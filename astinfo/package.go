@@ -2,7 +2,8 @@ package astinfo
 
 type Package struct {
 	Name    string
-	Structs map[string]*Struct // key为struct名称
+	Module  string // 存储package的全路径（如"github.com/user/project/pkg"）
+	Structs map[string]*Struct
 }
 
 func NewPackage() *Package {
