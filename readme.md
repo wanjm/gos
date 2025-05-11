@@ -43,11 +43,17 @@ func (hello *Hello) SayHello(ctx context.Context, req *schema.HelloRequest) (res
 
 
 ## 代码语法解析
-1. 在Project结构体,生成ParseDir方法，用于解析项目中的代码。
+1. 在Project结构体,生成ParseMode方法
+   - 解析项目的go.mod文件，获取项目的module名称，并保存到Project结构体的Module field中；
+2. 在Project结构体,生成ParsePackage方法
    - 生成Package对象；
    - 对于当前目录，调用pacakge的Parse方法完成本pacakge的解析；
-   - 遍历项目的当前所有子目录，递归调用本函数完成递归解析
-2. 在Package结构体,生成Parse方法，用于解析package中的代码。
+3. 在Project结构体,生成Parse方法，用于解析项目中的代码。
+    - 调用ParseMode方法；
+    - 调用filePath的Walk方法，遍历项目中的所有文件；
+    - 对于每个文件，当其是目录时，调用ParsePackage方法；
+4. 在Package结构体,生成Parse方法，用于解析package中的代码。
+    
 
 
 
