@@ -30,6 +30,7 @@ func (hello *Hello) SayHello(ctx context.Context, req *schema.HelloRequest) (res
 2. Package结构体用于存储package的信息。
 3. Package结构体包含以下字段：
     - Name: package名称
+    - Module : package的全路径
     - Structs: package中包含的struct map key为struct的名称；value为Struct结构体
 
 ## Struct
