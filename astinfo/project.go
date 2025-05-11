@@ -58,13 +58,7 @@ func (p *Project) ParsePackage(dirPath string) error {
 }
 
 // Parse 解析整个项目结构
-func (p *Project) Parse(rootPath string) error {
-	absPath, err := filepath.Abs(rootPath)
-	if err != nil {
-		return err
-	}
-	p.Path = absPath
-
+func (p *Project) Parse() error {
 	if err := p.ParseMode(); err != nil {
 		return err
 	}
