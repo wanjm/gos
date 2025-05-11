@@ -23,6 +23,7 @@ func (hello *Hello) SayHello(ctx context.Context, req *schema.HelloRequest) (res
 3. Project结构体包含以下字段：
     - Name: 项目名称
     - Module: 项目的module名称
+    - Path: 项目在工程中根目录在工程中的绝对路径
     - Packages: 项目中包含的package map key为package的全路径；value为Package结构体
 
 ## Package
@@ -33,9 +34,17 @@ func (hello *Hello) SayHello(ctx context.Context, req *schema.HelloRequest) (res
     - Module : package的全路径
     - Structs: package中包含的struct map key为struct的名称；value为Struct结构体
 
+
 ## Struct
 1. 代码存放存放在astinfo/struct.go中
 2. Struct结构体用于存储struct的信息。
 3. Struct结构体包含以下字段：
     - Name: struct名称
+
+
+## 代码语法解析
+1. 在Project结构体,生成Parse方法，用于解析项目中的代码。
+
+
+
 
