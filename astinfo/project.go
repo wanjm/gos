@@ -75,3 +75,30 @@ func (p *Project) ParsePackage(dir string) error {
 	p.Packages[pkgPath] = pkg
 	return nil
 }
+
+// GetPackage retrieves a package by module path without creation
+func (p *Project) GetPackage(module string) *Package {
+    return p.Packages[module]
+}
+
+// FindPackage finds or creates a package with automatic module path resolution
+func (p *Project) FindPackage(module string) *Package {
+    if pkg := p.GetPackage(module); pkg != nil {
+        return pkg
+    }
+    
+    // Extract package name from module path
+    _, name := filepath.Split(module)
+    if name == "" {
+        name = "main"
+    }
+    
+    newPkg := &Package{
+        Name:    name,
+        Module:  module,
+        Structs: make(map[string]*Struct),
+    }
+    
+    p.Packages[module] = newPkg
+    return newPkg
+}

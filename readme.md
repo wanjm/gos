@@ -43,20 +43,34 @@ func (hello *Hello) SayHello(ctx context.Context, req *schema.HelloRequest) (res
 
 
 ## 代码语法解析
-1. 在Project结构体,生成ParseMode方法
-   - 解析项目的go.mod文件，获取项目的module名称，并保存到Project结构体的Module field中；
-2. 在Project结构体,生成ParsePackage方法
-   - 生成Package对象；
-   - 对于当前目录，调用pacakge的Parse方法完成本pacakge的解析；
-3. 在Project结构体,生成Parse方法，用于解析项目中的代码。
+### porject::parse
+1. 在Project结构体,生成Parse方法，用于解析项目中的代码。
     - 调用ParseMode方法；
     - 调用filePath的Walk方法，遍历项目中的所有文件；
     - 对于每个文件，当其是目录时，调用ParsePackage方法；
-4. 在Package结构体,生成Parse方法，用于解析package中的代码。
+2. 在Project结构体,生成ParseMode方法
+   - 解析项目的go.mod文件，获取项目的module名称，并保存到Project结构体的Module field中；
+3. 在Project结构体,生成ParsePackage方法
+   - 生成Package对象；
+   - 对于当前目录，调用pacakge的Parse方法完成本pacakge的解析；
+### Pacakge::Parse
+4. 在Package结构体,生成Parse方法，用于解析packagka s码。
 -  解析package的go文件
-1. sdafd
+### Project:Package管理
+1. package的产生有两种来源
+2. 第一种是实实在在的解析这个包时生成； 
+3. 第二种是在解析过程中需要使用某个package，但是该package还没有生成时，需要先生成对象，然后再使用。
 
 
+## project的函数定义
+
+1. 生成Porject::GetPackage(module) 返回*Package；
+    - 该方法查找Project中的Packages map中是否存在指定module的package；
+2. 生成Porject::FindPackage(module) 返回*Package；
+    - 该方法查找Project中的Packages map中是否存在指定module的package；
+    - 如果存在，则返回该package；
+    - 如果不存在，则生成一个新的package，并将其添加到项目的Packages map中；
+   - 并返回
 
 ## 主函数定义
 1. 创建main.go文件，用于接收-p参数，调用Project的Parse方法；
