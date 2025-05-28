@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"log"
+	"path/filepath"
 )
 
 // Package 表示一个Go包的基本信息
@@ -50,5 +51,20 @@ func (pkg *Package) processTypeDecl(decl *ast.GenDecl) {
 				Name: typeSpec.Name.Name,
 			}
 		}
+	}
+}
+
+// NewPackage creates a new Package instance with the given module path
+func NewPackage(module string) *Package {
+	// Extract package name from module path
+	_, name := filepath.Split(module)
+	if name == "" {
+		name = "main"
+	}
+
+	return &Package{
+		Name:    name,
+		Module:  module,
+		Structs: make(map[string]*Struct),
 	}
 }
