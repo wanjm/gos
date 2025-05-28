@@ -53,6 +53,16 @@ func (hello *Hello) SayHello(ctx context.Context, req *schema.HelloRequest) (res
     - 调用filePath的Walk方法，遍历项目中的所有文件；
     - 对于每个文件，当其是目录时，调用ParsePackage方法；
 4. 在Package结构体,生成Parse方法，用于解析package中的代码。
+-  解析package的go文件
+1. sdafd
+
+
+
+## 主函数定义
+1. 创建main.go文件，用于接收-p参数，调用Project的Parse方法；
+2. 函数能接受-p参数，表示当前工作目录，并传递给Project对象的path中；
+3. 创建Project对象，接收Path值，调用起Parse方法；
+4. 调用其GenCode方法；
     
 
 

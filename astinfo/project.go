@@ -5,74 +5,73 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"golang.org/x/mod/modfile"
 )
 
-// Project 表示一个完整的Go项目结构
+// Project 表示一个Go项目的基本信息
 type Project struct {
-	Name     string              // 项目名称（通过go.mod解析）
-	Module   string              // 项目module名称
+	Name     string              // 项目名称
+	Module   string              // 项目模块名称（从go.mod解析）
 	Path     string              // 项目根目录的绝对路径
-	Packages map[string]*Package // 项目包含的包集合
+	Packages map[string]*Package // 项目包含的包集合（key为包全路径）
 }
 
-func NewProject() *Project {
-	return &Project{
-		Packages: make(map[string]*Package),
-	}
-}
-
-// ParseMode 解析go.mod文件获取module名称
-func (p *Project) ParseMode() error {
+func (p *Project) ParseModule() error {
 	modPath := filepath.Join(p.Path, "go.mod")
-	modData, err := os.ReadFile(modPath)
+	data, err := os.ReadFile(modPath)
 	if err != nil {
-		return fmt.Errorf("go.mod文件不存在: %v", err)
+		return fmt.Errorf("error reading go.mod: %w", err)
 	}
 
-	modLine := strings.Split(string(modData), "\n")[0]
-	if !strings.HasPrefix(modLine, "module ") {
-		return fmt.Errorf("无效的go.mod格式")
+	modFile, err := modfile.Parse("go.mod", data, nil)
+	if err != nil {
+		return fmt.Errorf("error parsing go.mod: %w", err)
 	}
 
-	p.Module = strings.TrimSpace(strings.TrimPrefix(modLine, "module "))
+	p.Module = modFile.Module.Mod.Path
 	return nil
 }
 
-// ParsePackage 解析指定目录下的Go包
-func (p *Project) ParsePackage(dirPath string) error {
-	relPath, err := filepath.Rel(p.Path, dirPath)
-	if err != nil {
-		return err
-	}
-
-	pkg := NewPackage()
-	pkg.Module = filepath.Join(p.Module, relPath)
-
-	if err := pkg.Parse(dirPath); err != nil {
-		return fmt.Errorf("解析包[%s]失败: %v", dirPath, err)
-	}
-
-	p.Packages[pkg.Module] = pkg
-	return nil
-}
-
-// Parse 解析整个项目结构
 func (p *Project) Parse() error {
-	if err := p.ParseMode(); err != nil {
+	if err := p.ParseModule(); err != nil {
 		return err
 	}
 
-	return filepath.WalkDir(p.Path, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || !d.IsDir() {
-			return nil
-		}
+	p.Packages = make(map[string]*Package)
 
-		// 跳过隐藏目录和vendor目录
-		if strings.HasPrefix(d.Name(), ".") || d.Name() == "vendor" {
-			return fs.SkipDir
+	err := filepath.WalkDir(p.Path, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
-
-		return p.ParsePackage(path)
+		if d.IsDir() {
+			if err := p.ParsePackage(path); err != nil {
+				return fmt.Errorf("error parsing package at %s: %w", path, err)
+			}
+		}
+		return nil
 	})
+
+	return err
+}
+
+func (p *Project) ParsePackage(dir string) error {
+	relPath, err := filepath.Rel(p.Path, dir)
+	if err != nil {
+		return err
+	}
+
+	pkgPath := filepath.Join(p.Module, relPath)
+	pkg := &Package{
+		Name:    filepath.Base(relPath),
+		Module:  p.Module,
+		Structs: make(map[string]*Struct),
+	}
+
+	if err := pkg.Parse(dir); err != nil {
+		return fmt.Errorf("package parse error: %w", err)
+	}
+
+	p.Packages[pkgPath] = pkg
+	return nil
 }
