@@ -9,10 +9,13 @@ type Hello struct {
 func (hello *Hello) SayHello(ctx context.Context, req *schema.HelloRequest) (res schema.HelloResponse, err basic.Error) {
 ```
 # 设计
-1. 我们需要定义一个Project结构体，用于存储项目的信息。
-2. 我们需要定义一个Package结构体，用于存储package的信息。
-3. 我们需要定义一个Struct结构体，用于存储struct的信息。
-4. 我们需要定义一个Function结构体，用于存储function的信息。
+1. Project
+2. Package
+3. Struct
+4. Interface
+5. Function
+6. Method
+7. Field
 
 ## 代码
 创建astinfo目录，用于存放设计代码
