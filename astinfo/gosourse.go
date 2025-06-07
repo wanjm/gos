@@ -13,7 +13,7 @@ type Gosourse struct {
 }
 
 // 解析全局变量和 struct，interface
-func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) Parser {
+func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 	switch genDecl.Tok {
 	case token.VAR:
 	case token.TYPE:
@@ -23,10 +23,12 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) Parser {
 		case *ast.InterfaceType:
 
 		case *ast.StructType:
-			return g.pkg.FindStruct(typeSpec.Name.Name)
+			class := g.pkg.FindStruct(typeSpec.Name.Name)
+			class.initGenDecl(genDecl)
+			parser = class
 		}
 	}
-	return nil
+	return
 }
 
 // 解析函数和方法

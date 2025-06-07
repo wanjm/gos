@@ -7,7 +7,7 @@ files=("$@")
 if [ ${#files[@]} -eq 0 ]; then
     files=("project" "package" "struct"
         "interface" "function" "method" "variable" "gosourse"
-        "basic"
+        "basic" "comment"
     )
 fi
 
