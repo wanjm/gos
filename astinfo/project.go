@@ -63,14 +63,16 @@ func (p *Project) Parse() error {
 
 // dir是pacakge 所在的全路径
 func (p *Project) ParsePackage(dir string) error {
+	// 计算相对路径
 	relPath, err := filepath.Rel(p.Path, dir)
 	if err != nil {
 		return err
 	}
-
+	// 用mode+相对路径，得到包全路径
 	pkgPath := filepath.Join(p.Module, relPath)
 	pkg := p.GetPackage(pkgPath)
-	if err := pkg.Parse(dir); err != nil {
+	pkg.Path = dir
+	if err := pkg.Parse(); err != nil {
 		return fmt.Errorf("package parse error: %w", err)
 	}
 	return nil

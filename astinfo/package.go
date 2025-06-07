@@ -12,11 +12,13 @@ import (
 // Package 表示一个Go包的基本信息
 type Package struct {
 	Name    string             // 包名称
+	Path    string             // 包所在目录的绝对路径
 	Module  string             // 所属模块全路径
 	Structs map[string]*Struct // 包内结构体集合（key为结构体名称）
 }
 
-func (pkg *Package) Parse(path string) error {
+func (pkg *Package) Parse() error {
+	path := pkg.Path
 	fmt.Printf("Parsing package: %s\n", path)
 	fset := token.NewFileSet()
 	// 这里取绝对路径，方便打印出来的语法树可以转跳到编辑器
