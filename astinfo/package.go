@@ -50,10 +50,23 @@ func (pkg *Package) Parse() error {
 
 // NewPackage creates a new Package instance with the given module path
 func NewPackage(module string) *Package {
-
 	// Extract package name from module path
 	return &Package{
 		Module:  module,
 		Structs: make(map[string]*Struct),
 	}
+}
+
+func (pkg *Package) Gettruct(name string) *Struct {
+	return pkg.Structs[name]
+}
+
+// findStruct
+func (pkg *Package) FindStruct(name string) *Struct {
+	class := pkg.Gettruct(name)
+	if class == nil {
+		class = NewStruct(name, pkg)
+		pkg.Structs[name] = class
+	}
+	return class
 }

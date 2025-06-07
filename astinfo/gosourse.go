@@ -13,16 +13,24 @@ type Gosourse struct {
 }
 
 // 解析全局变量和 struct，interface
-func (g *Gosourse) parseGenDecl(genDecl *ast.GenDecl) Parser {
+func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) Parser {
 	switch genDecl.Tok {
 	case token.VAR:
 	case token.TYPE:
+		typeSpec := genDecl.Specs[0].(*ast.TypeSpec)
+		// 仅关注结构体，暂时不考虑接口
+		switch typeSpec.Type.(type) {
+		case *ast.InterfaceType:
+
+		case *ast.StructType:
+			return g.pkg.FindStruct(typeSpec.Name.Name)
+		}
 	}
 	return nil
 }
 
 // 解析函数和方法
-func (g *Gosourse) parseFuncDecl(funcDecl *ast.FuncDecl) Parser {
+func (g *Gosourse) getFuncDeclParser(funcDecl *ast.FuncDecl) Parser {
 	switch funcDecl.Recv {
 	case nil:
 		return NewFunction(funcDecl, g)
@@ -44,9 +52,9 @@ func (g *Gosourse) Parse() error {
 		var parser Parser
 		switch decl := decls[i].(type) {
 		case *ast.GenDecl:
-			parser = g.parseGenDecl(decl)
+			parser = g.getGenDeclParser(decl)
 		case *ast.FuncDecl:
-			parser = g.parseFuncDecl(decl)
+			parser = g.getFuncDeclParser(decl)
 		}
 		if parser != nil {
 			parser.Parse()

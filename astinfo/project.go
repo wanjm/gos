@@ -42,16 +42,25 @@ func (p *Project) Parse() error {
 	if err := p.ParseModule(); err != nil {
 		return err
 	}
-
 	p.Packages = make(map[string]*Package)
-
+	// // project
+	// for eachdir {
+	//     // package
+	//     for eachfile {
+	//         // gosource
+	//         switch type
+	//             // struct
+	//             // interface
+	//             // variable
+	//             // function
+	//             // method
+	//     }
+	// }
 	err := filepath.WalkDir(p.Path, func(path string, d fs.DirEntry, err error) error {
-
 		//path是全路径
 		if err != nil {
 			return err
 		}
-
 		// Skip .git and gen directories
 		if d.IsDir() {
 			dirName := filepath.Base(path)

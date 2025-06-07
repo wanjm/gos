@@ -46,13 +46,22 @@ func (hello *Hello) SayHello(ctx context.Context, req *schema.HelloRequest) (res
 
 
 ## 代码语法解析
-### porject::parse
-1. 在Project结构体,生成Parse方法，用于解析项目中的代码。
-    - 调用ParseMode方法；
-    - 遍历目录并解析package
-### Pacakge::Parse
-1. 在Package结构体,生成Parse方法，用于解析packagkes码。
-   - 解析package的go文件
+```
+// project.parse
+for eachdir {
+    // package.parse
+    for eachfile {
+        // gosource.parse
+        switch type
+            // struct
+            // interface
+            // variable
+            // function
+            // method
+        
+    }
+}
+```
 
 ## 对象管理说明
 ### Project:Package管理
