@@ -46,11 +46,22 @@ func (p *Project) Parse() error {
 	p.Packages = make(map[string]*Package)
 
 	err := filepath.WalkDir(p.Path, func(path string, d fs.DirEntry, err error) error {
+
 		//path是全路径
 		if err != nil {
 			return err
 		}
+
+		// Skip .git and gen directories
 		if d.IsDir() {
+			dirName := filepath.Base(path)
+			skipdirs := []string{".git", "gen"}
+			for _, skipdir := range skipdirs {
+				if dirName == skipdir {
+					return filepath.SkipDir
+				}
+			}
+
 			if err := p.ParsePackage(path); err != nil {
 				return fmt.Errorf("error parsing package at %s: %w", path, err)
 			}
