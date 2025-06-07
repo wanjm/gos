@@ -1,5 +1,5 @@
 package astinfo
 
 type Parser interface {
-	Parse()
+	Parse() error
 }

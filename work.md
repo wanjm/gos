@@ -2,4 +2,4 @@
 用shell协议touchfile的脚本 根据文件名数组， 检查其对应的go文件是否存在，不存在则，创建，并向文件中添加packge astifo; 生成initgo.sh
 2. 将files变量换成为从命令行读入，有多少参数就创建多少文件,如果没有参数则使用默认值
 3. 分别在"interface" "function" "method" "variable" "gosourse"对应的go文件中，添加对应的类，并实现Parse(),方法体为空
-4. 
+4. 将刚才的Parse方法添加返回值error
