@@ -5,8 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-
-	"golang.org/x/mod/modfile"
+	"strings"
 )
 
 // Project 表示一个Go项目的基本信息
@@ -24,12 +23,18 @@ func (p *Project) ParseModule() error {
 		return fmt.Errorf("error reading go.mod: %w", err)
 	}
 
-	modFile, err := modfile.Parse("go.mod", data, nil)
-	if err != nil {
-		return fmt.Errorf("error parsing go.mod: %w", err)
+	// 直接读取第一行解析module值
+	lines := strings.Split(string(data), "\n")
+	if len(lines) == 0 {
+		return fmt.Errorf("go.mod is empty")
 	}
 
-	p.Module = modFile.Module.Mod.Path
+	firstLine := strings.TrimSpace(lines[0])
+	if !strings.HasPrefix(firstLine, "module ") {
+		return fmt.Errorf("invalid go.mod format, missing module declaration")
+	}
+
+	p.Module = strings.TrimSpace(firstLine[7:])
 	return nil
 }
 
@@ -41,6 +46,7 @@ func (p *Project) Parse() error {
 	p.Packages = make(map[string]*Package)
 
 	err := filepath.WalkDir(p.Path, func(path string, d fs.DirEntry, err error) error {
+		//path是全路径
 		if err != nil {
 			return err
 		}
@@ -55,6 +61,7 @@ func (p *Project) Parse() error {
 	return err
 }
 
+// dir是pacakge 所在的全路径
 func (p *Project) ParsePackage(dir string) error {
 	relPath, err := filepath.Rel(p.Path, dir)
 	if err != nil {

@@ -3,3 +3,4 @@
 2. 将files变量换成为从命令行读入，有多少参数就创建多少文件,如果没有参数则使用默认值
 3. 分别在"interface" "function" "method" "variable" "gosourse"对应的go文件中，添加对应的类，并实现Parse(),方法体为空
 4. 将刚才的Parse方法添加返回值error
+5. 修改Project::ParseModule方法，自己读取第一行，别解析处mode值,通过用空格split第一行，然后获取第一个元素，作为mode值
