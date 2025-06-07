@@ -91,6 +91,9 @@ func (hello *Hello) SayHello(ctx context.Context, req *schema.HelloRequest) (res
 3. 创建Project对象，接收Path值，调用起Parse方法；
 4. 调用其GenCode方法；
     
+## 规则说明
+1. 所有的parse方法，都是先构建一个对象，然后再调用其Parse方法；
+2. 每个对象中包含包含本设计的对象的关联关系，同时关联的语法树的入口对象；
 
 
 

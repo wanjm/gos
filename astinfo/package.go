@@ -41,8 +41,7 @@ func (pkg *Package) Parse() error {
 		_ = packName
 		// fmt.Printf("begin parse %s with %s\n", packName, path)
 		for filename, f := range pack.Files {
-			fmt.Printf("Parsing file: %s\n", filename)
-			gofile := NewGosourse(f, pkg)
+			gofile := NewGosourse(f, pkg, filename)
 			gofile.Parse()
 		}
 	}
