@@ -2,28 +2,38 @@ package astinfo
 
 import "go/ast"
 
-// /@goservlet prpc=xxx; servlet=xxx; servle; prpc
+// /@goservlet prpc=xxx; servlet=xxx; servlet; prpc
 type structComment struct {
 	groupName  string
-	serverType int // NONE, RpcStruct, ServletStruct
+	serverType string // NONE, RpcStruct, ServletStruct·
+	url        string // 服务的url, 对所有的方法都有效
 }
 
 func (comment *structComment) dealValuePair(key, value string) {
 	switch key {
 	case Prpc:
-		comment.serverType = PRPC
+		comment.serverType = Prpc
 		if len(value) == 0 {
 			comment.groupName = Prpc
 		} else {
 			comment.groupName = value
 		}
 	case Servlet:
-		comment.serverType = SERVLET
+		comment.serverType = Servlet
 		if len(value) == 0 {
 			comment.groupName = Servlet
 		} else {
 			comment.groupName = value
 		}
+	case Group:
+		comment.groupName = value
+	case Type:
+		comment.serverType = value
+		if len(comment.groupName) == 0 {
+			comment.groupName = comment.serverType
+		}
+	case Url:
+		comment.url = value
 	}
 }
 
@@ -61,16 +71,7 @@ func (v *Struct) Parse() error {
 
 // parseComment
 func (class *Struct) ParseComment() error {
-	// 方法体为空
 	parseComment(class.genDecl.Doc, &class.comment)
-	// for _, servlet := range class.servlets {
-	// 	if servlet.comment.serverName == "" {
-	// 		servlet.comment.serverName = class.comment.groupName
-	// 	}
-	// }
-	// if class.comment.serverType != NOUSAGE {
-	// 	class.Package.Project.addServer(class.comment.groupName)
-	// }
 	return nil
 }
 
