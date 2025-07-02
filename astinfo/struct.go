@@ -2,7 +2,9 @@ package astinfo
 
 import "go/ast"
 
-// /@goservlet prpc=xxx; servlet=xxx; servlet; prpc
+// @goservlet prpc=xxx; servlet=xxx; servlet; prpc
+// @goservlet type=xxx ;  prpc, servlet, websocket, restful,
+// @goservlet group=xxx; 如果不存在，则跟type同名
 type structComment struct {
 	groupName  string
 	serverType string // NONE, RpcStruct, ServletStruct·
