@@ -35,6 +35,7 @@ func (p *Project) ParseModule() error {
 	}
 
 	p.Module = strings.TrimSpace(firstLine[7:])
+	fmt.Printf("Module: %s\n", p.Module)
 	return nil
 }
 
@@ -43,12 +44,18 @@ func (p *Project) Parse() error {
 		return err
 	}
 	p.Packages = make(map[string]*Package)
-	// // project
-	// for eachdir {
-	//     // package
-	//     for eachfile {
-	//         // gosource
-	//         switch type
+	// project.parse(){
+	// 	for eachdir {
+	//      package.parse
+	//  }
+	// }
+	// pacakge.parse(){}
+	//   for eachfile {
+	//   	gosource.parse（）
+	//   }
+	//}
+	// gosource.parse（）{
+	//         switch type{
 	//             // struct
 	//             // interface
 	//             // variable
