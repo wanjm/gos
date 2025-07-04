@@ -35,7 +35,8 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 func (g *Gosourse) getFuncDeclParser(funcDecl *ast.FuncDecl) Parser {
 	switch funcDecl.Recv {
 	case nil:
-		return NewFunction(funcDecl, g)
+		function := NewFunction(funcDecl, g)
+		function.functionManager = &g.pkg.FunctionManager
 	default:
 		return NewMethod(funcDecl, g)
 	}

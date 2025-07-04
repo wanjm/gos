@@ -1,10 +1,14 @@
 package astinfo
 
-import "go/ast"
+import (
+	"fmt"
+	"go/ast"
+)
 
 type Function struct {
-	funcDecl *ast.FuncDecl
-	goSource *Gosourse
+	funcDecl        *ast.FuncDecl
+	goSource        *Gosourse
+	functionManager *FunctionManager
 }
 
 // create
@@ -15,6 +19,9 @@ func NewFunction(funcDecl *ast.FuncDecl, goSource *Gosourse) *Function {
 	}
 }
 func (f *Function) Parse() error {
+	if f.functionManager == nil {
+		fmt.Printf("functionManager should be initialized")
+	}
 	// 方法体为空
 	return nil
 }

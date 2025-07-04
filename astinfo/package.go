@@ -14,6 +14,7 @@ type Package struct {
 	Path    string             // 包所在目录的绝对路径
 	Module  string             // 所属模块全路径
 	Structs map[string]*Struct // 包内结构体集合（key为结构体名称）
+	FunctionManager
 }
 
 // getName
@@ -57,13 +58,13 @@ func NewPackage(module string) *Package {
 	}
 }
 
-func (pkg *Package) Gettruct(name string) *Struct {
+func (pkg *Package) Getstruct(name string) *Struct {
 	return pkg.Structs[name]
 }
 
 // findStruct
 func (pkg *Package) FindStruct(name string) *Struct {
-	class := pkg.Gettruct(name)
+	class := pkg.Getstruct(name)
 	if class == nil {
 		class = NewStruct(name, pkg)
 		pkg.Structs[name] = class

@@ -46,6 +46,7 @@ type Struct struct {
 	genDecl       *ast.GenDecl
 	astStructType *ast.StructType
 	comment       structComment
+	FunctionManager
 	// TODO: 后续添加字段和方法解析
 }
 
