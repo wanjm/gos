@@ -119,3 +119,32 @@ func (p *Project) FindPackage(module string) *Package {
 	p.Packages[module] = newPkg
 	return newPkg
 }
+
+// GenerateCode 生成项目的代码
+func (p *Project) GenerateCode() error {
+	// 遍历所有包
+	for _, pkg := range p.Packages {
+		_ = pkg
+		// 生成包的代码
+		// if err := pkg.GenerateCode(); err != nil {
+		// 	return fmt.Errorf("error generating code for package %s: %w", pkg.Name, err)
+		// }
+	}
+	return nil
+}
+
+func CreateProject(path string, cfg *Config) *Project {
+	project := Project{
+		Path: path,
+		// Package:      make(map[string]*Package),
+		// initiatorMap: make(map[*Struct]*Initiators),
+		// cfg:          cfg,
+		// servers:      make(map[string]*server),
+		// creators: make(map[*Struct]*Initiator),
+	}
+	// 由于Package中有指向Project的指针，所以RawPackage指向了此处的project，如果返回对象，则出现了两个Project，一个是返回的Project，一个是RawPackage中的Project；
+	// 返回*Project才能保证这是一个Project对象；
+	// project.initRawPackage()
+	// project.rawPkg = project.getPackage("", true)
+	return &project
+}

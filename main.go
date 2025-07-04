@@ -2,32 +2,34 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/wan_jm/servlet/astinfo"
 )
 
 func main() {
-	projectPath := flag.String("p", ".", "project root directory")
+	var path string
+	flag.StringVar(&path, "p", ".", "需要生成代码工程的根目录")
+	init := flag.Bool("i", false, "初始化文件")
+	h := flag.Bool("h", false, "显示帮助文件")
 	flag.Parse()
-
-	absPath, err := filepath.Abs(*projectPath)
+	if *h {
+		flag.Usage()
+		return
+	}
+	path, err := filepath.Abs(path)
 	if err != nil {
-		log.Fatalf("Error getting absolute path: %v", err)
+		log.Printf("open %s failed with %s", path, err.Error())
+		return
 	}
-
-	project := &astinfo.Project{
-		Path: absPath,
+	os.Chdir(path)
+	cfg := astinfo.Config{
+		InitMain: *init,
 	}
-
-	if err := project.Parse(); err != nil {
-		log.Fatalf("Project parse failed: %v", err)
-	}
-
-	// TODO: Implement GenCode method
-	fmt.Println("Project parsed successfully:")
-	fmt.Printf("Module: %s\n", project.Module)
-	fmt.Printf("Found %d packages\n", len(project.Packages))
+	// cfg.Load(
+	var project = astinfo.CreateProject(path, &cfg)
+	project.Parse()
+	project.GenerateCode()
 }
