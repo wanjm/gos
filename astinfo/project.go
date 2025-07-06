@@ -14,6 +14,7 @@ type Project struct {
 	Module   string              // 项目模块名称（从go.mod解析）
 	Path     string              // 项目根目录的绝对路径
 	Packages map[string]*Package // 项目包含的包集合（key为包全路径）
+	cfg      *Config
 }
 
 func (p *Project) ParseModule() error {
@@ -122,6 +123,7 @@ func (p *Project) FindPackage(module string) *Package {
 
 // GenerateCode 生成项目的代码
 func (p *Project) GenerateCode() error {
+	p.genInitMain()
 	// 遍历所有包
 	for _, pkg := range p.Packages {
 		_ = pkg
@@ -136,9 +138,9 @@ func (p *Project) GenerateCode() error {
 func CreateProject(path string, cfg *Config) *Project {
 	project := Project{
 		Path: path,
+		cfg:  cfg,
 		// Package:      make(map[string]*Package),
 		// initiatorMap: make(map[*Struct]*Initiators),
-		// cfg:          cfg,
 		// servers:      make(map[string]*server),
 		// creators: make(map[*Struct]*Initiator),
 	}

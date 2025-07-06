@@ -37,6 +37,11 @@ struct 由package管理
 1. function type =〉 filter，initiator
 2. method type =〉rpc, servlet，restful，postAction, creator
 
+## struct定义
+1. type 该struct的功能说明rpc,servlet,restful
+2. group 
+2. title 该struct的说明
+3. url 该struct服务的url前缀
 # 开发技巧
 ## funtion/method 将自己塞到functionManager中去；
 1. function/method是被functionManager管理的，那是由functionManager来管理她，还是她把自己送到functionManager中去呢？
@@ -46,4 +51,12 @@ struct 由package管理
 
 
 # 代码生成说明
+## initiator返回的管理
+## initiator函数生成；
+## 注册servlet函数
+## 注册filter函数
+## 主函数
+1. 调用initiator函数，由于initiator有相互依赖，需要定义执行顺序；
+3. 注册filter函数
+2. 注册servlet函数
 
