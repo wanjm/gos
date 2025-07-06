@@ -23,6 +23,14 @@ type => struct, interface, function, method ,variable
 struct 由package管理
 
 ## 对象管理
+### FunctionManager
+FunctionManager 管理了
+1. initiator初始化函数；
+2. servlet
+3. creator
+4. postAction 该函数在servlet执行后执行的函数；
+
+
 
 
 
@@ -51,12 +59,32 @@ struct 由package管理
 
 
 # 代码生成说明
+## 代码执行顺序
+排序执行顺序定义的生成代码的执行逻辑，后续代码需要按照该逻辑生成代码；
+生成的代码最终对外暴露Prepare和Run函数；
+1. Prepare完成代码初始化和注入工作；用于非servlet的功能，如cronjob或者test等；
+2. Run则整个业务逻辑，filter，路由注入等；（该函数会主动调用prepare）
+```mermaid
+flowchart TD 
+A[Run说明] --> B[initVariable] --> c[initFilter] --> d[initServlet]
+P[Prepare说明] --> P1[initVariable]
+```
 ## initiator返回的管理
-## initiator函数生成；
+1. 由于initiator最后需要全局管理，全局排序；
+2. 所以initiator一开始由function管理；
+3. 但是最终按照相互依赖关系排序到project中；
+### initiator函数生成；
+1. initVariable按照各个package的initorator函数依赖关系依次调用；
+2. 调用顺序首先保证依赖顺序；
+3. 没有依赖关系的同级函数按照package顺序排序；
+4. 同package中的函数按照函数名字排序；
+### initiator依赖关系的建立
+
 ## 注册servlet函数
 ## 注册filter函数
+
 ## 主函数
 1. 调用initiator函数，由于initiator有相互依赖，需要定义执行顺序；
-3. 注册filter函数
-2. 注册servlet函数
+2. 注册filter函数
+3. 注册servlet函数
 
