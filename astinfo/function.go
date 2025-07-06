@@ -21,6 +21,7 @@ const (
 )
 
 type Function struct {
+	Name            string //函数名
 	funcDecl        *ast.FuncDecl
 	goSource        *Gosourse
 	functionManager *FunctionManager //function指向pkg的functionManager，method指向自己recevicer(struct)的functionManager
@@ -97,6 +98,41 @@ func (f *Function) Parse() error {
 		fmt.Printf("functionManager should be initialized")
 	}
 	parseComment(f.funcDecl.Doc, &f.comment)
+	f.parseParameter()
 	// 方法体为空
 	return nil
+}
+
+// 解析参数和返回值
+func (f *Function) parseParameter() bool {
+	var paramType *ast.FuncType = f.funcDecl.Type
+	for _, param := range paramType.Params.List {
+		// field := Field{
+		// 	ownerInfo: "function Name is " + method.Name,
+		// }
+		// field.parseType(param.Type, method.goSource)
+		//此处可能多个参数 a,b string的格式暂时仅处理一个；
+		for _, name := range param.Names {
+			_ = name
+			// nfield := field
+			// nfield.name = name.Name
+			// method.Params = append(method.Params, &nfield)
+			// break
+		}
+	}
+	if paramType.Results != nil {
+		for _, result := range paramType.Results.List {
+
+			// field := Field{
+			// 	ownerInfo: "function Name is " + method.Name,
+			// }
+			// field.parseType(result.Type, method.goFile)
+
+			if len(result.Names) != 0 {
+				// field.name = result.Names[0].Name
+			}
+			// method.Results = append(method.Results, &field)
+		}
+	}
+	return true
 }
