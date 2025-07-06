@@ -22,11 +22,13 @@ type => struct, interface, function, method ,variable
 ### struct 管理
 struct 由package管理
 
+## 对象管理
 
 
-## 功能定义
-### 函数定义
-1. type 该函数的功能说明 rpc,filter,initiator,servlet,restful，creator
+
+# 产品定义
+## 函数定义
+1. type 该函数的功能说明rpc,filter,initiator,servlet,restful，creator
 2. group 
 3. method 该函数对外服务的方法 GET,POST
 4. title 该函数的说明
@@ -35,6 +37,11 @@ struct 由package管理
 1. function type =〉 filter，initiator
 2. method type =〉rpc, servlet，restful，postAction, creator
 
+# 开发技巧
+## funtion/method 将自己塞到functionManager中去；
+1. function/method是被functionManager管理的，那是由functionManager来管理她，还是她把自己送到functionManager中去呢？
+2. 目前由于统一使用createParser(参见goFile.parse)，然后调用了Parser.parse函数，导致让functionManager来管理function/method这个模式不现实， 因为其他代码没有这个逻辑，所以目前采用了function/method将自己送到functionManger的方法来实现；
+3. 另外method在没有被解析之前，是不知道自己属于哪个functionMaanager的。所以也导致了他们需要将自己送到functionManager中去；
 
 
 
