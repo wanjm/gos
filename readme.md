@@ -43,6 +43,14 @@ func (hello *Hello) SayHello(ctx context.Context, req *schema.HelloRequest) (res
 2. Struct结构体用于存储struct的信息。
 3. Struct结构体包含以下字段：
     - Name: struct名称
+## functionManager
+我们的代码函数分为
+1. 初始化函数initiator，用于自动运行，生成一些对象共注入其他对象中；
+2. creator函数，用于生成对象供注入，跟intiator的区别时，initiator是全局的，creator是每次注入时都生成；
+3. servlet函数；
+4. postAction函数；
+所有的函数分别有package和struct对象进行管理；所以function有pkg管理，method由struct管理；
+5. filter该有谁管理；
 
 
 ## 代码语法解析
