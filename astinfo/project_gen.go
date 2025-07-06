@@ -19,13 +19,20 @@ func (project *Project) genMain() {
 	var content strings.Builder
 	content.WriteString("package main\n")
 	//	import "gitlab.plaso.cn/message-center/gen"
-	content.WriteString("import (\"" + project.Module + "/gen\")\n")
+	content.WriteString("import (\"flag\"\n\"" + project.Module + "/gen\")\n")
 	content.WriteString(`
 func main() {
+	parseArgument();
+	run()
+}
+func parseArgument() {
+	flag.Parse()
+}
+func run() {
 	wg:=gen.Run(gen.Config{
 		Cors: true,
 		Addr: ":8080",
-		ServerName: "servlet",
+		ServerName: "servlet", // this is the name of group tag in comments;
 	})
 	wg.Wait()
 }
