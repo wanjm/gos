@@ -7,5 +7,10 @@ type Parser interface {
 type CodeGenerator interface {
 	// 需要GoGenerated，作为参数的主要原因是，生成过程中需要向代码中添加import；
 
-	Generate(goGenerated *GoGenerated) error
+	Generate(goGenerated *GenedFile) error
+}
+
+type Import struct {
+	Name string
+	Path string
 }

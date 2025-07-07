@@ -10,6 +10,6 @@ type Variable struct{}
 // schema.struct
 // schema.function  creator!=nil, receiverPrefix==""
 // 返回值无\n
-func (v *Variable) Generate(goGenerated *GoGenerated) error {
+func (v *Variable) Generate(goGenerated *GenedFile) error {
 	return nil
 }

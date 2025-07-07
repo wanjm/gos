@@ -132,6 +132,7 @@ func (p *Project) GenerateCode() error {
 		// 	return fmt.Errorf("error generating code for package %s: %w", pkg.Name, err)
 		// }
 	}
+	p.genProjectCode()
 	return nil
 }
 
