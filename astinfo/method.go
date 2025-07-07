@@ -36,6 +36,6 @@ func (m *Method) parseReceiver() error {
 	// 由于代码的位置关系，这一步不一定会找到，所以自己创建了。
 	receiver := m.goSource.pkg.FindStruct(nameIndent.Name)
 	m.Receiver = receiver
-	m.Function.callableManager = &receiver.MethodManager
+	receiver.MethodManager.AddCallable(m)
 	return nil
 }

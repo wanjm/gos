@@ -35,12 +35,10 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 func (g *Gosourse) getFuncDeclParser(funcDecl *ast.FuncDecl) Parser {
 	switch funcDecl.Recv {
 	case nil:
-		function := NewFunction(funcDecl, g)
-		function.callableManager = &g.pkg.FunctionManager
+		return NewFunctionParserHelper(funcDecl, g)
 	default:
 		return NewMethod(funcDecl, g)
 	}
-	return nil
 }
 func (g *Gosourse) Parse() error {
 	fmt.Printf("Parsing file: %s\n", g.Path)

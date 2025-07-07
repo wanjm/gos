@@ -21,11 +21,10 @@ const (
 )
 
 type Function struct {
-	Name            string //函数名
-	funcDecl        *ast.FuncDecl
-	goSource        *Gosourse
-	callableManager CallableManager
-	comment         functionComment
+	Name     string //函数名
+	funcDecl *ast.FuncDecl
+	goSource *Gosourse
+	comment  functionComment
 }
 
 func (comment *functionComment) dealValuePair(key, value string) {
@@ -92,11 +91,33 @@ func NewFunction(funcDecl *ast.FuncDecl, goSource *Gosourse) *Function {
 	}
 }
 
+// GetType() string
+func (f *Function) GetType() string {
+	return f.comment.funcType
+}
+
+type FunctionParserHelper struct {
+	*Function
+	*FunctionManager
+}
+
+func NewFunctionParserHelper(funcDecl *ast.FuncDecl, goSource *Gosourse) *FunctionParserHelper {
+	return &FunctionParserHelper{
+		Function: &Function{
+			funcDecl: funcDecl,
+			goSource: goSource,
+		},
+		FunctionManager: &goSource.pkg.FunctionManager,
+	}
+}
+func (h *FunctionParserHelper) Parse() error {
+	h.Function.Parse()
+	h.FunctionManager.AddCallable(h.Function)
+	return nil
+}
+
 // 解析自己，并把自己添加到对应的functionManager中；
 func (f *Function) Parse() error {
-	if f.callableManager == nil {
-		fmt.Printf("functionManager should be initialized")
-	}
 	parseComment(f.funcDecl.Doc, &f.comment)
 	f.parseParameter()
 	// 方法体为空
