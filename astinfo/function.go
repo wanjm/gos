@@ -24,7 +24,7 @@ type Function struct {
 	Name            string //函数名
 	funcDecl        *ast.FuncDecl
 	goSource        *Gosourse
-	functionManager *FunctionManager //function指向pkg的functionManager，method指向自己recevicer(struct)的functionManager
+	callableManager CallableManager
 	comment         functionComment
 }
 
@@ -94,7 +94,7 @@ func NewFunction(funcDecl *ast.FuncDecl, goSource *Gosourse) *Function {
 
 // 解析自己，并把自己添加到对应的functionManager中；
 func (f *Function) Parse() error {
-	if f.functionManager == nil {
+	if f.callableManager == nil {
 		fmt.Printf("functionManager should be initialized")
 	}
 	parseComment(f.funcDecl.Doc, &f.comment)

@@ -80,6 +80,15 @@ P[Prepare说明] --> P1[initVariable]
 4. 同package中的函数按照函数名字排序；
 ### initiator依赖关系的建立
 
+### 变量注入的来源
+1. initiator产生的变量；
+2. creator产生出来的；
+3. 构造函数初始化出来的；
+
+### project全局变量的管理
+1. 所有initiaotr的返回值记录到全局管理中；
+2. 依靠该变量建立initiator之间的依赖关系；
+
 ## 注册servlet函数
 ## 注册filter函数
 
