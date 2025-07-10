@@ -78,7 +78,14 @@ P[Prepare说明] --> P1[initVariable]
 2. 调用顺序首先保证依赖顺序；
 3. 没有依赖关系的同级函数按照package顺序排序；
 4. 同package中的函数按照函数名字排序；
-5. 建立依赖关系时，会生成数组，按照数组生成变量，并调用函数即可；
+5. 建立[依赖关系](#initiator依赖关系的建立)时，会生成数组，按照数组生成变量，并调用函数即可；
+
+### Function调用的生成；
+### Method调用的生成；
+### Field变量的生成；
+Field，可以控制Varialbe生成代码的来源；
+### Variable变量的生成；
+Variable根据自己的来源，确认生成代码；来源请参考[Field](#field变量的生成)
 
 ### initiator依赖关系的建立
 算法
@@ -90,7 +97,7 @@ P[Prepare说明] --> P1[initVariable]
 6. 父节点ready，则自己也ready，此时分配__global_xxx的变量名；
 7. 放到最终的variableMap中；
 8. 将自己放到readyNode列表；
-9. 最终没有剩余functions, 则完成；
+9. 最终剩余functions长度为0, 则完成；
 ### 变量注入的来源
 1. initiator产生的变量；
 2. creator产生出来的；
