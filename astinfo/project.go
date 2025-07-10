@@ -15,6 +15,8 @@ type Project struct {
 	Path     string              // 项目根目录的绝对路径
 	Packages map[string]*Package // 项目包含的包集合（key为包全路径）
 	cfg      *Config
+
+	*InitManager
 }
 
 func (p *Project) ParseModule() error {

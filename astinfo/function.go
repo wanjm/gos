@@ -25,6 +25,9 @@ type Function struct {
 	funcDecl *ast.FuncDecl
 	goSource *Gosourse
 	comment  functionComment
+
+	Params  []*Field // method params, 下标0是request
+	Results []*Field // method results（output)	Params      []*Field // method params, 下标0是request
 }
 
 func (comment *functionComment) dealValuePair(key, value string) {

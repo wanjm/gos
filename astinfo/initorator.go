@@ -1,157 +1,167 @@
 package astinfo
 
+import "fmt"
+
 const (
 	globalPrefix = "__global_"
 )
 
 // 初始化函数依赖关系节点
 type DependNode struct {
-	level          int
-	children       []*DependNode //依赖于自己的节点
-	parent         []*DependNode //自己依赖的节点
-	function       *Function
-	returnVariable *Variable
+	Func               *Function
+	Parent             []*DependNode
+	returnVariableName string
 }
 
-// type InitiatorManager struct {
-// 	root        DependNode
-// 	dependNodes []*DependNode
-// 	sortedNodes []*DependNode
-// 	// initiatorMap map[*Struct]*Initiators //便于注入时根据类型存照
-// 	project     *Project
-// 	noNameIndex int
-// }
+// getReturnName 获取返回值名称
+func (d *DependNode) getReturnName() string {
+	return d.getReturnField().Name
+}
 
-// // 1. 收集所有的initiator函数到一个数组中；
-// // 2. 根据依赖关系生成变量名，只有一个函数的所有依赖值都存在时，才生成变量名；
-// // 3. 生成变量名时，同时记录依赖层级；
-// // 4. 当有变量无法程程时，则表示依赖条件不满足，a: 依赖的变量不存在， b：存在相互依赖，无法生成变量名；
-// func (manager *InitiatorManager) genInitiator() {
-// 	// 获取所有的初始化函数
-// 	for _, pkg := range manager.project.Package {
-// 		pkg.genInitiator(manager)
-// 	}
-// 	// 生成所有的返回值变量
-// 	leftLength := len(manager.dependNodes)
-// 	lastlength := leftLength + 1
-// 	for leftLength != lastlength {
-// 		lastlength = leftLength
-// 		manager.buildTree()
-// 		leftLength = len(manager.dependNodes)
-// 	}
-// 	if leftLength > 0 {
-// 		for _, node := range manager.dependNodes {
-// 			fmt.Printf("can't find paramter for initiator %s\n", node.function.Name)
-// 		}
-// 		panic("can't find paramter for initiator")
-// 	}
-// }
+// getReturnField 获取返回值字段
+func (d *DependNode) getReturnField() *Field {
+	return d.Func.Results[0]
+}
 
-// func (manager *InitiatorManager) genInitiatorCode() {
-// 	var file *GenedFile = createGenedFile("goservlet_initiator")
-// 	define := strings.Builder{}
-// 	assign := strings.Builder{}
-// 	file.addBuilder(&define)
-// 	file.addBuilder(&assign)
-// 	assign.WriteString("func initVariable() {\n")
-// 	sort.Slice(manager.sortedNodes, func(i, j int) bool {
-// 		var a = manager.sortedNodes[i].level - manager.sortedNodes[j].level
-// 		if a == 0 {
-// 			return manager.sortedNodes[i].function.Name < manager.sortedNodes[j].function.Name
-// 		}
-// 		return a < 0
-// 	})
-// 	for _, node := range manager.sortedNodes {
-// 		initor := node.function
-// 		variable := node.returnVariable
-// 		if variable != nil {
-// 			define.WriteString(variable.genDefinition(file))
-// 			define.WriteString("\n")
-// 			assign.WriteString(variable.name)
-// 			assign.WriteString("=")
-// 		}
-// 		assign.WriteString(initor.genCallCode("", file))
-// 		assign.WriteString("\n")
-// 	}
-// 	assign.WriteString("}\n")
-// 	file.save()
-// 	manager.project.addInitFuncs("initVariable()")
-// }
-// func (manager *InitiatorManager) checkReady(node *DependNode) bool {
-// 	param := node.function.Params
-// 	project := manager.project
-// 	level := 0
-// 	for _, p := range param {
-// 		p.class = p.findStruct(true)
-// 		dep := project.getDependNode(p.class.(*Struct), p.name)
-// 		if dep == nil {
-// 			return false
-// 		}
-// 		if level < dep.level {
-// 			level = dep.level
-// 		}
-// 	}
-// 	node.level = level + 1
-// 	manager.sortedNodes = append(manager.sortedNodes, node)
-// 	manager.genVariable(node)
-// 	return true
-// }
+type InitGroup struct {
+	Initorators []*DependNode
+	Default     *DependNode
+}
 
-// // 建立依赖关系树
-// // 目前采用简单for循环，找到依赖关系后再生成variable的方法，完成依赖关系的建立
-// func (manager *InitiatorManager) buildTree() {
-// 	// root := &manager.root
-// 	c := 0
-// 	for _, node := range manager.dependNodes {
-// 		if !manager.checkReady(node) {
-// 			manager.dependNodes[c] = node
-// 			c++
-// 		}
-// 	}
-// 	manager.dependNodes = manager.dependNodes[:c]
-// }
+// addNode 添加节点
+func (g *InitGroup) addNode(node *DependNode) {
+	g.Initorators = append(g.Initorators, node)
+	if g.Default == nil {
+		g.Default = node
+	}
+	if node.getReturnName() == "" {
+		if g.Default.getReturnName() == "" {
+			fmt.Printf("more than one function return the same type,but without name %s %s\n", g.Default.Func.Name, node.Func.Name)
+		} else {
+			g.Default = node
+		}
+	}
+}
 
-// func (manager *Project) addInitiatorVaiable(node *DependNode) {
-// 	initiator := node.returnVariable
-// 	// 后续添加排序功能
-// 	// funcManager.initiator = append(funcManager.initiator, initiator)
-// 	var inits *Initiators
-// 	var ok bool
-// 	if inits, ok = manager.initiatorMap[initiator.class]; !ok {
-// 		inits = createInitiators()
-// 		manager.initiatorMap[initiator.class] = inits
-// 	}
-// 	inits.addInitiator(node)
-// }
+type InitManager struct {
+	variableMap VariableMap
+	readyNode   []*DependNode
+	project     *Project
+}
 
-// func (manager *InitiatorManager) genVariable(dependNode *DependNode) {
-// 	if len(dependNode.function.Results) == 0 {
-// 		return
-// 	}
-// 	result := dependNode.function.Results[0]
-// 	//  := initor.Results[0]
-// 	name := result.name
-// 	if len(name) == 0 {
-// 		name = "n" + strconv.Itoa(manager.noNameIndex)
-// 		manager.noNameIndex++
-// 	}
-// 	name = globalPrefix + name
-// 	variable := Variable{
-// 		// creator:   initor,
-// 		class:     result.findStruct(true),
-// 		name:      name,
-// 		isPointer: result.isPointer,
-// 	}
-// 	dependNode.returnVariable = &variable
-// 	manager.project.addInitiatorVaiable(dependNode)
-// }
+func (p *Project) InitInitorator() {
+	p.InitManager = &InitManager{
+		variableMap: make(map[Typer]*InitGroup),
+		project:     p,
+	}
+	p.InitManager.initInitorator()
+}
 
-// func (pkg *Package) genInitiator(manager *InitiatorManager) {
-// 	manager.dependNodes = append(manager.dependNodes, pkg.initiators...)
-// 	for _, class := range pkg.StructMap {
-// 		class.genInitiator(manager)
-// 	}
-// }
-// func (class *Struct) genInitiator(manager *InitiatorManager) {
-// 	manager.dependNodes = append(manager.dependNodes, class.initiators...)
-// }
+// 返回初始化函数和map，key为Typer，value为相同返回值的数组
+func (im *InitManager) collect() ([]*DependNode, VariableMap) {
+	p := im.project
+	functions := []*DependNode{}
+	var waittingVariableMap VariableMap = make(map[Typer]*InitGroup)
+	// 收集initiator到functions中；
+	// 建立候选变量map
+	for _, pkg := range p.Packages {
+		for _, function := range pkg.Initiator {
+			node := waittingVariableMap.addFunction(function)
+			functions = append(functions, node)
+		}
+	}
+	return functions, waittingVariableMap
+}
+
+// initInitorator 初始化初始化函数
+func (im *InitManager) initInitorator() {
+	// 创建variableMap
+	functions, waittingVariableMap := im.collect()
+	//将所有节点连接到父节点
+	for _, node := range functions {
+		im.initParent(node, waittingVariableMap)
+	}
+	// 每轮从functions中取出已经准备好了的function，放到ready的function中；
+	var found bool = true
+	for found {
+		found = false
+		var index int = 0
+		for _, node := range functions {
+			if im.variableMap.checkReady(node) {
+				node.returnVariableName = globalPrefix + node.getReturnName()
+				found = true
+				im.variableMap.addNode(node)
+				im.readyNode = append(im.readyNode, node)
+			} else {
+				functions[index] = node
+				index++
+			}
+		}
+		functions = functions[:index]
+	}
+	if len(functions) > 0 {
+		for _, node := range functions {
+			fmt.Printf("can't init function: %s\n", node.Func.Name)
+		}
+	}
+}
+
+// initParent 初始化父节点
+func (im *InitManager) initParent(node *DependNode, waittingVariableMap VariableMap) {
+	params := node.Func.Params
+	for _, param := range params {
+		parent := waittingVariableMap.getVariable(param.Type, param.Name)
+		if parent != nil {
+			node.Parent = append(node.Parent, parent)
+		} else {
+			fmt.Printf("can't init field: %s not found for function %s\n", param.Name, node.Func.Name)
+		}
+	}
+}
+
+type VariableMap map[Typer]*InitGroup
+
+func (vm VariableMap) getVariable(typer Typer, name string) *DependNode {
+	group := vm[typer]
+	if group == nil {
+		return nil
+	}
+	for _, initorator := range group.Initorators {
+		if initorator.getReturnName() == name {
+			return initorator
+		}
+	}
+	return group.Default
+}
+
+// addFunction 添加初始化函数
+func (im VariableMap) addFunction(function *Function) *DependNode {
+	var node = &DependNode{
+		Func: function,
+	}
+	im.addNode(node)
+	return node
+}
+
+// addNode 添加节点
+func (im VariableMap) addNode(node *DependNode) {
+	typer := node.getReturnField().Type
+	group := im[typer]
+	if group == nil {
+		group = &InitGroup{
+			Initorators: []*DependNode{},
+		}
+		im[typer] = group
+	}
+	group.addNode(node)
+}
+
+// checkReady 检查是否所有父节点都已初始化
+func (im VariableMap) checkReady(node *DependNode) bool {
+	for _, parent := range node.Parent {
+		if parent.returnVariableName == "" {
+			return false
+		}
+	}
+	return true
+}

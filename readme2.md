@@ -78,8 +78,19 @@ P[Prepare说明] --> P1[initVariable]
 2. 调用顺序首先保证依赖顺序；
 3. 没有依赖关系的同级函数按照package顺序排序；
 4. 同package中的函数按照函数名字排序；
-### initiator依赖关系的建立
+5. 建立依赖关系时，会生成数组，按照数组生成变量，并调用函数即可；
 
+### initiator依赖关系的建立
+算法
+1. foreach package；收集initiator functions；并创建variable map，
+2. initiator functions按照name排序；
+3. foreach initiator functions；
+4. 从variableMap中寻找依赖关系，并记录到自己的parent中；
+5. 对于每一个initiator,查看其父节点是否ready；
+6. 父节点ready，则自己也ready，此时分配__global_xxx的变量名；
+7. 放到最终的variableMap中；
+8. 将自己放到readyNode列表；
+9. 最终没有剩余functions, 则完成；
 ### 变量注入的来源
 1. initiator产生的变量；
 2. creator产生出来的；
@@ -88,6 +99,16 @@ P[Prepare说明] --> P1[initVariable]
 ### project全局变量的管理
 1. 所有initiaotr的返回值记录到全局管理中；
 2. 依靠该变量建立initiator之间的依赖关系；
+
+### 获取需要注入的变量
+1. 同名的变量；
+2. 同类型的变量；
+3. 调用creator
+4. 直接写结构体初始化；
+为了便于查找变量，需要设计的数据结构；
+1. map[*Struct][]Variable;
+
+
 
 ## 注册servlet函数
 ## 注册filter函数

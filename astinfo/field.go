@@ -1,6 +1,16 @@
 package astinfo
 
+type FieldComment struct {
+}
+
+type Typer interface {
+}
+
 // 变量名和变量类型的定义
 // 用于函数的参数和返回值，struct的属性；
 type Field struct {
+	Type      Typer // 实际可以为Struct，Interface， RawType
+	Name      string
+	isPointer bool
+	Comment   FieldComment
 }
