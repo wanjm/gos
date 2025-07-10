@@ -71,3 +71,9 @@ func (pkg *Package) FindStruct(name string) *Struct {
 	}
 	return class
 }
+func SimplePackage(module, name string) *Package {
+	return &Package{
+		Module: module,
+		name:   name,
+	}
+}

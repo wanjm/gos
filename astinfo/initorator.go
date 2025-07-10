@@ -1,6 +1,9 @@
 package astinfo
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 const (
 	globalPrefix = "__global_"
@@ -47,6 +50,23 @@ type InitManager struct {
 	variableMap VariableMap
 	readyNode   []*DependNode
 	project     *Project
+}
+
+// Generate(goGenerated *GenedFile) error
+func (im *InitManager) Generate(goGenerated *GenedFile) error {
+	var definition strings.Builder
+	var call strings.Builder
+	goGenerated.addBuilder(&definition)
+	goGenerated.addBuilder(&call)
+	definition.WriteString("var (\n")
+	call.WriteString("func init() {\n")
+	for _, node := range im.readyNode {
+		definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type))
+		call.WriteString(fmt.Sprintf("%s = %s\n", node.returnVariableName, node.Func.GenerateCallCode(goGenerated)))
+	}
+	definition.WriteString(")\n")
+	call.WriteString("}\n")
+	return nil
 }
 
 func (p *Project) InitInitorator() {

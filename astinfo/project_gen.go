@@ -71,8 +71,8 @@ func (p *Project) genProjectCode() {
 	if err != nil && !os.IsExist(err) {
 		log.Fatal(err)
 	}
-	file := createGenedFile("goservlet_project")
-	file.getImport("github.com/gin-gonic/gin", "gin")
+	file := createGenedFile("goservlet_project", p)
+	file.getImport(SimplePackage("github.com/gin-gonic/gin", "gin"))
 	os.Chdir("gen")
 	p.genBasicCode(file)
 	p.genPrepare(file)
@@ -93,8 +93,8 @@ func (p *Project) genPrepare(file *GenedFile) {
 	file.addBuilder(&content)
 }
 func (Project *Project) genBasicCode(file *GenedFile) {
-	file.getImport("github.com/gin-contrib/cors", "cors")
-	file.getImport("sync", "sync")
+	file.getImport(SimplePackage("github.com/gin-contrib/cors", "cors"))
+	file.getImport(SimplePackage("sync", "sync"))
 
 	var content strings.Builder
 	content.WriteString(`

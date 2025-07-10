@@ -17,13 +17,15 @@ type GenedFile struct {
 	genCodeImport        map[string]*Import //产生code时会引入其他模块的内容，此时每个模块需要一个名字；但是名字还不能重复
 	genCodeImportNameMap map[string]int     //记录mode的个数；
 	contents             []*strings.Builder //本文件内容的多个片段，参见save函数
+	Project              *Project           // 所属项目
 }
 
-func createGenedFile(fileName string) *GenedFile {
+func createGenedFile(fileName string, project *Project) *GenedFile {
 	return &GenedFile{
 		name:                 fileName,
 		genCodeImport:        make(map[string]*Import),
 		genCodeImportNameMap: make(map[string]int),
+		Project:              project,
 	}
 }
 
@@ -37,7 +39,7 @@ func (file *GenedFile) save() {
 	}
 	content := strings.Builder{}
 	content.WriteString("package gen\n")
-	content.WriteString(file.genImport())
+	content.WriteString(file.genImportCode())
 	for _, content1 := range file.contents {
 		content.WriteString(content1.String())
 	}
@@ -60,7 +62,10 @@ func (file *GenedFile) addBuilder(builder *strings.Builder) {
 }
 
 // 根据modePath获取Import信息；理论上该函数不需要modeName，但是为了最大限度的代码可读性，还是带上了modeName；
-func (file *GenedFile) getImport(modePath, modeName string) (result *Import) {
+func (file *GenedFile) getImport(pkg *Package) (result *Import) {
+	var modePath, modeName string
+	modePath = pkg.Module
+	modeName = pkg.name
 	if impt, ok := file.genCodeImport[modePath]; ok {
 		return impt
 	}
@@ -88,7 +93,7 @@ func (file *GenedFile) getImport(modePath, modeName string) (result *Import) {
 	file.genCodeImport[modePath] = result
 	return
 }
-func (file *GenedFile) genImport() string {
+func (file *GenedFile) genImportCode() string {
 	if len(file.genCodeImport) == 0 {
 		return ""
 	}

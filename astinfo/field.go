@@ -1,9 +1,13 @@
 package astinfo
 
+import "strings"
+
 type FieldComment struct {
 }
 
 type Typer interface {
+	IsPointer() bool
+	Name() string
 }
 
 // 变量名和变量类型的定义
@@ -13,4 +17,16 @@ type Field struct {
 	Name      string
 	isPointer bool
 	Comment   FieldComment
+}
+
+// genVariableCode
+func (f *Field) GenVariableCode(goGenerated *GenedFile) string {
+	var code strings.Builder
+	code.WriteString(f.Name)
+	if f.Type.IsPointer() {
+		code.WriteString(" *")
+	}
+	code.WriteString(" ")
+	code.WriteString(f.Type.Name())
+	return code.String()
 }

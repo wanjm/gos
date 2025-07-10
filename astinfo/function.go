@@ -99,26 +99,6 @@ func (f *Function) GetType() string {
 	return f.comment.funcType
 }
 
-type FunctionParserHelper struct {
-	*Function
-	*FunctionManager
-}
-
-func NewFunctionParserHelper(funcDecl *ast.FuncDecl, goSource *Gosourse) *FunctionParserHelper {
-	return &FunctionParserHelper{
-		Function: &Function{
-			funcDecl: funcDecl,
-			goSource: goSource,
-		},
-		FunctionManager: &goSource.pkg.FunctionManager,
-	}
-}
-func (h *FunctionParserHelper) Parse() error {
-	h.Function.Parse()
-	h.FunctionManager.AddCallable(h.Function)
-	return nil
-}
-
 // 解析自己，并把自己添加到对应的functionManager中；
 func (f *Function) Parse() error {
 	parseComment(f.funcDecl.Doc, &f.comment)
@@ -159,4 +139,40 @@ func (f *Function) parseParameter() bool {
 		}
 	}
 	return true
+}
+
+// generateCallCode 生成调用代码
+func (f *Function) GenerateCallCode(goGenerated *GenedFile) string {
+	var call strings.Builder
+	impt := goGenerated.getImport(f.goSource.pkg)
+	call.WriteString(impt.Name + "." + f.Name)
+	call.WriteString("(")
+	for i, param := range f.Params {
+		if i != 0 {
+			call.WriteString(", ")
+		}
+		call.WriteString(param.Name)
+	}
+	call.WriteString(")")
+	return call.String()
+}
+
+type FunctionParserHelper struct {
+	*Function
+	*FunctionManager
+}
+
+func NewFunctionParserHelper(funcDecl *ast.FuncDecl, goSource *Gosourse) *FunctionParserHelper {
+	return &FunctionParserHelper{
+		Function: &Function{
+			funcDecl: funcDecl,
+			goSource: goSource,
+		},
+		FunctionManager: &goSource.pkg.FunctionManager,
+	}
+}
+func (h *FunctionParserHelper) Parse() error {
+	h.Function.Parse()
+	h.FunctionManager.AddCallable(h.Function)
+	return nil
 }
