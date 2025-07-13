@@ -11,7 +11,7 @@ import (
 
 // 每个有自动生成代码的package 会有一个GenedFile类；
 type GenedFile struct {
-	// pkg *Package
+	pkg *Package
 	// for gen code
 	name                 string             //文件名,没有go后缀
 	genCodeImport        map[string]*Import //产生code时会引入其他模块的内容，此时每个模块需要一个名字；但是名字还不能重复

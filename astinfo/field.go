@@ -29,7 +29,7 @@ func (f *Field) GenVariableCode(goGenerated *GenedFile) string {
 		code.WriteString(" *")
 	}
 	code.WriteString(" ")
-	code.WriteString(f.Type.Name())
+	code.WriteString(f.Type.Name(goGenerated))
 	return code.String()
 }
 
@@ -48,19 +48,22 @@ func (field *Field) Parse() error {
 func findType(pkg *Package, typeName string) Typer {
 	return pkg.FindStruct(typeName)
 }
-func (field *Field) ParseType(fieldType ast.Expr) error {
+
+// 在pkg内解析Type；
+func (pkg *Package) parseType(typer *Typer, fieldType ast.Expr) error {
 	switch fieldType := fieldType.(type) {
 	case *ast.ArrayType:
 		// 内置array类型
 		// field的pkg指向原始类型；
 		// field的class只想ArrayType;
 		// ArrayType中的pkg，typeName，class指向具体的类型
-		field.Type = &ArrayType{}
-		return nil
+		array := ArrayType{}
+		*typer = &array
+		return pkg.parseType(&array.Typer, fieldType.Elt)
 	case *ast.StarExpr:
-		field.isPointer = true
-		field.pointerCount++
-		return field.ParseType(fieldType.X)
+		pointer := PinterType{}
+		*typer = &pointer
+		return pkg.parseType(&pointer.Typer, fieldType.X)
 	case *ast.Ident:
 		// 此时可能是
 		// 原始类型； string
@@ -70,9 +73,9 @@ func (field *Field) ParseType(fieldType ast.Expr) error {
 		type1 := GetRawType(fieldType.Name)
 		if type1 == nil {
 			//再检查Struct类型；
-			field.Type = findType(field.pkg, fieldType.Name)
+			*typer = findType(pkg, fieldType.Name)
 		} else {
-			field.Type = type1
+			*typer = type1
 		}
 		return nil
 	case *ast.SelectorExpr:
@@ -80,10 +83,14 @@ func (field *Field) ParseType(fieldType ast.Expr) error {
 		// field定义的selector，就只考虑pkg1
 		pkgName := fieldType.X.(*ast.Ident).Name
 		typeName := fieldType.Sel.Name
-		field.Type = findType(GlobalProject.FindPackage(pkgName), typeName)
+		*typer = findType(GlobalProject.FindPackage(pkgName), typeName)
 		return nil
 	default:
 		fmt.Printf("unknown field type '%T'\n", fieldType)
 	}
 	return nil
+}
+
+func (field *Field) ParseType(fieldType ast.Expr) error {
+	return field.pkg.parseType(&field.Type, fieldType)
 }

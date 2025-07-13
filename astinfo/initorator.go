@@ -61,7 +61,7 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 	definition.WriteString("var (\n")
 	call.WriteString("func initVariable() {\n")
 	for _, node := range im.readyNode {
-		definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type.Name()))
+		definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type.Name(goGenerated)))
 		call.WriteString(fmt.Sprintf("%s = %s\n", node.returnVariableName, node.Func.GenerateCallCode(goGenerated)))
 	}
 	definition.WriteString(")\n")

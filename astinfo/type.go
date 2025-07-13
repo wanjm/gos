@@ -2,29 +2,45 @@ package astinfo
 
 type Typer interface {
 	IsPointer() bool
-	Name() string
+	Name(genFile *GenedFile) string
 }
 
 // 解析原生类型，主要是生成swagger要用；
 type BaseType struct {
-	isPointer bool
-	typeName  string
+	typeName string
 }
 
 func (b *BaseType) IsPointer() bool {
-	return b.isPointer
+	return false
 }
 
-func (b *BaseType) Name() string {
+func (b *BaseType) Name(_ *GenedFile) string {
 	return b.typeName
 }
 
 type ArrayType struct {
-	BaseType
+	Typer
+}
+
+// Name
+func (a *ArrayType) Name(genFile *GenedFile) string {
+	return "[]" + a.Typer.Name(genFile)
 }
 
 type RawType struct {
 	BaseType
+}
+
+type PinterType struct {
+	Typer
+}
+
+func (p *PinterType) IsPointer() bool {
+	return true
+}
+
+func (p *PinterType) Name(genFile *GenedFile) string {
+	return "*" + p.Typer.Name(genFile)
 }
 
 var rawTypeMap = map[string]*RawType{}
@@ -34,8 +50,7 @@ func init() {
 	for _, t := range rawType {
 		rawTypeMap[t] = &RawType{
 			BaseType: BaseType{
-				isPointer: false,
-				typeName:  t,
+				typeName: t,
 			},
 		}
 	}

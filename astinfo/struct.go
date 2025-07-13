@@ -55,8 +55,12 @@ func (v *Struct) IsPointer() bool {
 	return false
 }
 
-func (v *Struct) Name() string {
-	return v.StructName
+func (v *Struct) Name(genFile *GenedFile) string {
+	if genFile.pkg == v.Pkg {
+		return v.StructName
+	}
+	impt := genFile.getImport(v.Pkg)
+	return impt.Name + "." + v.StructName
 }
 
 // new
