@@ -63,6 +63,10 @@ func (v *Struct) Name(genFile *GenedFile) string {
 	return impt.Name + "." + v.StructName
 }
 
+func (v *Struct) FullName() string {
+	return v.Pkg.name + "." + v.StructName
+}
+
 // new
 func NewStruct(name string, pkg *Package) *Struct {
 	return &Struct{

@@ -153,8 +153,9 @@ func (f *Function) GenerateCallCode(goGenerated *GenedFile) string {
 		if i != 0 {
 			call.WriteString(", ")
 		}
-		// variable := Variable{}
-		call.WriteString(param.Name)
+		// 目前仅遇到function initiator调用的情况，所以直接找名字；
+		variableName := GlobalProject.GetVariableName(param.Type, param.Name)
+		call.WriteString(variableName)
 	}
 	call.WriteString(")")
 	return call.String()

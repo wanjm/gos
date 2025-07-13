@@ -83,7 +83,7 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 
 func (p *Project) InitInitorator() {
 	p.InitManager = &InitManager{
-		variableMap: make(map[Typer]*InitGroup),
+		variableMap: make(map[string]*InitGroup),
 		project:     p,
 	}
 	p.InitManager.initInitorator()
@@ -93,7 +93,7 @@ func (p *Project) InitInitorator() {
 func (im *InitManager) collect() ([]*DependNode, VariableMap) {
 	p := im.project
 	functions := []*DependNode{}
-	var waittingVariableMap VariableMap = make(map[Typer]*InitGroup)
+	var waittingVariableMap VariableMap = make(map[string]*InitGroup)
 	// 收集initiator到functions中；
 	// 建立候选变量map
 	for _, pkg := range p.Packages {
@@ -154,11 +154,14 @@ func (im *InitManager) initParent(node *DependNode, waittingVariableMap Variable
 		}
 	}
 }
+func (p *Project) GetVariableName(typer Typer, name string) string {
+	return p.InitManager.variableMap.getVariable(typer, name).returnVariableName
+}
 
-type VariableMap map[Typer]*InitGroup
+type VariableMap map[string]*InitGroup //key是原始类型的名字"int"，"pkg.Struct"
 
 func (vm VariableMap) getVariable(typer Typer, name string) *DependNode {
-	group := vm[typer]
+	group := vm[typer.FullName()]
 	if group == nil {
 		return nil
 	}
@@ -186,12 +189,12 @@ func (im VariableMap) addNode(node *DependNode) {
 		return
 	}
 	typer := returnField.Type
-	group := im[typer]
+	group := im[typer.FullName()]
 	if group == nil {
 		group = &InitGroup{
 			Initorators: []*DependNode{},
 		}
-		im[typer] = group
+		im[typer.FullName()] = group
 	}
 	group.addNode(node)
 }
