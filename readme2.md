@@ -12,6 +12,10 @@ Package.parse => file.foreach(goFile.parse)
 goFile.parse => type.switch{create parser;parser.parse}
 type => struct, interface, function, method ,variable
 ```
+### Function 解析
+
+### Type解析
+Type需要嵌套的；
 
 ## 对象被管理
 ### 函数管理
@@ -29,6 +33,8 @@ FunctionManager 管理了
 2. servlet
 3. creator
 4. postAction 该函数在servlet执行后执行的函数；
+
+
 
 
 
@@ -81,11 +87,26 @@ P[Prepare说明] --> P1[initVariable]
 5. 建立[依赖关系](#initiator依赖关系的建立)时，会生成数组，按照数组生成变量，并调用函数即可；
 
 ### Function调用的生成；
+function的调用格式是 pkgName.functionName(var1, var2);
+1. 其中pkgName来源于function.goSource.pkg;
+2. var1来源与function.params[*]=>field;
+3. 由function，协助field初始化variable，再由variable产生代码；
+4. 其中还包含了pkg的import；
+
 ### Method调用的生成；
+method.调用格式为 structVariable.methodName(var1, var2); 目前生成servlet调用的代码，都是模版写死的，没有动态生成；
+1. 除了structVariable，其他都跟function调用一样；
+2. 所以structVariable该如何处理。需要实际遇到再处理；
+
 ### Field变量的生成；
 Field，可以控制Varialbe生成代码的来源；
 ### Variable变量的生成；
 Variable根据自己的来源，确认生成代码；来源请参考[Field](#field变量的生成)
+1. creator: 需要返回creator.genCallCode的代码；（暂时不考虑是method的情况）
+2. initiator: 需要返回全部变量的变量名；
+3. 调用构造写法，此时涉及到其中的每个变量都需要注入（servlet的struct）；
+4. 调用构造的写法，使用default值初始化，servlet的request；
+5. 如果是servlet的method做creator的情况，则需要动态注入creator；
 
 ### initiator依赖关系的建立
 算法

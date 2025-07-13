@@ -41,7 +41,7 @@ func (comment *structComment) dealValuePair(key, value string) {
 
 // Struct 表示一个Go结构体的基本信息
 type Struct struct {
-	Name          string // 结构体名称
+	StructName    string // 结构体名称
 	Pkg           *Package
 	genDecl       *ast.GenDecl
 	astStructType *ast.StructType
@@ -51,11 +51,19 @@ type Struct struct {
 	// TODO: 后续添加字段和方法解析
 }
 
+func (v *Struct) IsPointer() bool {
+	return false
+}
+
+func (v *Struct) Name() string {
+	return v.StructName
+}
+
 // new
 func NewStruct(name string, pkg *Package) *Struct {
 	return &Struct{
-		Name: name,
-		Pkg:  pkg,
+		StructName: name,
+		Pkg:        pkg,
 	}
 }
 
@@ -81,6 +89,6 @@ func (class *Struct) ParseComment() error {
 
 // parseField
 func (v *Struct) ParseField() error {
-	v.Fields = parseParameter(v.astStructType.Fields.List)
+	v.Fields = parseFields(v.astStructType.Fields.List, v.Pkg)
 	return nil
 }

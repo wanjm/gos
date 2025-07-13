@@ -30,6 +30,10 @@ func main() {
 	}
 	// cfg.Load(
 	var project = astinfo.CreateProject(path, &cfg)
-	project.Parse()
+	err = project.Parse()
+	if err != nil {
+		log.Printf("parse project failed with %s", err.Error())
+		return
+	}
 	project.GenerateCode()
 }

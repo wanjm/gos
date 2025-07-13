@@ -35,9 +35,9 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 func (g *Gosourse) getFuncDeclParser(funcDecl *ast.FuncDecl) Parser {
 	switch funcDecl.Recv {
 	case nil:
-		return NewFunctionParserHelper(funcDecl, g)
+		return NewFunctionParserHelper(funcDecl, g.pkg)
 	default:
-		return NewMethod(funcDecl, g)
+		return NewMethod(funcDecl, g.pkg)
 	}
 }
 func (g *Gosourse) Parse() error {

@@ -3,7 +3,6 @@ package gen
 import (
 	cors "github.com/gin-contrib/cors"
 	gin "github.com/gin-gonic/gin"
-	biz "github.com/wan_jm/servlet_example/biz"
 	sync "sync"
 )
 
@@ -68,15 +67,7 @@ func run(wg *sync.WaitGroup, config Config) {
 
 const TraceId = "TraceId"
 
-var (
-	__global_ HelloRequest
-)
-
-func initVariable() {
-	__global_ = biz.GetSql()
-}
 func Prepare() {
-	initVariable()
 
 }
 func prepare() {

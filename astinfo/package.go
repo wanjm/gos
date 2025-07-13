@@ -14,6 +14,7 @@ type Package struct {
 	Path    string             // 包所在目录的绝对路径
 	Module  string             // 所属模块全路径
 	Structs map[string]*Struct // 包内结构体集合（key为结构体名称）
+	fset    *token.FileSet     //记录fset，到时可以找到文件
 	FunctionManager
 }
 
@@ -31,9 +32,9 @@ func (pkg *Package) GetName() string {
 func (pkg *Package) Parse() error {
 	path := pkg.Path
 	fmt.Printf("Parsing package: %s\n", path)
-	fset := token.NewFileSet()
+	pkg.fset = token.NewFileSet()
 	// 这里取绝对路径，方便打印出来的语法树可以转跳到编辑器
-	packageMap, err := parser.ParseDir(fset, path, nil, parser.AllErrors|parser.ParseComments)
+	packageMap, err := parser.ParseDir(pkg.fset, path, nil, parser.AllErrors|parser.ParseComments)
 	if err != nil {
 		log.Printf("parse %s failed %s", path, err.Error())
 		return nil

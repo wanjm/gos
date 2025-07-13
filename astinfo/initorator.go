@@ -36,8 +36,7 @@ func (g *InitGroup) addNode(node *DependNode) {
 	g.Initorators = append(g.Initorators, node)
 	if g.Default == nil {
 		g.Default = node
-	}
-	if node.getReturnName() == "" {
+	} else if node.getReturnName() == "" {
 		if g.Default.getReturnName() == "" {
 			fmt.Printf("more than one function return the same type,but without name %s %s\n", g.Default.Func.Name, node.Func.Name)
 		} else {
@@ -62,7 +61,7 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 	definition.WriteString("var (\n")
 	call.WriteString("func initVariable() {\n")
 	for _, node := range im.readyNode {
-		definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type))
+		definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type.Name()))
 		call.WriteString(fmt.Sprintf("%s = %s\n", node.returnVariableName, node.Func.GenerateCallCode(goGenerated)))
 	}
 	definition.WriteString(")\n")

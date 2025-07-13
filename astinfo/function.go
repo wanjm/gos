@@ -23,7 +23,7 @@ const (
 type Function struct {
 	Name     string //函数名
 	funcDecl *ast.FuncDecl
-	goSource *Gosourse
+	pkg      *Package
 	comment  functionComment
 
 	Params  []*Field // method params, 下标0是request
@@ -87,10 +87,10 @@ func (comment *functionComment) dealOldValuePair(key, value string) bool {
 }
 
 // create
-func NewFunction(funcDecl *ast.FuncDecl, goSource *Gosourse) *Function {
+func NewFunction(funcDecl *ast.FuncDecl, pkg *Package) *Function {
 	return &Function{
 		funcDecl: funcDecl,
-		goSource: goSource,
+		pkg:      pkg,
 	}
 }
 
@@ -109,11 +109,12 @@ func (f *Function) Parse() error {
 }
 
 // 从ast.Field中解析出参数
-func parseParameter(params []*ast.Field) []*Field {
+func parseFields(params []*ast.Field, pkg *Package) []*Field {
 	var result []*Field
 	for _, param := range params {
 		field := Field{
-			astRoot: param.Type,
+			astRoot: param,
+			pkg:     pkg,
 		}
 		field.Parse()
 		if len(param.Names) != 0 {
@@ -132,15 +133,19 @@ func parseParameter(params []*ast.Field) []*Field {
 // 解析参数和返回值
 func (f *Function) parseParameter() bool {
 	var paramType *ast.FuncType = f.funcDecl.Type
-	f.Params = parseParameter(paramType.Params.List)
-	f.Results = parseParameter(paramType.Results.List)
+	//Params参数不可能为nil
+	f.Params = parseFields(paramType.Params.List, f.pkg)
+	//Results返回值可能为nil
+	if paramType.Results != nil {
+		f.Results = parseFields(paramType.Results.List, f.pkg)
+	}
 	return true
 }
 
 // generateCallCode 生成调用代码
 func (f *Function) GenerateCallCode(goGenerated *GenedFile) string {
 	var call strings.Builder
-	impt := goGenerated.getImport(f.goSource.pkg)
+	impt := goGenerated.getImport(f.pkg)
 	call.WriteString(impt.Name + "." + f.Name)
 	call.WriteString("(")
 	for i, param := range f.Params {
@@ -159,13 +164,13 @@ type FunctionParserHelper struct {
 	*FunctionManager
 }
 
-func NewFunctionParserHelper(funcDecl *ast.FuncDecl, goSource *Gosourse) *FunctionParserHelper {
+func NewFunctionParserHelper(funcDecl *ast.FuncDecl, pkg *Package) *FunctionParserHelper {
 	return &FunctionParserHelper{
 		Function: &Function{
 			funcDecl: funcDecl,
-			goSource: goSource,
+			pkg:      pkg,
 		},
-		FunctionManager: &goSource.pkg.FunctionManager,
+		FunctionManager: &pkg.FunctionManager,
 	}
 }
 func (h *FunctionParserHelper) Parse() error {

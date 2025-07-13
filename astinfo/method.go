@@ -8,9 +8,9 @@ type Method struct {
 }
 
 // new
-func NewMethod(funcDecl *ast.FuncDecl, goSource *Gosourse) *Method {
+func NewMethod(funcDecl *ast.FuncDecl, pkg *Package) *Method {
 	return &Method{
-		Function: *NewFunction(funcDecl, goSource),
+		Function: *NewFunction(funcDecl, pkg),
 	}
 }
 
@@ -34,7 +34,7 @@ func (m *Method) parseReceiver() error {
 		nameIndent = recvType.(*ast.Ident)
 	}
 	// 由于代码的位置关系，这一步不一定会找到，所以自己创建了。
-	receiver := m.goSource.pkg.FindStruct(nameIndent.Name)
+	receiver := m.pkg.FindStruct(nameIndent.Name)
 	m.Receiver = receiver
 	receiver.MethodManager.AddCallable(m)
 	return nil

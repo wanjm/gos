@@ -139,8 +139,10 @@ func (p *Project) GenerateCode() error {
 	return nil
 }
 
+var GlobalProject *Project
+
 func CreateProject(path string, cfg *Config) *Project {
-	project := Project{
+	GlobalProject = &Project{
 		Path: path,
 		cfg:  cfg,
 		// Package:      make(map[string]*Package),
@@ -152,5 +154,5 @@ func CreateProject(path string, cfg *Config) *Project {
 	// 返回*Project才能保证这是一个Project对象；
 	// project.initRawPackage()
 	// project.rawPkg = project.getPackage("", true)
-	return &project
+	return GlobalProject
 }
