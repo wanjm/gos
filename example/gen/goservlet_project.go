@@ -69,11 +69,12 @@ func run(wg *sync.WaitGroup, config Config) {
 const TraceId = "TraceId"
 
 var (
-	__global_ HelloRequest
+	__global__0 *biz.HelloRequest
 )
 
 func initVariable() {
-	__global_ = biz.GetSql()
+	__global__0 = biz.GetSql()
+	biz.GetSql2(a)
 }
 func Prepare() {
 	initVariable()
