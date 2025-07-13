@@ -1,13 +1,11 @@
 package astinfo
 
-import "strings"
+import (
+	"go/ast"
+	"strings"
+)
 
 type FieldComment struct {
-}
-
-type Typer interface {
-	IsPointer() bool
-	Name() string
 }
 
 // 变量名和变量类型的定义
@@ -17,6 +15,7 @@ type Field struct {
 	Name      string
 	isPointer bool
 	Comment   FieldComment
+	astRoot   ast.Expr
 }
 
 // genVariableCode
@@ -29,4 +28,29 @@ func (f *Field) GenVariableCode(goGenerated *GenedFile) string {
 	code.WriteString(" ")
 	code.WriteString(f.Type.Name())
 	return code.String()
+}
+
+// Parse() error
+// name type;
+// name map
+// name []arrays
+func (field *Field) Parse() error {
+	fieldType := field.astRoot
+	// var modeName, structName strings
+	// 内置slice类型；
+	if arrayType, ok := fieldType.(*ast.ArrayType); ok {
+		// 内置array类型
+		// field的pkg指向原始类型；
+		// field的class只想ArrayType;
+		// ArrayType中的pkg，typeName，class指向具体的类型
+		_ = arrayType
+		field.Type = &ArrayType{}
+		return nil
+	}
+	if innerType, ok := fieldType.(*ast.StarExpr); ok {
+		field.isPointer = true
+		fieldType = innerType.X
+	}
+
+	return nil
 }

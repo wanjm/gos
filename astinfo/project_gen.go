@@ -79,11 +79,13 @@ func (p *Project) genProjectCode() {
 	file.save()
 }
 func (p *Project) genPrepare(file *GenedFile) {
+	p.InitInitorator()
 	var content strings.Builder
+	p.InitManager.Generate(file)
 	content.WriteString("func Prepare() {\n")
-	// for _, fun := range p.initFuncs {
-	// 	content.WriteString(fun + "\n")
-	// }
+	for _, fun := range p.initFuncs {
+		content.WriteString(fun + "()\n")
+	}
 	content.WriteString(`
 	}	
 	func prepare() {

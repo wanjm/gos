@@ -17,6 +17,7 @@ type Project struct {
 	cfg      *Config
 
 	*InitManager
+	initFuncs []string
 }
 
 func (p *Project) ParseModule() error {

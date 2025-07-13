@@ -54,18 +54,22 @@ type InitManager struct {
 
 // Generate(goGenerated *GenedFile) error
 func (im *InitManager) Generate(goGenerated *GenedFile) error {
+	if len(im.readyNode) == 0 {
+		return nil
+	}
 	var definition strings.Builder
 	var call strings.Builder
-	goGenerated.addBuilder(&definition)
-	goGenerated.addBuilder(&call)
 	definition.WriteString("var (\n")
-	call.WriteString("func init() {\n")
+	call.WriteString("func initVariable() {\n")
 	for _, node := range im.readyNode {
 		definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type))
 		call.WriteString(fmt.Sprintf("%s = %s\n", node.returnVariableName, node.Func.GenerateCallCode(goGenerated)))
 	}
 	definition.WriteString(")\n")
 	call.WriteString("}\n")
+	goGenerated.addBuilder(&definition)
+	goGenerated.addBuilder(&call)
+	im.project.initFuncs = append(im.project.initFuncs, "initVariable")
 	return nil
 }
 

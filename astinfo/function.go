@@ -102,42 +102,38 @@ func (f *Function) GetType() string {
 // 解析自己，并把自己添加到对应的functionManager中；
 func (f *Function) Parse() error {
 	parseComment(f.funcDecl.Doc, &f.comment)
+	f.Name = f.funcDecl.Name.Name
 	f.parseParameter()
 	// 方法体为空
 	return nil
 }
 
+// 从ast.Field中解析出参数
+func parseParameter(params []*ast.Field) []*Field {
+	var result []*Field
+	for _, param := range params {
+		field := Field{
+			astRoot: param.Type,
+		}
+		field.Parse()
+		if len(param.Names) != 0 {
+			for _, name := range param.Names {
+				field1 := field
+				field1.Name = name.Name
+				result = append(result, &field1)
+			}
+		} else {
+			result = append(result, &field)
+		}
+	}
+	return result
+}
+
 // 解析参数和返回值
 func (f *Function) parseParameter() bool {
 	var paramType *ast.FuncType = f.funcDecl.Type
-	for _, param := range paramType.Params.List {
-		// field := Field{
-		// 	ownerInfo: "function Name is " + method.Name,
-		// }
-		// field.parseType(param.Type, method.goSource)
-		//此处可能多个参数 a,b string的格式暂时仅处理一个；
-		for _, name := range param.Names {
-			_ = name
-			// nfield := field
-			// nfield.name = name.Name
-			// method.Params = append(method.Params, &nfield)
-			// break
-		}
-	}
-	if paramType.Results != nil {
-		for _, result := range paramType.Results.List {
-
-			// field := Field{
-			// 	ownerInfo: "function Name is " + method.Name,
-			// }
-			// field.parseType(result.Type, method.goFile)
-
-			if len(result.Names) != 0 {
-				// field.name = result.Names[0].Name
-			}
-			// method.Results = append(method.Results, &field)
-		}
-	}
+	f.Params = parseParameter(paramType.Params.List)
+	f.Results = parseParameter(paramType.Results.List)
 	return true
 }
 
@@ -151,6 +147,7 @@ func (f *Function) GenerateCallCode(goGenerated *GenedFile) string {
 		if i != 0 {
 			call.WriteString(", ")
 		}
+		// variable := Variable{}
 		call.WriteString(param.Name)
 	}
 	call.WriteString(")")

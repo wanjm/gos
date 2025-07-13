@@ -47,6 +47,7 @@ type Struct struct {
 	astStructType *ast.StructType
 	comment       structComment
 	MethodManager
+	Fields []*Field
 	// TODO: 后续添加字段和方法解析
 }
 
@@ -80,6 +81,6 @@ func (class *Struct) ParseComment() error {
 
 // parseField
 func (v *Struct) ParseField() error {
-	// 方法体为空
+	v.Fields = parseParameter(v.astStructType.Fields.List)
 	return nil
 }
