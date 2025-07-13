@@ -124,6 +124,7 @@ func parseFields(params []*ast.Field, pkg *Package) []*Field {
 				result = append(result, &field1)
 			}
 		} else {
+			//没有参数名，基本不会出现
 			result = append(result, &field)
 		}
 	}

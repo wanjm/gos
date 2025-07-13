@@ -2,6 +2,7 @@ package astinfo
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -18,11 +19,15 @@ type DependNode struct {
 
 // getReturnName 获取返回值名称
 func (d *DependNode) getReturnName() string {
+	//此函数没有判空，是要求其他逻辑保证调用不到该函数。所以暂时不判空。如果有一天觉得无法保证。还是要改的；
 	return d.getReturnField().Name
 }
 
 // getReturnField 获取返回值字段
 func (d *DependNode) getReturnField() *Field {
+	if len(d.Func.Results) == 0 {
+		return nil
+	}
 	return d.Func.Results[0]
 }
 
@@ -61,8 +66,12 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 	definition.WriteString("var (\n")
 	call.WriteString("func initVariable() {\n")
 	for _, node := range im.readyNode {
-		definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type.Name(goGenerated)))
-		call.WriteString(fmt.Sprintf("%s = %s\n", node.returnVariableName, node.Func.GenerateCallCode(goGenerated)))
+		if node.returnVariableName != "" {
+			definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type.Name(goGenerated)))
+			call.WriteString(fmt.Sprintf("%s = ", node.returnVariableName))
+		}
+		call.WriteString(node.Func.GenerateCallCode(goGenerated))
+		call.WriteString("\n")
 	}
 	definition.WriteString(")\n")
 	call.WriteString("}\n")
@@ -99,6 +108,7 @@ func (im *InitManager) collect() ([]*DependNode, VariableMap) {
 // initInitorator 初始化初始化函数
 func (im *InitManager) initInitorator() {
 	// 创建variableMap
+	var globalIndex int = 0
 	functions, waittingVariableMap := im.collect()
 	//将所有节点连接到父节点
 	for _, node := range functions {
@@ -111,7 +121,10 @@ func (im *InitManager) initInitorator() {
 		var index int = 0
 		for _, node := range functions {
 			if im.variableMap.checkReady(node) {
-				node.returnVariableName = globalPrefix + node.getReturnName()
+				if node.getReturnField() != nil {
+					node.returnVariableName = globalPrefix + node.getReturnName() + "_" + strconv.Itoa(globalIndex)
+					globalIndex++
+				}
 				found = true
 				im.variableMap.addNode(node)
 				im.readyNode = append(im.readyNode, node)
@@ -168,7 +181,11 @@ func (im VariableMap) addFunction(function *Function) *DependNode {
 
 // addNode 添加节点
 func (im VariableMap) addNode(node *DependNode) {
-	typer := node.getReturnField().Type
+	returnField := node.getReturnField()
+	if returnField == nil {
+		return
+	}
+	typer := returnField.Type
 	group := im[typer]
 	if group == nil {
 		group = &InitGroup{

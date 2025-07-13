@@ -2,6 +2,7 @@ package astinfo
 
 type Typer interface {
 	IsPointer() bool
+	// 使用genFile作为参数的目的是，在生成代码时，需要根据genFile来生成import代码；
 	Name(genFile *GenedFile) string
 }
 
