@@ -158,6 +158,10 @@ func (p *Project) GetVariableName(typer Typer, name string) string {
 	return p.InitManager.variableMap.getVariable(typer, name).returnVariableName
 }
 
+func (p *Project) GetVariableNode(typer Typer, name string) *DependNode {
+	return p.InitManager.variableMap.getVariable(typer, name)
+}
+
 type VariableMap map[string]*InitGroup //key是原始类型的名字"int"，"pkg.Struct"
 
 func (vm VariableMap) getVariable(typer Typer, name string) *DependNode {

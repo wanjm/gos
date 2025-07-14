@@ -13,7 +13,8 @@ goFile.parse => type.switch{create parser;parser.parse}
 type => struct, interface, function, method ,variable
 ```
 ### Function 解析
-
+1. 解析comments
+2. 解析入参和出参
 ### Type解析
 Type需要嵌套的；
 
@@ -33,6 +34,9 @@ FunctionManager 管理了
 2. servlet
 3. creator
 4. postAction 该函数在servlet执行后执行的函数；
+
+### initiatorManager
+管理initor初始化函数的返回值，便于注入时查找；
 
 
 
@@ -65,7 +69,7 @@ FunctionManager 管理了
 
 
 # 代码生成说明
-## 代码执行顺序
+## 代码业务逻辑执行顺序
 排序执行顺序定义的生成代码的执行逻辑，后续代码需要按照该逻辑生成代码；
 生成的代码最终对外暴露Prepare和Run函数；
 1. Prepare完成代码初始化和注入工作；用于非servlet的功能，如cronjob或者test等；
@@ -79,12 +83,15 @@ P[Prepare说明] --> P1[initVariable]
 1. 由于initiator最后需要全局管理，全局排序；
 2. 所以initiator一开始由function管理；
 3. 但是最终按照相互依赖关系排序到project中；
+4. 对于initiator变量，采用一个map来管理，其key是全局唯一表示某个struct的字符串，其值是返回同类型的数组；
+5. 返回值只讨论对象和一级指针；多级指针暂时不考虑；
 ### initiator函数生成；
 1. initVariable按照各个package的initorator函数依赖关系依次调用；
 2. 调用顺序首先保证依赖顺序；
 3. 没有依赖关系的同级函数按照package顺序排序；
 4. 同package中的函数按照函数名字排序；
 5. 建立[依赖关系](#initiator依赖关系的建立)时，会生成数组，按照数组生成变量，并调用函数即可；
+6. 由于initiator的入参仅可能是其他init的结果，所以入参的注入，仅需要到initmanager中寻找即可；
 
 ### Function调用的生成；
 function的调用格式是 pkgName.functionName(var1, var2);

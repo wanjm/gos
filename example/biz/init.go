@@ -6,5 +6,5 @@ func GetSql() *HelloRequest {
 }
 
 // @goservlet type=initiator
-func GetSql2(a *HelloRequest) {
+func GetSql2(a HelloRequest) {
 }

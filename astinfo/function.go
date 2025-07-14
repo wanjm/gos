@@ -144,6 +144,12 @@ func (f *Function) parseParameter() bool {
 }
 
 // generateCallCode 生成调用代码
+// 生成pkg.functionName(var1,var2);
+// 同步生成import语句；、
+//
+// 调用场景
+// 1. initvarialbe中调用initor函数；
+// 2. 在生成变量时，可能需要使用crator来生成；
 func (f *Function) GenerateCallCode(goGenerated *GenedFile) string {
 	var call strings.Builder
 	impt := goGenerated.getImport(f.pkg)
@@ -153,8 +159,12 @@ func (f *Function) GenerateCallCode(goGenerated *GenedFile) string {
 		if i != 0 {
 			call.WriteString(", ")
 		}
+		variable := Variable{
+			Type: param.Type,
+			Name: param.Name,
+		}
 		// 目前仅遇到function initiator调用的情况，所以直接找名字；
-		variableName := GlobalProject.GetVariableName(param.Type, param.Name)
+		variableName := variable.Generate(goGenerated)
 		call.WriteString(variableName)
 	}
 	call.WriteString(")")

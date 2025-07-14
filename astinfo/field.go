@@ -25,7 +25,7 @@ type Field struct {
 func (f *Field) GenVariableCode(goGenerated *GenedFile) string {
 	var code strings.Builder
 	code.WriteString(f.Name)
-	if f.Type.IsPointer() {
+	if IsPointer(f.Type) {
 		code.WriteString(" *")
 	}
 	code.WriteString(" ")
@@ -51,6 +51,8 @@ func findType(pkg *Package, typeName string) Typer {
 
 // 在pkg内解析Type；
 func (pkg *Package) parseType(typer *Typer, fieldType ast.Expr) error {
+	var resultType Typer
+	var err error
 	switch fieldType := fieldType.(type) {
 	case *ast.ArrayType:
 		// 内置array类型
@@ -58,12 +60,17 @@ func (pkg *Package) parseType(typer *Typer, fieldType ast.Expr) error {
 		// field的class只想ArrayType;
 		// ArrayType中的pkg，typeName，class指向具体的类型
 		array := ArrayType{}
-		*typer = &array
-		return pkg.parseType(&array.Typer, fieldType.Elt)
+		resultType = &array
+		err = pkg.parseType(&array.Typer, fieldType.Elt)
 	case *ast.StarExpr:
 		pointer := PinterType{}
-		*typer = &pointer
-		return pkg.parseType(&pointer.Typer, fieldType.X)
+		resultType = &pointer
+		if p, ok := pointer.Typer.(*PinterType); ok {
+			pointer.Depth = p.Depth + 1
+		} else {
+			pointer.Depth = 1
+		}
+		err = pkg.parseType(&pointer.Typer, fieldType.X)
 	case *ast.Ident:
 		// 此时可能是
 		// 原始类型； string
@@ -73,22 +80,23 @@ func (pkg *Package) parseType(typer *Typer, fieldType ast.Expr) error {
 		type1 := GetRawType(fieldType.Name)
 		if type1 == nil {
 			//再检查Struct类型；
-			*typer = findType(pkg, fieldType.Name)
+			resultType = findType(pkg, fieldType.Name)
 		} else {
-			*typer = type1
+			resultType = type1
 		}
-		return nil
 	case *ast.SelectorExpr:
 		// 其他package的结构体，=》pkg1.Struct
 		// field定义的selector，就只考虑pkg1
 		pkgName := fieldType.X.(*ast.Ident).Name
 		typeName := fieldType.Sel.Name
-		*typer = findType(GlobalProject.FindPackage(pkgName), typeName)
-		return nil
+		resultType = findType(GlobalProject.FindPackage(pkgName), typeName)
 	default:
 		fmt.Printf("unknown field type '%T'\n", fieldType)
+		return nil
 	}
-	return nil
+	//如果将来Typer需要全局唯一，此处可以先找到唯一值，再赋值给typer；
+	*typer = resultType
+	return err
 }
 
 func (field *Field) ParseType(fieldType ast.Expr) error {

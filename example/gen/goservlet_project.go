@@ -74,7 +74,7 @@ var (
 
 func initVariable() {
 	__global__0 = biz.GetSql()
-	biz.GetSql2(__global__0)
+	biz.GetSql2(*__global__0)
 }
 func Prepare() {
 	initVariable()
