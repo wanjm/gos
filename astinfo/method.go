@@ -8,9 +8,9 @@ type Method struct {
 }
 
 // new
-func NewMethod(funcDecl *ast.FuncDecl, pkg *Package) *Method {
+func NewMethod(funcDecl *ast.FuncDecl, goSource *Gosourse) *Method {
 	return &Method{
-		Function: *NewFunction(funcDecl, pkg),
+		Function: *NewFunction(funcDecl, goSource),
 	}
 }
 

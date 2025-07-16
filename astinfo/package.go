@@ -18,6 +18,11 @@ type Package struct {
 	FunctionManager
 }
 
+//  Package中不包含goSource，因为
+// 1. package 仅仅是因为需要被引用时生成；
+// 2. package 有多个goSource文件；
+// 3. package 将来可以建立goSource和ast.File之间的映射关系来达到寻找关系的目的；
+
 // getName
 func (pkg *Package) GetName() string {
 	name := pkg.name

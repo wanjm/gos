@@ -24,6 +24,7 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 
 		case *ast.StructType:
 			class := g.pkg.FindStruct(typeSpec.Name.Name)
+			class.goSource = g
 			class.initGenDecl(genDecl)
 			parser = class
 		}
@@ -35,9 +36,9 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 func (g *Gosourse) getFuncDeclParser(funcDecl *ast.FuncDecl) Parser {
 	switch funcDecl.Recv {
 	case nil:
-		return NewFunctionParserHelper(funcDecl, g.pkg)
+		return NewFunctionParserHelper(funcDecl, g)
 	default:
-		return NewMethod(funcDecl, g.pkg)
+		return NewMethod(funcDecl, g)
 	}
 }
 func (g *Gosourse) Parse() error {

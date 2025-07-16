@@ -25,6 +25,7 @@ type Function struct {
 	funcDecl *ast.FuncDecl
 	pkg      *Package
 	comment  functionComment
+	goSource *Gosourse
 
 	Params  []*Field // method params, 下标0是request
 	Results []*Field // method results（output)	Params      []*Field // method params, 下标0是request
@@ -87,10 +88,10 @@ func (comment *functionComment) dealOldValuePair(key, value string) bool {
 }
 
 // create
-func NewFunction(funcDecl *ast.FuncDecl, pkg *Package) *Function {
+func NewFunction(funcDecl *ast.FuncDecl, goSource *Gosourse) *Function {
 	return &Function{
 		funcDecl: funcDecl,
-		pkg:      pkg,
+		goSource: goSource,
 	}
 }
 
@@ -109,12 +110,12 @@ func (f *Function) Parse() error {
 }
 
 // 从ast.Field中解析出参数
-func parseFields(params []*ast.Field, pkg *Package) []*Field {
+func parseFields(params []*ast.Field, goSource *Gosourse) []*Field {
 	var result []*Field
 	for _, param := range params {
 		field := Field{
-			astRoot: param,
-			pkg:     pkg,
+			astRoot:  param,
+			goSource: goSource,
 		}
 		field.Parse()
 		if len(param.Names) != 0 {
@@ -135,10 +136,10 @@ func parseFields(params []*ast.Field, pkg *Package) []*Field {
 func (f *Function) parseParameter() bool {
 	var paramType *ast.FuncType = f.funcDecl.Type
 	//Params参数不可能为nil
-	f.Params = parseFields(paramType.Params.List, f.pkg)
+	f.Params = parseFields(paramType.Params.List, f.goSource)
 	//Results返回值可能为nil
 	if paramType.Results != nil {
-		f.Results = parseFields(paramType.Results.List, f.pkg)
+		f.Results = parseFields(paramType.Results.List, f.goSource)
 	}
 	return true
 }
@@ -176,13 +177,13 @@ type FunctionParserHelper struct {
 	*FunctionManager
 }
 
-func NewFunctionParserHelper(funcDecl *ast.FuncDecl, pkg *Package) *FunctionParserHelper {
+func NewFunctionParserHelper(funcDecl *ast.FuncDecl, goSource *Gosourse) *FunctionParserHelper {
 	return &FunctionParserHelper{
 		Function: &Function{
 			funcDecl: funcDecl,
-			pkg:      pkg,
+			goSource: goSource,
 		},
-		FunctionManager: &pkg.FunctionManager,
+		FunctionManager: &goSource.pkg.FunctionManager,
 	}
 }
 func (h *FunctionParserHelper) Parse() error {

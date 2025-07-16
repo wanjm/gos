@@ -4,10 +4,12 @@ import (
 	"context"
 
 	"github.com/wan_jm/servlet_example/basic"
+	"gorm.io/gorm"
 )
 
 // @goservlet type=servlet;url="/example"
 type Hello struct {
+	Mysql *gorm.DB
 }
 
 // @goservlet url="/hello";

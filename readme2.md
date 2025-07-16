@@ -38,6 +38,10 @@ FunctionManager 管理了
 ### initiatorManager
 管理initor初始化函数的返回值，便于注入时查找；
 
+### Package管理
+1. 项目内部解析出的Packge对象；由解析过程中产生；
+2. 项目内部饮用的Package对象；由Import语句引入；
+
 
 
 

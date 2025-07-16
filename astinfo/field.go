@@ -18,7 +18,7 @@ type Field struct {
 	pointerCount int
 	Comment      FieldComment
 	astRoot      *ast.Field
-	pkg          *Package
+	goSource     *Gosourse //解析Filed时，其他type可能来源其他Package，此时需要Import内容来找到该包；
 }
 
 // genVariableCode
@@ -50,7 +50,7 @@ func findType(pkg *Package, typeName string) Typer {
 }
 
 // 在pkg内解析Type；
-func (pkg *Package) parseType(typer *Typer, fieldType ast.Expr) error {
+func (field *Field) parseType(typer *Typer, fieldType ast.Expr) error {
 	var resultType Typer
 	var err error
 	switch fieldType := fieldType.(type) {
@@ -61,7 +61,7 @@ func (pkg *Package) parseType(typer *Typer, fieldType ast.Expr) error {
 		// ArrayType中的pkg，typeName，class指向具体的类型
 		array := ArrayType{}
 		resultType = &array
-		err = pkg.parseType(&array.Typer, fieldType.Elt)
+		err = field.parseType(&array.Typer, fieldType.Elt)
 	case *ast.StarExpr:
 		pointer := PinterType{}
 		resultType = &pointer
@@ -70,7 +70,7 @@ func (pkg *Package) parseType(typer *Typer, fieldType ast.Expr) error {
 		} else {
 			pointer.Depth = 1
 		}
-		err = pkg.parseType(&pointer.Typer, fieldType.X)
+		err = field.parseType(&pointer.Typer, fieldType.X)
 	case *ast.Ident:
 		// 此时可能是
 		// 原始类型； string
@@ -80,7 +80,7 @@ func (pkg *Package) parseType(typer *Typer, fieldType ast.Expr) error {
 		type1 := GetRawType(fieldType.Name)
 		if type1 == nil {
 			//再检查Struct类型；
-			resultType = findType(pkg, fieldType.Name)
+			resultType = findType(field.goSource.pkg, fieldType.Name)
 		} else {
 			resultType = type1
 		}
@@ -100,5 +100,5 @@ func (pkg *Package) parseType(typer *Typer, fieldType ast.Expr) error {
 }
 
 func (field *Field) ParseType(fieldType ast.Expr) error {
-	return field.pkg.parseType(&field.Type, fieldType)
+	return field.parseType(&field.Type, fieldType)
 }

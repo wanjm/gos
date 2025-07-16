@@ -4,6 +4,7 @@ import (
 	cors "github.com/gin-contrib/cors"
 	gin "github.com/gin-gonic/gin"
 	biz "github.com/wan_jm/servlet_example/biz"
+	gorm "gorm"
 	sync "sync"
 )
 
@@ -70,11 +71,12 @@ const TraceId = "TraceId"
 
 var (
 	__global__0 *biz.HelloRequest
+	__global__1 *gorm.DB
 )
 
 func initVariable() {
 	__global__0 = biz.GetSql()
-	biz.GetSql2(*__global__0)
+	__global__1 = biz.GetSql2(*__global__0)
 }
 func Prepare() {
 	initVariable()
