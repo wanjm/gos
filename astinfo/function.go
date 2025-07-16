@@ -23,7 +23,6 @@ const (
 type Function struct {
 	Name     string //函数名
 	funcDecl *ast.FuncDecl
-	pkg      *Package
 	comment  functionComment
 	goSource *Gosourse
 
@@ -153,7 +152,7 @@ func (f *Function) parseParameter() bool {
 // 2. 在生成变量时，可能需要使用crator来生成；
 func (f *Function) GenerateCallCode(goGenerated *GenedFile) string {
 	var call strings.Builder
-	impt := goGenerated.getImport(f.pkg)
+	impt := goGenerated.getImport(f.goSource.pkg)
 	call.WriteString(impt.Name + "." + f.Name)
 	call.WriteString("(")
 	for i, param := range f.Params {

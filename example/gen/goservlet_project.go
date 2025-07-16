@@ -4,7 +4,7 @@ import (
 	cors "github.com/gin-contrib/cors"
 	gin "github.com/gin-gonic/gin"
 	biz "github.com/wan_jm/servlet_example/biz"
-	gorm "gorm"
+	gorm "gorm.io/gorm"
 	sync "sync"
 )
 
