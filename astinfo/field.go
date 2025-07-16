@@ -89,7 +89,8 @@ func (field *Field) parseType(typer *Typer, fieldType ast.Expr) error {
 		// field定义的selector，就只考虑pkg1
 		pkgName := fieldType.X.(*ast.Ident).Name
 		typeName := fieldType.Sel.Name
-		resultType = findType(GlobalProject.FindPackage(pkgName), typeName)
+		pkgModePath := field.goSource.Imports[pkgName]
+		resultType = findType(GlobalProject.FindPackage(pkgModePath), typeName)
 	default:
 		fmt.Printf("unknown field type '%T'\n", fieldType)
 		return nil
