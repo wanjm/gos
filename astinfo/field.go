@@ -3,7 +3,6 @@ package astinfo
 import (
 	"fmt"
 	"go/ast"
-	"strings"
 )
 
 type FieldComment struct {
@@ -12,25 +11,20 @@ type FieldComment struct {
 // 变量名和变量类型的定义
 // 用于函数的参数和返回值，struct的属性；
 type Field struct {
-	Type         Typer // 实际可以为Struct，Interface， RawType
-	Name         string
-	isPointer    bool
-	pointerCount int
-	Comment      FieldComment
-	astRoot      *ast.Field
-	goSource     *Gosourse //解析Filed时，其他type可能来源其他Package，此时需要Import内容来找到该包；
+	Type     Typer // 实际可以为Struct，Interface， RawType
+	Name     string
+	Comment  FieldComment
+	astRoot  *ast.Field
+	goSource *Gosourse //解析Filed时，其他type可能来源其他Package，此时需要Import内容来找到该包；
 }
 
 // genVariableCode
 func (f *Field) GenVariableCode(goGenerated *GenedFile) string {
-	var code strings.Builder
-	code.WriteString(f.Name)
-	if IsPointer(f.Type) {
-		code.WriteString(" *")
+	variable := Variable{
+		Type: f.Type,
+		Name: f.Name,
 	}
-	code.WriteString(" ")
-	code.WriteString(f.Type.Name(goGenerated))
-	return code.String()
+	return variable.Generate(goGenerated)
 }
 
 // Parse() error

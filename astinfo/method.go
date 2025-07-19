@@ -17,10 +17,10 @@ func NewMethod(funcDecl *ast.FuncDecl, goSource *Gosourse) *Method {
 // 解析method
 // 首先解析receiver；找到自己所属的Struct；
 func (m *Method) Parse() error {
+	m.Function.Parse()
 	if err := m.parseReceiver(); err != nil {
 		return err
 	}
-	m.Function.Parse()
 	return nil
 }
 

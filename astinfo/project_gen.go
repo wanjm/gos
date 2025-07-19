@@ -207,7 +207,7 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 		"router",
 	}, "_")
 	var declare strings.Builder
-	declare.WriteString("func " + name + "(router *gin.Engine) {\n")
+	declare.WriteString("func " + name + "(engine *gin.Engine) {\n")
 	file.addBuilder(&declare)
 	return name
 }

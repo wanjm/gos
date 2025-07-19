@@ -21,6 +21,7 @@ type Variable struct {
 func (v *Variable) Generate(goGenerated *GenedFile) string {
 	variableNode := GlobalProject.GetVariableNode(v.Type, v.Name)
 	if variableNode == nil {
+		// 构造结构体
 	}
 	variableName := variableNode.returnVariableName
 	returnField := variableNode.getReturnField()
