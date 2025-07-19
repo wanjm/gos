@@ -11,6 +11,7 @@ const TagPrefix = "@goservlet"
 
 type Comment interface {
 	dealValuePair(key, value string)
+	// HasComment() bool
 }
 
 // 注释支持的格式为 @plaso url=xxx ; creator ; filter

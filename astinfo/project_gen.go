@@ -1,11 +1,11 @@
 package astinfo
 
 import (
-	"html/template"
 	"log"
 	"os"
 	"runtime"
 	"strings"
+	"text/template"
 )
 
 func (project *Project) genGoMod() {
@@ -97,6 +97,7 @@ func (p *Project) genPrepare(file *GenedFile) {
 	}	
 	func prepare() {
 		Prepare()
+		initServer()
     }
 	`)
 	file.addBuilder(&content)
@@ -146,14 +147,7 @@ var servers map[string]*server
 			config.AllowHeaders = append(config.AllowHeaders, "*")
 			router.Use(cors.New(config))
 		}
-			//如果不存在，则启动就失败，不需要检查
-		server := servers[config.ServerName]
-		if server.filters != nil {
-			router.Use(server.filters...)
-		}
-		for _, routerInitor := range server.routerInitors {
-			routerInitor(router)
-		}
+		register(config.ServerName, router)
 		if config.CertFile != "" {
 			router.RunTLS(config.Addr, config.CertFile, config.KeyFile)
 		} else {
@@ -168,7 +162,7 @@ var servers map[string]*server
 }
 
 type Server struct {
-	name             string
+	Name             string
 	callGen          CallableGen
 	GeneratedFilters []string
 	GenerateRouters  []string
@@ -197,12 +191,14 @@ func (sm *Server) Generate(file *GenedFile) {
 // 1. 最终代码的server代码。完成代码的filter和路由的注册；
 // 2. filter，和路由的工作代码
 type ServerManager struct {
-	servers map[string]*Server
+	servers   map[string]*Server
+	generator map[string]CallableGen
 }
 
 func CreateServerManager() *ServerManager {
 	sm := &ServerManager{
-		servers: map[string]*Server{},
+		servers:   map[string]*Server{},
+		generator: map[string]CallableGen{},
 	}
 	return sm
 }
@@ -210,10 +206,7 @@ func CreateServerManager() *ServerManager {
 // register
 func (sm *ServerManager) register(callGen CallableGen) {
 	name := callGen.GetName()
-	sm.servers[name] = &Server{
-		name:    name,
-		callGen: callGen,
-	}
+	sm.generator[name] = callGen
 }
 
 func (sm *ServerManager) Prepare() {
@@ -228,15 +221,31 @@ func (sm *ServerManager) splitServers() {
 		for _, filter := range pkg.Filter {
 			var server *Server
 			var ok bool
-			if server, ok = sm.servers[filter.comment.groupName]; ok {
+			var groupName = filter.comment.groupName
+			if server, ok = sm.servers[groupName]; ok {
 				server.filters = append(server.filters, filter)
+			} else {
+				server = &Server{
+					Name: groupName,
+				}
+				sm.servers[groupName] = server
 			}
 		}
 		for _, router := range pkg.Structs {
 			var server *Server
 			var ok bool
-			if server, ok = sm.servers[router.comment.groupName]; ok {
+			var groupName = router.comment.groupName
+			if groupName == "" {
+				continue
+			}
+			if server, ok = sm.servers[groupName]; ok {
 				server.routers = append(server.routers, router)
+			} else {
+				server = &Server{
+					Name:    groupName,
+					callGen: sm.generator[router.comment.serverType],
+				}
+				sm.servers[groupName] = server
 			}
 		}
 	}
@@ -249,19 +258,19 @@ func (sm *ServerManager) Generate(file *GenedFile) {
 		`
 func initServer(){
 	servers = make(map[string]*server)
-	{{range .servers}}
-	servers[{{.Name}}] = &server{
+	{{range .}}
+	servers["{{.Name}}"] = &server{
 		filters: gin.HandlersChain{
-			{{.GeneratedFilters}},
+			{{.FilterNames}}
 		},
 		routerInitors: []func(*gin.Engine){
-			{{.GenerateRouters}},
+			{{.RouterNames}}
 		},
 	}
 	{{end}}
 }
 
-	func register(name string ){
+	func register(name string, router *gin.Engine ){
 		server := servers[name]
 		if server.filters != nil {
 			router.Use(server.filters...)
@@ -276,13 +285,27 @@ func initServer(){
 		log.Fatalf("解析模板失败: %v", err)
 	}
 	var sb strings.Builder
-	err = tmpl.Execute(&sb, sm)
+	type ServerInfo struct {
+		Name        string
+		FilterNames string
+		RouterNames string
+	}
+	var s []*ServerInfo
+	for _, server := range sm.servers {
+		s = append(s, &ServerInfo{
+			Name:        server.Name,
+			FilterNames: strings.Join(server.GeneratedFilters, ","),
+			RouterNames: strings.Join(server.GenerateRouters, ","),
+		})
+	}
+
+	err = tmpl.Execute(&sb, s)
 	if err != nil {
 		log.Fatalf("执行模板失败: %v", err)
 	}
 	for _, server := range sm.servers {
 		//一个server一个文件；
-		file1 := createGenedFile(server.name, GlobalProject)
+		file1 := createGenedFile(server.Name, GlobalProject)
 		server.Generate(file1)
 	}
 	file.addBuilder(&sb)
