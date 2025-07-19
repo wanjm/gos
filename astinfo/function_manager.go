@@ -19,6 +19,8 @@ func (f *FunctionManager) AddCallable(callable Callable) {
 		f.Initiator = append(f.Initiator, callable.(*Function))
 	case FilterConst:
 		f.Filter = append(f.Filter, callable.(*Function))
+	case Creator:
+	case Websocket:
 	}
 }
 

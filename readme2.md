@@ -36,7 +36,11 @@ FunctionManager 管理了
 4. postAction 该函数在servlet执行后执行的函数；
 
 ### initiatorManager
-管理initor初始化函数的返回值，便于注入时查找；
+1. 管理initor初始化函数的返回值，便于注入时查找；
+2. 完成initiator初始化函数的调用，并维护依赖关系；
+
+### ServerManager
+负责对配置的每个server进行初始化，管理其中的filter，servlet；并生成最终代码中的server代码。打通filter和servlet的注册环节
 
 ### Package管理
 1. 项目内部解析出的Packge对象；由解析过程中产生；
@@ -97,6 +101,18 @@ P[Prepare说明] --> P1[initVariable]
 5. 建立[依赖关系](#initiator依赖关系的建立)时，会生成数组，按照数组生成变量，并调用函数即可；
 6. 由于initiator的入参仅可能是其他init的结果，所以入参的注入，仅需要到initmanager中寻找即可；
 
+## Callable的生成
+servlet生成支持 servlet，prpc，restful；其区别是：
+1. servlet， 请求json对象，返回{code:0,msg:"",obj:{}}
+2. prpc 请求为[arg1,arg2],然后{c: r:[err,obj]}
+3. restful 请求是json对象，返回用http code表示返回code，报文体对应obj；
+由于filter有对应提前返回的能力，所以filter与上面的类型配套使用；
+因此需要注册一个方法来filter和servlet的生成；
+
+### 生成规则
+1. 每个group一个文件；
+2. 其中包含了所有的filter；
+3. 所有的路由；包含每个package的每个struct，每个方法注册一个；
 ### Function调用的生成；
 function的调用格式是 pkgName.functionName(var1, var2);
 1. 其中pkgName来源于function.goSource.pkg;
@@ -108,6 +124,9 @@ function的调用格式是 pkgName.functionName(var1, var2);
 method.调用格式为 structVariable.methodName(var1, var2); 目前生成servlet调用的代码，都是模版写死的，没有动态生成；
 1. 除了structVariable，其他都跟function调用一样；
 2. 所以structVariable该如何处理。需要实际遇到再处理；
+
+### Filter
+
 
 ### Field变量的生成；
 Field，可以控制Varialbe生成代码的来源；

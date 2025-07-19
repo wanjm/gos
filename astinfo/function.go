@@ -13,6 +13,7 @@ type functionComment struct {
 	isDeprecated bool
 	funcType     string //函数类型，filter，servlet，websocket，prpc，initiator,creator
 	security     []string
+	groupName    string
 }
 
 const (
@@ -53,6 +54,11 @@ func (comment *functionComment) dealValuePair(key, value string) {
 		if value == Websocket {
 			comment.method = GET
 		}
+	case Group:
+		comment.groupName = value
+	case FilterConst:
+		comment.groupName = value
+		comment.funcType = FilterConst
 	default:
 		if !comment.dealOldValuePair(key, value) {
 			fmt.Printf("unknown key '%s' in function comment\n", key)

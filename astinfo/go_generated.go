@@ -17,7 +17,7 @@ type GenedFile struct {
 	genCodeImport        map[string]*Import //产生code时会引入其他模块的内容，此时每个模块需要一个名字；但是名字还不能重复
 	genCodeImportNameMap map[string]int     //记录mode的个数；
 	contents             []*strings.Builder //本文件内容的多个片段，参见save函数
-	Project              *Project           // 所属项目
+	// Project              *Project           // 所属项目
 }
 
 func createGenedFile(fileName string, project *Project) *GenedFile {
@@ -25,7 +25,7 @@ func createGenedFile(fileName string, project *Project) *GenedFile {
 		name:                 fileName,
 		genCodeImport:        make(map[string]*Import),
 		genCodeImportNameMap: make(map[string]int),
-		Project:              project,
+		// Project:              project,
 	}
 }
 

@@ -1,6 +1,7 @@
 package astinfo
 
 import (
+	"html/template"
 	"log"
 	"os"
 	"runtime"
@@ -79,9 +80,15 @@ func (p *Project) genProjectCode() {
 	file.save()
 }
 func (p *Project) genPrepare(file *GenedFile) {
+
 	p.InitInitorator()
-	var content strings.Builder
 	p.InitManager.Generate(file)
+
+	sm := CreateServerManager()
+	sm.Prepare()
+	sm.Generate(file)
+
+	var content strings.Builder
 	content.WriteString("func Prepare() {\n")
 	for _, fun := range p.initFuncs {
 		content.WriteString(fun + "()\n")
@@ -158,4 +165,125 @@ var servers map[string]*server
 	`)
 
 	file.addBuilder(&content)
+}
+
+type Server struct {
+	name             string
+	callGen          CallableGen
+	GeneratedFilters []string
+	GenerateRouters  []string
+	filters          []*Function
+	routers          []*Struct
+	// initRouteFuns []string           //initRoute 调用的init函数； 有package生成，生成路由代码时生成，一个package生成一个路由代码
+	// urlFilters    map[string]*Filter //记录url过滤器函数,key是url, url是原始文件中的url，可能包含引号
+	// initFuncs     []string           //initAll 调用的init函数；
+}
+
+// generate
+func (sm *Server) Generate(file *GenedFile) {
+	generator := sm.callGen
+	for _, function := range sm.filters {
+		sm.GeneratedFilters = append(sm.GeneratedFilters, generator.GenFilterCode(function, file))
+	}
+	for _, router := range sm.routers {
+		for _, method := range router.MethodManager.Server {
+			sm.GenerateRouters = append(sm.GenerateRouters, generator.GenRouterCode(method, file))
+		}
+	}
+}
+
+// 负责对配置的每个server进行初始化，管理其中的filter，servlet；并生成最终代码中的server代码。打通filter和servlet的注册环节
+// 其生成代码分为连个部分；
+// 1. 最终代码的server代码。完成代码的filter和路由的注册；
+// 2. filter，和路由的工作代码
+type ServerManager struct {
+	servers map[string]*Server
+}
+
+func CreateServerManager() *ServerManager {
+	sm := &ServerManager{
+		servers: map[string]*Server{},
+	}
+	return sm
+}
+
+// register
+func (sm *ServerManager) register(callGen CallableGen) {
+	name := callGen.GetName()
+	sm.servers[name] = &Server{
+		name:    name,
+		callGen: callGen,
+	}
+}
+
+func (sm *ServerManager) Prepare() {
+	for _, callGen := range callableGens {
+		sm.register(callGen)
+	}
+	sm.splitServers()
+}
+func (sm *ServerManager) splitServers() {
+	project := GlobalProject
+	for _, pkg := range project.Packages {
+		for _, filter := range pkg.Filter {
+			var server *Server
+			var ok bool
+			if server, ok = sm.servers[filter.comment.groupName]; ok {
+				server.filters = append(server.filters, filter)
+			}
+		}
+		for _, router := range pkg.Structs {
+			var server *Server
+			var ok bool
+			if server, ok = sm.servers[router.comment.groupName]; ok {
+				server.routers = append(server.routers, router)
+			}
+		}
+	}
+}
+
+// Generate
+func (sm *ServerManager) Generate(file *GenedFile) {
+
+	tmplText :=
+		`
+func initServer(){
+	servers = make(map[string]*server)
+	{{range .servers}}
+	servers[{{.Name}}] = &server{
+		filters: gin.HandlersChain{
+			{{.GeneratedFilters}},
+		},
+		routerInitors: []func(*gin.Engine){
+			{{.GenerateRouters}},
+		},
+	}
+	{{end}}
+}
+
+	func register(name string ){
+		server := servers[name]
+		if server.filters != nil {
+			router.Use(server.filters...)
+		}
+		for _, routerInitor := range server.routerInitors {
+			routerInitor(router)
+		}
+	}
+`
+	tmpl, err := template.New("personInfo").Parse(tmplText)
+	if err != nil {
+		log.Fatalf("解析模板失败: %v", err)
+	}
+	var sb strings.Builder
+	err = tmpl.Execute(&sb, sm)
+	if err != nil {
+		log.Fatalf("执行模板失败: %v", err)
+	}
+	for _, server := range sm.servers {
+		//一个server一个文件；
+		file1 := createGenedFile(server.name, GlobalProject)
+		server.Generate(file1)
+	}
+	file.addBuilder(&sb)
 }
