@@ -1,6 +1,7 @@
 package astinfo
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"runtime"
@@ -176,14 +177,39 @@ type Server struct {
 // generate
 func (sm *Server) Generate(file *GenedFile) {
 	generator := sm.callGen
+	generator.GenerateCommon(file)
 	for _, function := range sm.filters {
 		sm.GeneratedFilters = append(sm.GeneratedFilters, generator.GenFilterCode(function, file))
 	}
-	for _, router := range sm.routers {
-		for _, method := range router.MethodManager.Server {
-			sm.GenerateRouters = append(sm.GenerateRouters, generator.GenRouterCode(method, file))
+	for _, class := range sm.routers {
+		//generate begin;
+		sm.GenerateRouters = append(sm.GenerateRouters, sm.generateBegin(class, file))
+
+		// generate servlets;
+		for _, method := range class.MethodManager.Server {
+			generator.GenRouterCode(method, file)
 		}
+
+		// generate end
+		var end strings.Builder
+		end.WriteString("}\n")
+		file.addBuilder(&end)
 	}
+}
+
+// generateBegin
+func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
+	var name = strings.Join([]string{
+		"init",
+		class.comment.groupName,
+		class.Pkg.name,
+		class.StructName,
+		"router",
+	}, "_")
+	var declare strings.Builder
+	declare.WriteString("func " + name + "(router *gin.Engine) {\n")
+	file.addBuilder(&declare)
+	return name
 }
 
 // 负责对配置的每个server进行初始化，管理其中的filter，servlet；并生成最终代码中的server代码。打通filter和servlet的注册环节
@@ -215,22 +241,12 @@ func (sm *ServerManager) Prepare() {
 	}
 	sm.splitServers()
 }
+
+// 扫描所有的程序，将服务按照group分为多个server；
 func (sm *ServerManager) splitServers() {
 	project := GlobalProject
 	for _, pkg := range project.Packages {
-		for _, filter := range pkg.Filter {
-			var server *Server
-			var ok bool
-			var groupName = filter.comment.groupName
-			if server, ok = sm.servers[groupName]; ok {
-				server.filters = append(server.filters, filter)
-			} else {
-				server = &Server{
-					Name: groupName,
-				}
-				sm.servers[groupName] = server
-			}
-		}
+		// 结构体会定义group和type，所以先扫描struct
 		for _, router := range pkg.Structs {
 			var server *Server
 			var ok bool
@@ -238,14 +254,23 @@ func (sm *ServerManager) splitServers() {
 			if groupName == "" {
 				continue
 			}
-			if server, ok = sm.servers[groupName]; ok {
-				server.routers = append(server.routers, router)
-			} else {
+			if server, ok = sm.servers[groupName]; !ok {
 				server = &Server{
 					Name:    groupName,
 					callGen: sm.generator[router.comment.serverType],
 				}
 				sm.servers[groupName] = server
+			}
+			server.routers = append(server.routers, router)
+		}
+		for _, filter := range pkg.Filter {
+			var server *Server
+			var ok bool
+			var groupName = filter.comment.groupName
+			if server, ok = sm.servers[groupName]; ok {
+				server.filters = append(server.filters, filter)
+			} else {
+				fmt.Printf("failed to found server %s", groupName)
 			}
 		}
 	}
@@ -253,19 +278,20 @@ func (sm *ServerManager) splitServers() {
 
 // Generate
 func (sm *ServerManager) Generate(file *GenedFile) {
-
+	for _, server := range sm.servers {
+		//一个server一个文件；
+		file1 := createGenedFile(server.Name, GlobalProject)
+		server.Generate(file1)
+		file1.save()
+	}
 	tmplText :=
 		`
 func initServer(){
 	servers = make(map[string]*server)
 	{{range .}}
 	servers["{{.Name}}"] = &server{
-		filters: gin.HandlersChain{
-			{{.FilterNames}}
-		},
-		routerInitors: []func(*gin.Engine){
-			{{.RouterNames}}
-		},
+		filters: gin.HandlersChain{	{{.FilterNames}} },
+		routerInitors: []func(*gin.Engine){ {{.RouterNames}} },
 	}
 	{{end}}
 }
@@ -292,21 +318,18 @@ func initServer(){
 	}
 	var s []*ServerInfo
 	for _, server := range sm.servers {
-		s = append(s, &ServerInfo{
+		server := &ServerInfo{
 			Name:        server.Name,
-			FilterNames: strings.Join(server.GeneratedFilters, ","),
-			RouterNames: strings.Join(server.GenerateRouters, ","),
-		})
+			FilterNames: strings.Join(server.GeneratedFilters, ",\n"),
+			RouterNames: strings.Join(server.GenerateRouters, ",\n"),
+		}
+		s = append(s, server)
 	}
 
 	err = tmpl.Execute(&sb, s)
 	if err != nil {
 		log.Fatalf("执行模板失败: %v", err)
 	}
-	for _, server := range sm.servers {
-		//一个server一个文件；
-		file1 := createGenedFile(server.Name, GlobalProject)
-		server.Generate(file1)
-	}
+
 	file.addBuilder(&sb)
 }
