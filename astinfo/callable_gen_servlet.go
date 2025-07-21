@@ -131,6 +131,7 @@ func (servlet *ServletGen) GenRouterCode(method *Method, file *GenedFile) string
 		names := strings.Split(methodUrl, "/")
 		for _, name := range names {
 			if strings.Contains(name, ":") {
+				//此处最好从名字能获取到Field，然后在调用type的parse方法，返回其对应的值；
 				tm.UrlParameterStr += fmt.Sprintf("request.%s=c.Param(\"%s\")\n", capitalize(name[1:]), name[1:])
 			}
 		}

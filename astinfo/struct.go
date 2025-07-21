@@ -51,6 +51,7 @@ type Struct struct {
 	astStructType *ast.StructType
 	comment       structComment
 	Fields        []*Field
+	FieldMap      map[string]*Field
 	MethodManager
 	// TODO: 后续添加字段和方法解析
 }
@@ -124,5 +125,9 @@ func (class *Struct) ParseComment() error {
 func (v *Struct) ParseField() error {
 	// v.goSource在解析结构体时，被赋值，解析field也是在解析结构体时，所以v.goSource不为空
 	v.Fields = parseFields(v.astStructType.Fields.List, v.goSource)
+	v.FieldMap = make(map[string]*Field)
+	for _, field := range v.Fields {
+		v.FieldMap[field.Name] = field
+	}
 	return nil
 }
