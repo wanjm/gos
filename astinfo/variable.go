@@ -19,6 +19,17 @@ type Variable struct {
 // schema.function  creator!=nil, receiverPrefix==""
 // 返回值无\n
 func (v *Variable) Generate(goGenerated *GenedFile) string {
+	var variableCode = v.genFromGlobal(goGenerated)
+	if variableCode != "" {
+		return variableCode
+	}
+
+	variableCode = v.Type.GenConstructCode(goGenerated)
+	return variableCode
+}
+
+// genFromGlobal
+func (v *Variable) genFromGlobal(_ *GenedFile) string {
 	var variableCode string
 	variableNode := GlobalProject.GetVariableNode(v.Type, v.Name)
 	if variableNode != nil {
@@ -35,9 +46,6 @@ func (v *Variable) Generate(goGenerated *GenedFile) string {
 		} else {
 			variableCode = strings.Repeat("*", delta) + variableCode
 		}
-	} else {
-		variableCode = v.Type.GenConstructCode(goGenerated)
 	}
-
 	return variableCode
 }

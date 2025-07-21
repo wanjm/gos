@@ -79,6 +79,14 @@ func (v *Struct) GenConstructCode(genFile *GenedFile) string {
 	// getAddr(Strurct{
 	//}
 	//)
+	for _, field := range v.Fields {
+		if IsRawType(field.Type) {
+			continue
+		}
+		sb.WriteString(field.Name + ":")
+		sb.WriteString(field.GenVariableCode(genFile))
+		sb.WriteString(",\n")
+	}
 	sb.WriteString("}")
 
 	return sb.String()
