@@ -63,17 +63,19 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 	}
 	var definition strings.Builder
 	var call strings.Builder
-	definition.WriteString("var (\n")
-	call.WriteString("func initVariable() {\n")
+	definition.WriteString("type GlobalInspector struct {\n")
+	call.WriteString("var inspector GlobalInspector\n")
+	call.WriteString("func initVariable() GlobalInspector {\n")
 	for _, node := range im.readyNode {
 		if node.returnVariableName != "" {
 			definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type.Name(goGenerated)))
-			call.WriteString(fmt.Sprintf("%s = ", node.returnVariableName))
+			call.WriteString(fmt.Sprintf("inspector.%s = ", node.returnVariableName))
 		}
 		call.WriteString(node.Func.GenerateCallCode(goGenerated))
 		call.WriteString("\n")
 	}
-	definition.WriteString(")\n")
+	definition.WriteString("}\n")
+	call.WriteString("return inspector\n")
 	call.WriteString("}\n")
 	goGenerated.addBuilder(&definition)
 	goGenerated.addBuilder(&call)

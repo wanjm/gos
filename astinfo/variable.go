@@ -33,7 +33,7 @@ func (v *Variable) genFromGlobal(_ *GenedFile) string {
 	var variableCode string
 	variableNode := GlobalProject.GetVariableNode(v.Type, v.Name)
 	if variableNode != nil {
-		variableCode = variableNode.returnVariableName
+		variableCode = "inspector." + variableNode.returnVariableName
 		returnField := variableNode.getReturnField()
 		var returnDepth = PointerDepth(returnField.Type)
 		var targetDepth = PointerDepth(v.Type)
