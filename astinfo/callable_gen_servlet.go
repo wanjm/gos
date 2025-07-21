@@ -114,10 +114,30 @@ func (servlet *ServletGen) GenRouterCode(method *Method, file *GenedFile) string
 		Url              string
 		FilterName       string //自带最后一个逗号
 		RequestConstruct string
+		UrlParameterStr  string
+	}
+	var filterName string
+	tm := &CodeParam{
+		HttpMethod:       method.comment.method,
+		MethodName:       method.Name,
+		Url:              method.comment.Url,
+		FilterName:       filterName,
+		RequestConstruct: requestParam.GenVariableCode(file),
+	}
+
+	//获取可能存在的url中的参数
+	methodUrl := strings.Trim(method.comment.Url, "\"")
+	if strings.Contains(methodUrl, ":") {
+		names := strings.Split(methodUrl, "/")
+		for _, name := range names {
+			if strings.Contains(name, ":") {
+				tm.UrlParameterStr += fmt.Sprintf("request.%s=c.Param(\"%s\")\n", capitalize(name[1:]), name[1:])
+			}
+		}
 	}
 	tmplText := `engine.{{.HttpMethod}} ( {{.Url}}, {{.FilterName}} func(c *gin.Context) {
 		request := {{.RequestConstruct}}
-
+		{{.UrlParameterStr}}	
 		// 利用gin的自动绑定功能，将请求内容绑定到request对象上；兼容get,post等情况
 		if err := c.ShouldBind(request); err != nil {
 			cJSON(c, 200, Response{
@@ -136,14 +156,7 @@ func (servlet *ServletGen) GenRouterCode(method *Method, file *GenedFile) string
 		})
 	})
 		`
-	var filterName string
-	tm := &CodeParam{
-		HttpMethod:       method.comment.method,
-		MethodName:       method.Name,
-		Url:              method.comment.Url,
-		FilterName:       filterName,
-		RequestConstruct: requestParam.GenVariableCode(file),
-	}
+
 	tmpl, err := template.New("personInfo").Parse(tmplText)
 	if err != nil {
 		log.Fatalf("解析模板失败: %v", err)
