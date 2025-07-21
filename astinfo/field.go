@@ -57,9 +57,9 @@ func (field *Field) parseType(typer *Typer, fieldType ast.Expr) error {
 		resultType = &array
 		err = field.parseType(&array.Typer, fieldType.Elt)
 	case *ast.StarExpr:
-		pointer := PinterType{}
+		pointer := PointerType{}
 		resultType = &pointer
-		if p, ok := pointer.Typer.(*PinterType); ok {
+		if p, ok := pointer.Typer.(*PointerType); ok {
 			pointer.Depth = p.Depth + 1
 		} else {
 			pointer.Depth = 1

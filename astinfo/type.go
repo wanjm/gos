@@ -9,17 +9,37 @@ type Typer interface {
 	// 该变量的全名（目前时pkg.StructName）,后续可能需要改为pkgModPath.StructName达到全局唯一的目的
 	// 保证该类的全局唯一是本函数的目的；
 	FullName() string
+	Constructor
+}
+type Constructor interface {
+	GenConstructCode(genFile *GenedFile) string
 }
 
+func GetConstructor(typer Typer) Constructor {
+	if constructor, ok := typer.(Constructor); ok {
+		return constructor
+	}
+	if IsPointer(typer) {
+		return GetConstructor(typer.(*PointerType).Typer)
+	}
+	return nil
+}
 func IsPointer(typer Typer) bool {
-	_, ok := typer.(*PinterType)
+	_, ok := typer.(*PointerType)
 	return ok
 }
+
+// isRawType
+func IsRawType(typer Typer) bool {
+	_, ok := typer.(*RawType)
+	return ok
+}
+
 func PointerDepth(typer Typer) int {
 	if !IsPointer(typer) {
 		return 0
 	}
-	return typer.(*PinterType).Depth
+	return typer.(*PointerType).Depth
 }
 
 // 解析原生类型，主要是生成swagger要用；
@@ -39,6 +59,20 @@ func (b *BaseType) FullName() string {
 	return b.typeName
 }
 
+func (b *BaseType) GenConstructCode(genFile *GenedFile) string {
+	switch b.typeName {
+	case "int", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64":
+		return "0"
+	case "float32", "float64":
+		return "0.0"
+	case "string":
+		return `""`
+	case "bool":
+		return "false"
+	}
+	return b.typeName
+}
+
 type ArrayType struct {
 	Typer
 }
@@ -52,7 +86,7 @@ type RawType struct {
 	BaseType
 }
 
-type PinterType struct {
+type PointerType struct {
 	Typer
 	Depth int
 }
@@ -61,8 +95,17 @@ type PinterType struct {
 // 	return true
 // }
 
-func (p *PinterType) Name(genFile *GenedFile) string {
+func (p *PointerType) Name(genFile *GenedFile) string {
 	return "*" + p.Typer.Name(genFile)
+}
+
+func (p *PointerType) GenConstructCode(genFile *GenedFile) string {
+	var code = p.Typer.GenConstructCode(genFile)
+	if IsPointer(p.Typer) {
+		return "getAddr(" + code + ",)"
+	} else {
+		return "&" + code
+	}
 }
 
 var rawTypeMap = map[string]*RawType{}

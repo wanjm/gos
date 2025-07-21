@@ -2,9 +2,11 @@ package astinfo
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
+	"text/template"
 )
 
 type ServletGen struct{}
@@ -95,7 +97,7 @@ func (servlet *ServletGen) GenRouterCode(method *Method, file *GenedFile) string
 	var sb strings.Builder
 	file.addBuilder(&sb)
 	// method.generateServletPostCall(file, &sb)
-	var realParams string
+	// var realParams string
 	// var rawServlet = false
 	//  有request请求，需要解析request，有些情况下，服务端不需要request；
 	// 参数为context.Context, request *schema.Request
@@ -105,19 +107,51 @@ func (servlet *ServletGen) GenRouterCode(method *Method, file *GenedFile) string
 		fmt.Print("only pointer is supported in " + strconv.Itoa(paramIndex) + " parameter(start from 0) for method " + method.Name)
 		os.Exit(0)
 	}
-	variableCode := "request:=" + requestParam.GenVariableCode(file) + "\n"
-	sb.WriteString(variableCode)
-	sb.WriteString(`
+
+	type CodeParam struct {
+		HttpMethod       string
+		MethodName       string
+		Url              string
+		FilterName       string //自带最后一个逗号
+		RequestConstruct string
+	}
+	tmplText := `engine.{{.HttpMethod}} ( {{.Url}}, {{.FilterName}} func(c *gin.Context) {
+		request := {{.RequestConstruct}}
+
 		// 利用gin的自动绑定功能，将请求内容绑定到request对象上；兼容get,post等情况
-		if err := engine.ShouldBind(request); err != nil {
-			cJSON(engine,200, Response{
-			Code: 4,
-			Message: "param error",
+		if err := c.ShouldBind(request); err != nil {
+			cJSON(c, 200, Response{
+				Code:    4,
+				Message: "param error",
 			})
 			return
 		}
-		`)
-	realParams += ",request"
+		response, err := receiver.{{.MethodName}}(c, request)
+		var code = 200
+
+		cJSON(c, code, Response{
+			Object:  response,
+			Code:    int(err.Code),
+			Message: err.Message,
+		})
+	})
+		`
+	var filterName string
+	tm := &CodeParam{
+		HttpMethod:       method.comment.method,
+		MethodName:       method.Name,
+		Url:              method.comment.Url,
+		FilterName:       filterName,
+		RequestConstruct: requestParam.GenVariableCode(file),
+	}
+	tmpl, err := template.New("personInfo").Parse(tmplText)
+	if err != nil {
+		log.Fatalf("解析模板失败: %v", err)
+	}
+	err = tmpl.Execute(&sb, tm)
+	if err != nil {
+		log.Fatalf("执行模板失败: %v", err)
+	}
 
 	return name
 }

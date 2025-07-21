@@ -207,7 +207,13 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 		"router",
 	}, "_")
 	var declare strings.Builder
+	var receiver = Variable{
+		Type: class,
+		Name: "receiver",
+	}
 	declare.WriteString("func " + name + "(engine *gin.Engine) {\n")
+	declare.WriteString(receiver.Name + ":=" + receiver.Generate(file))
+	declare.WriteString("\n")
 	file.addBuilder(&declare)
 	return name
 }

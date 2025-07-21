@@ -19,23 +19,25 @@ type Variable struct {
 // schema.function  creator!=nil, receiverPrefix==""
 // 返回值无\n
 func (v *Variable) Generate(goGenerated *GenedFile) string {
+	var variableCode string
 	variableNode := GlobalProject.GetVariableNode(v.Type, v.Name)
-	if variableNode == nil {
-		// 构造结构体
-	}
-	variableName := variableNode.returnVariableName
-	returnField := variableNode.getReturnField()
-	var returnDepth = PointerDepth(returnField.Type)
-	var targetDepth = PointerDepth(v.Type)
-	var delta = returnDepth - targetDepth
-	if delta < 0 {
-		if delta != -1 {
-			fmt.Printf("")
+	if variableNode != nil {
+		variableCode = variableNode.returnVariableName
+		returnField := variableNode.getReturnField()
+		var returnDepth = PointerDepth(returnField.Type)
+		var targetDepth = PointerDepth(v.Type)
+		var delta = returnDepth - targetDepth
+		if delta < 0 {
+			if delta != -1 {
+				fmt.Printf("")
+			}
+			variableCode = "&" + variableCode
+		} else {
+			variableCode = strings.Repeat("*", delta) + variableCode
 		}
-		variableName = "&" + variableName
 	} else {
-		variableName = strings.Repeat("*", delta) + variableName
+		variableCode = v.Type.GenConstructCode(goGenerated)
 	}
 
-	return variableName
+	return variableCode
 }

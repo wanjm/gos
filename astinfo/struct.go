@@ -1,6 +1,9 @@
 package astinfo
 
-import "go/ast"
+import (
+	"go/ast"
+	"strings"
+)
 
 // @goservlet prpc=xxx; servlet=xxx; servlet; prpc
 // @goservlet type=xxx ;  prpc, servlet, websocket, restful,
@@ -63,6 +66,22 @@ func (v *Struct) Name(genFile *GenedFile) string {
 
 func (v *Struct) FullName() string {
 	return v.Pkg.name + "." + v.StructName
+}
+func (v *Struct) GenConstructCode(genFile *GenedFile) string {
+	result := genFile.getImport(v.Pkg)
+	var sb strings.Builder
+	if result.Name != "" {
+		sb.WriteString(result.Name)
+		sb.WriteString(".")
+	}
+	sb.WriteString(v.StructName + "{\n")
+	//结尾不能有\n,否则后续代码不好写，有语法错误；如：最后两行会有语法错误
+	// getAddr(Strurct{
+	//}
+	//)
+	sb.WriteString("}")
+
+	return sb.String()
 }
 
 // 不一定每次newStruct时都会有goSrouce，所以此时只能传Pkg；
