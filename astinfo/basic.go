@@ -20,6 +20,9 @@ type Import struct {
 	Path string
 }
 
+func firstLower(word string) string {
+	return string(unicode.ToLower([]rune(word)[0])) + word[1:]
+}
 func capitalize(s string) string {
 	if s == "" {
 		return s

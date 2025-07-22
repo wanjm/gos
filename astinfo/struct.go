@@ -66,7 +66,7 @@ func (v *Struct) Name(genFile *GenedFile) string {
 }
 
 func (v *Struct) FullName() string {
-	return v.Pkg.name + "." + v.StructName
+	return v.Pkg.Module + "." + v.StructName
 }
 func (v *Struct) GenConstructCode(genFile *GenedFile) string {
 	result := genFile.getImport(v.Pkg)

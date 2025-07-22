@@ -159,6 +159,7 @@ func (p *Project) GetVariableName(typer Typer, name string) string {
 }
 
 func (p *Project) GetVariableNode(typer Typer, name string) *DependNode {
+	name = firstLower(name)
 	return p.InitManager.variableMap.getVariable(typer, name)
 }
 
