@@ -215,6 +215,7 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 	declare.WriteString(receiver.Name + ":=" + receiver.Generate(file))
 	declare.WriteString("\n")
 	file.addBuilder(&declare)
+	file.getImport(SimplePackage("github.com/gin-gonic/gin", "gin"))
 	return name
 }
 

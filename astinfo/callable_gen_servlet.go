@@ -101,12 +101,6 @@ func (servlet *ServletGen) GenRouterCode(method *Method, file *GenedFile) string
 	// var rawServlet = false
 	//  有request请求，需要解析request，有些情况下，服务端不需要request；
 	// 参数为context.Context, request *schema.Request
-	paramIndex := 1
-	requestParam := method.Params[paramIndex]
-	if !IsPointer(requestParam.Type) {
-		fmt.Print("only pointer is supported in " + strconv.Itoa(paramIndex) + " parameter(start from 0) for method " + method.Name)
-		os.Exit(0)
-	}
 
 	type CodeParam struct {
 		HttpMethod       string
@@ -115,14 +109,28 @@ func (servlet *ServletGen) GenRouterCode(method *Method, file *GenedFile) string
 		FilterName       string //自带最后一个逗号
 		RequestConstruct string
 		UrlParameterStr  string
+		HasRequest       bool
+		HasResponse      bool
 	}
 	var filterName string
 	tm := &CodeParam{
-		HttpMethod:       method.comment.method,
-		MethodName:       method.Name,
-		Url:              method.comment.Url,
-		FilterName:       filterName,
-		RequestConstruct: requestParam.GenVariableCode(file),
+		HttpMethod: method.comment.method,
+		MethodName: method.Name,
+		Url:        method.comment.Url,
+		FilterName: filterName,
+	}
+	if len(method.Params) > 1 {
+		paramIndex := 1
+		requestParam := method.Params[paramIndex]
+		if !IsPointer(requestParam.Type) {
+			fmt.Print("only pointer is supported in " + strconv.Itoa(paramIndex) + " parameter(start from 0) for method " + method.Name)
+			os.Exit(0)
+		}
+		tm.HasRequest = true
+		tm.RequestConstruct = requestParam.GenVariableCode(file)
+	}
+	if len(method.Results) > 1 {
+		tm.HasResponse = true
 	}
 
 	//获取可能存在的url中的参数
@@ -137,6 +145,7 @@ func (servlet *ServletGen) GenRouterCode(method *Method, file *GenedFile) string
 		}
 	}
 	tmplText := `engine.{{.HttpMethod}} ( {{.Url}}, {{.FilterName}} func(c *gin.Context) {
+		{{ if .HasRequest }}
 		request := {{.RequestConstruct}}
 		{{.UrlParameterStr}}	
 		// 利用gin的自动绑定功能，将请求内容绑定到request对象上；兼容get,post等情况
@@ -147,11 +156,12 @@ func (servlet *ServletGen) GenRouterCode(method *Method, file *GenedFile) string
 			})
 			return
 		}
-		response, err := receiver.{{.MethodName}}(c, request)
+		{{ end }}
+		{{ if .HasResponse }}response,{{end}} err := receiver.{{.MethodName}}(c {{ if .HasRequest }},request{{ end }})
 		var code = 200
 
 		cJSON(c, code, Response{
-			Object:  response,
+			{{ if .HasResponse }}Object:  response,{{ end }}
 			Code:    int(err.Code),
 			Message: err.Message,
 		})
@@ -166,6 +176,5 @@ func (servlet *ServletGen) GenRouterCode(method *Method, file *GenedFile) string
 	if err != nil {
 		log.Fatalf("执行模板失败: %v", err)
 	}
-
 	return name
 }
