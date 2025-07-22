@@ -68,7 +68,7 @@ func (v *Struct) Name(genFile *GenedFile) string {
 func (v *Struct) FullName() string {
 	return v.Pkg.Module + "." + v.StructName
 }
-func (v *Struct) GenConstructCode(genFile *GenedFile) string {
+func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 	result := genFile.getImport(v.Pkg)
 	var sb strings.Builder
 	if result.Name != "" {
@@ -80,13 +80,15 @@ func (v *Struct) GenConstructCode(genFile *GenedFile) string {
 	// getAddr(Strurct{
 	//}
 	//)
-	for _, field := range v.Fields {
-		if IsRawType(field.Type) {
-			continue
+	if wire {
+		for _, field := range v.Fields {
+			if IsRawType(field.Type) {
+				continue
+			}
+			sb.WriteString(field.Name + ":")
+			sb.WriteString(field.GenVariableCode(genFile, wire))
+			sb.WriteString(",\n")
 		}
-		sb.WriteString(field.Name + ":")
-		sb.WriteString(field.GenVariableCode(genFile))
-		sb.WriteString(",\n")
 	}
 	sb.WriteString("}")
 

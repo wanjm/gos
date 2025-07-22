@@ -10,6 +10,7 @@ import (
 type Variable struct {
 	Type Typer
 	Name string
+	Wire bool
 }
 
 // 当需要一个变量值时如下几个场景；
@@ -24,7 +25,7 @@ func (v *Variable) Generate(goGenerated *GenedFile) string {
 		return variableCode
 	}
 
-	variableCode = v.Type.GenConstructCode(goGenerated)
+	variableCode = v.Type.GenConstructCode(goGenerated, v.Wire)
 	return variableCode
 }
 

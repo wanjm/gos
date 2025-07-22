@@ -12,7 +12,7 @@ type Typer interface {
 	Constructor
 }
 type Constructor interface {
-	GenConstructCode(genFile *GenedFile) string
+	GenConstructCode(genFile *GenedFile, wire bool) string
 }
 
 func GetConstructor(typer Typer) Constructor {
@@ -59,7 +59,7 @@ func (b *BaseType) FullName() string {
 	return b.typeName
 }
 
-func (b *BaseType) GenConstructCode(genFile *GenedFile) string {
+func (b *BaseType) GenConstructCode(genFile *GenedFile, _ bool) string {
 	switch b.typeName {
 	case "int", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64":
 		return "0"
@@ -99,8 +99,8 @@ func (p *PointerType) Name(genFile *GenedFile) string {
 	return "*" + p.Typer.Name(genFile)
 }
 
-func (p *PointerType) GenConstructCode(genFile *GenedFile) string {
-	var code = p.Typer.GenConstructCode(genFile)
+func (p *PointerType) GenConstructCode(genFile *GenedFile, wire bool) string {
+	var code = p.Typer.GenConstructCode(genFile, wire)
 	if IsPointer(p.Typer) {
 		return "getAddr(" + code + ",)"
 	} else {

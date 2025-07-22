@@ -19,10 +19,11 @@ type Field struct {
 }
 
 // genVariableCode
-func (f *Field) GenVariableCode(goGenerated *GenedFile) string {
+func (f *Field) GenVariableCode(goGenerated *GenedFile, wire bool) string {
 	variable := Variable{
 		Type: f.Type,
 		Name: f.Name,
+		Wire: wire,
 	}
 	return variable.Generate(goGenerated)
 }

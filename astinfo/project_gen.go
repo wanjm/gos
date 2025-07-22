@@ -210,6 +210,7 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 	var receiver = Variable{
 		Type: class,
 		Name: "receiver",
+		Wire: true,
 	}
 	declare.WriteString("func " + name + "(engine *gin.Engine) {\n")
 	declare.WriteString(receiver.Name + ":=" + receiver.Generate(file))

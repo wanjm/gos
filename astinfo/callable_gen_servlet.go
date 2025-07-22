@@ -127,7 +127,7 @@ func (servlet *ServletGen) GenRouterCode(method *Method, file *GenedFile) string
 			os.Exit(0)
 		}
 		tm.HasRequest = true
-		tm.RequestConstruct = requestParam.GenVariableCode(file)
+		tm.RequestConstruct = requestParam.GenVariableCode(file, false)
 	}
 	if len(method.Results) > 1 {
 		tm.HasResponse = true
