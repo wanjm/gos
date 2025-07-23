@@ -61,7 +61,7 @@ func (error *Error) Error() string {
 
 func (project *Project) genInitMain() {
 	//如果是空目录，或者init为true；则生成main.go 和basic.go的Error类；
-	if !project.cfg.InitMain {
+	if !project.Cfg.InitMain {
 		return
 	}
 	project.genGoMod()
@@ -74,7 +74,7 @@ func (p *Project) genProjectCode() {
 		log.Fatal(err)
 	}
 	file := createGenedFile("goservlet_project", p)
-	file.getImport(SimplePackage("github.com/gin-gonic/gin", "gin"))
+	file.GetImport(SimplePackage("github.com/gin-gonic/gin", "gin"))
 	os.Chdir("gen")
 	p.genBasicCode(file)
 	p.genPrepare(file)
@@ -101,11 +101,11 @@ func (p *Project) genPrepare(file *GenedFile) {
 		initServer()
     }
 	`)
-	file.addBuilder(&content)
+	file.AddBuilder(&content)
 }
 func (Project *Project) genBasicCode(file *GenedFile) {
-	file.getImport(SimplePackage("github.com/gin-contrib/cors", "cors"))
-	file.getImport(SimplePackage("sync", "sync"))
+	file.GetImport(SimplePackage("github.com/gin-contrib/cors", "cors"))
+	file.GetImport(SimplePackage("sync", "sync"))
 
 	var content strings.Builder
 	content.WriteString(`
@@ -159,7 +159,7 @@ var servers map[string]*server
 		const TraceId = "TraceId"
 	`)
 
-	file.addBuilder(&content)
+	file.AddBuilder(&content)
 }
 
 type Server struct {
@@ -193,7 +193,7 @@ func (sm *Server) Generate(file *GenedFile) {
 		// generate end
 		var end strings.Builder
 		end.WriteString("}\n")
-		file.addBuilder(&end)
+		file.AddBuilder(&end)
 	}
 }
 
@@ -202,7 +202,7 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 	var name = strings.Join([]string{
 		"init",
 		class.comment.groupName,
-		class.Pkg.name,
+		class.Pkg.Name,
 		class.StructName,
 		"router",
 	}, "_")
@@ -215,8 +215,8 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 	declare.WriteString("func " + name + "(engine *gin.Engine) {\n")
 	declare.WriteString(receiver.Name + ":=" + receiver.Generate(file))
 	declare.WriteString("\n")
-	file.addBuilder(&declare)
-	file.getImport(SimplePackage("github.com/gin-gonic/gin", "gin"))
+	file.AddBuilder(&declare)
+	file.GetImport(SimplePackage("github.com/gin-gonic/gin", "gin"))
 	return name
 }
 
@@ -274,7 +274,7 @@ func (sm *ServerManager) splitServers() {
 		for _, filter := range pkg.Filter {
 			var server *Server
 			var ok bool
-			var groupName = filter.comment.groupName
+			var groupName = filter.Comment.groupName
 			if server, ok = sm.servers[groupName]; ok {
 				server.filters = append(server.filters, filter)
 			} else {
@@ -339,5 +339,5 @@ func initServer(){
 		log.Fatalf("执行模板失败: %v", err)
 	}
 
-	file.addBuilder(&sb)
+	file.AddBuilder(&sb)
 }

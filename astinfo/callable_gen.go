@@ -7,8 +7,13 @@ type CallableGen interface {
 	GenRouterCode(method *Method, file *GenedFile) string
 }
 
-var callableGens = []CallableGen{
-	&ServletGen{},
-	&prpcGen{},
-	&ResutfulGen{},
+var callableGens []CallableGen
+
+//	{
+//		&ServletGen{},
+//		&prpcGen{},
+//		&ResutfulGen{},
+//	}
+func RegisterCallableGen(gen ...CallableGen) {
+	callableGens = append(callableGens, gen...)
 }

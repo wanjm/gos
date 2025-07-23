@@ -1,4 +1,4 @@
-package astinfo
+package callable_gen
 
 import (
 	"fmt"
@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+
+	"github.com/wan_jm/servlet/astinfo"
 )
 
 type ServletGen struct{}
@@ -14,12 +16,12 @@ type ServletGen struct{}
 func (servlet *ServletGen) GetName() string {
 	return "servlet"
 }
-func (servlet *ServletGen) GenerateCommon(file *GenedFile) {
+func (servlet *ServletGen) GenerateCommon(file *astinfo.GenedFile) {
 	var content strings.Builder
-	Project := GlobalProject
-	if Project.cfg.Generation.ResponseKey != "" {
-		oneImport := file.getImport(SimplePackage(Project.cfg.Generation.ResponseMod, "xx"))
-		content.WriteString("var responseKey " + oneImport.Name + "." + Project.cfg.Generation.ResponseKey)
+	Project := astinfo.GlobalProject
+	if Project.Cfg.Generation.ResponseKey != "" {
+		oneImport := file.GetImport(astinfo.SimplePackage(Project.Cfg.Generation.ResponseMod, "xx"))
+		content.WriteString("var responseKey " + oneImport.Name + "." + Project.Cfg.Generation.ResponseKey)
 		content.WriteString(`
 	type JsonString struct {
 		context context.Context
@@ -61,15 +63,15 @@ func cJSON(c *gin.Context, code int,response any) {
 		content.WriteString("c.JSON(code, response)\n")
 		content.WriteString("}\n")
 	}
-	file.addBuilder(&content)
+	file.AddBuilder(&content)
 }
 
-func (servlet *ServletGen) GenFilterCode(function *Function, file *GenedFile) string {
-	file.getImport(SimplePackage("github.com/gin-gonic/gin", "gin"))
-	pkg := function.goSource.pkg
+func (servlet *ServletGen) GenFilterCode(function *astinfo.Function, file *astinfo.GenedFile) string {
+	file.GetImport(astinfo.SimplePackage("github.com/gin-gonic/gin", "gin"))
+	pkg := function.GoSource.Pkg
 	//生成这个函数，pkg.file已经生成了，所以可以直接使用
-	name := "filter_" + pkg.name + "_" + function.Name
-	impt := file.getImport(pkg)
+	name := "filter_" + pkg.Name + "_" + function.Name
+	impt := file.GetImport(pkg)
 	var sb = strings.Builder{}
 	sb.WriteString("// filter_${pkg.file.name}_${filter.function.Name}\n")
 	sb.WriteString("func ")
@@ -87,15 +89,15 @@ func (servlet *ServletGen) GenFilterCode(function *Function, file *GenedFile) st
 		}
 	}
 	`)
-	file.addBuilder(&sb)
+	file.AddBuilder(&sb)
 	return name
 }
 
 // genRouterCode
-func (servlet *ServletGen) GenRouterCode(method *Method, file *GenedFile) string {
+func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.GenedFile) string {
 	name := ""
 	var sb strings.Builder
-	file.addBuilder(&sb)
+	file.AddBuilder(&sb)
 	// method.generateServletPostCall(file, &sb)
 	// var realParams string
 	// var rawServlet = false
@@ -114,15 +116,15 @@ func (servlet *ServletGen) GenRouterCode(method *Method, file *GenedFile) string
 	}
 	var filterName string
 	tm := &CodeParam{
-		HttpMethod: method.comment.method,
+		HttpMethod: method.Comment.Method,
 		MethodName: method.Name,
-		Url:        method.comment.Url,
+		Url:        method.Comment.Url,
 		FilterName: filterName,
 	}
 	if len(method.Params) > 1 {
 		paramIndex := 1
 		requestParam := method.Params[paramIndex]
-		if !IsPointer(requestParam.Type) {
+		if !astinfo.IsPointer(requestParam.Type) {
 			fmt.Print("only pointer is supported in " + strconv.Itoa(paramIndex) + " parameter(start from 0) for method " + method.Name)
 			os.Exit(0)
 		}
@@ -134,13 +136,13 @@ func (servlet *ServletGen) GenRouterCode(method *Method, file *GenedFile) string
 	}
 
 	//获取可能存在的url中的参数
-	methodUrl := strings.Trim(method.comment.Url, "\"")
+	methodUrl := strings.Trim(method.Comment.Url, "\"")
 	if strings.Contains(methodUrl, ":") {
 		names := strings.Split(methodUrl, "/")
 		for _, name := range names {
 			if strings.Contains(name, ":") {
 				//此处最好从名字能获取到Field，然后在调用type的parse方法，返回其对应的值；
-				tm.UrlParameterStr += fmt.Sprintf("request.%s=c.Param(\"%s\")\n", capitalize(name[1:]), name[1:])
+				tm.UrlParameterStr += fmt.Sprintf("request.%s=c.Param(\"%s\")\n", astinfo.Capitalize(name[1:]), name[1:])
 			}
 		}
 	}

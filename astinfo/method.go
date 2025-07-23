@@ -34,7 +34,7 @@ func (m *Method) parseReceiver() error {
 		nameIndent = recvType.(*ast.Ident)
 	}
 	// 由于代码的位置关系，这一步不一定会找到，所以自己创建了。
-	receiver := m.goSource.pkg.FindStruct(nameIndent.Name)
+	receiver := m.GoSource.Pkg.FindStruct(nameIndent.Name)
 	m.Receiver = receiver
 	receiver.MethodManager.AddCallable(m)
 	return nil

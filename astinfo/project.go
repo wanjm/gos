@@ -14,7 +14,7 @@ type Project struct {
 	Module   string              // 项目模块名称（从go.mod解析）
 	Path     string              // 项目根目录的绝对路径
 	Packages map[string]*Package // 项目包含的包集合（key为包全路径）
-	cfg      *Config
+	Cfg      *Config
 
 	*InitManager
 	initFuncs []string
@@ -144,7 +144,7 @@ var GlobalProject *Project
 func CreateProject(path string, cfg *Config) *Project {
 	GlobalProject = &Project{
 		Path: path,
-		cfg:  cfg,
+		Cfg:  cfg,
 		// Package:      make(map[string]*Package),
 		// initiatorMap: make(map[*Struct]*Initiators),
 		// servers:      make(map[string]*server),

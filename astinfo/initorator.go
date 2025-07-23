@@ -77,8 +77,8 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 	definition.WriteString("}\n")
 	call.WriteString("return inspector\n")
 	call.WriteString("}\n")
-	goGenerated.addBuilder(&definition)
-	goGenerated.addBuilder(&call)
+	goGenerated.AddBuilder(&definition)
+	goGenerated.AddBuilder(&call)
 	im.project.initFuncs = append(im.project.initFuncs, "initVariable")
 	return nil
 }
@@ -161,7 +161,7 @@ func (p *Project) GetVariableName(typer Typer, name string) string {
 }
 
 func (p *Project) GetVariableNode(typer Typer, name string) *DependNode {
-	name = firstLower(name)
+	name = FirstLower(name)
 	return p.InitManager.variableMap.getVariable(typer, name)
 }
 

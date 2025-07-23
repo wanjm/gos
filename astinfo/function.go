@@ -9,7 +9,7 @@ import (
 type functionComment struct {
 	Url          string // url
 	title        string // 函数描述，供swagger使用
-	method       string // http方法，GET,POST，默认是POST
+	Method       string // http方法，GET,POST，默认是POST
 	isDeprecated bool
 	funcType     string //函数类型，filter，servlet，websocket，prpc，initiator,creator
 	security     []string
@@ -24,8 +24,8 @@ const (
 type Function struct {
 	Name     string //函数名
 	funcDecl *ast.FuncDecl
-	comment  functionComment
-	goSource *Gosourse
+	Comment  functionComment
+	GoSource *Gosourse
 
 	Params  []*Field // method params, 下标0是request
 	Results []*Field // method results（output)	Params      []*Field // method params, 下标0是request
@@ -39,20 +39,20 @@ func (comment *functionComment) dealValuePair(key, value string) {
 		if len(comment.funcType) == 0 {
 			//默认是servlet
 			comment.funcType = Servlet
-			if len(comment.method) == 0 {
-				comment.method = POST
+			if len(comment.Method) == 0 {
+				comment.Method = POST
 			}
 		}
 	case Security:
 		comment.security = strings.Split(value, ",")
 	case ConstMethod:
-		comment.method = strings.ToUpper(value)
+		comment.Method = strings.ToUpper(value)
 	case Title:
 		comment.title = strings.Trim(value, "\"")
 	case Type:
 		comment.funcType = value
 		if value == Websocket {
-			comment.method = GET
+			comment.Method = GET
 		}
 	case Group:
 		comment.groupName = value
@@ -84,7 +84,7 @@ func (comment *functionComment) dealOldValuePair(key, value string) bool {
 	case Initiator:
 		comment.funcType = Initiator
 	case Websocket:
-		comment.method = GET
+		comment.Method = GET
 		comment.funcType = Websocket
 	default:
 		return false
@@ -96,18 +96,18 @@ func (comment *functionComment) dealOldValuePair(key, value string) bool {
 func NewFunction(funcDecl *ast.FuncDecl, goSource *Gosourse) *Function {
 	return &Function{
 		funcDecl: funcDecl,
-		goSource: goSource,
+		GoSource: goSource,
 	}
 }
 
 // GetType() string
 func (f *Function) GetType() string {
-	return f.comment.funcType
+	return f.Comment.funcType
 }
 
 // 解析自己，并把自己添加到对应的functionManager中；
 func (f *Function) Parse() error {
-	parseComment(f.funcDecl.Doc, &f.comment)
+	parseComment(f.funcDecl.Doc, &f.Comment)
 	f.Name = f.funcDecl.Name.Name
 	f.parseParameter()
 	// 方法体为空
@@ -141,10 +141,10 @@ func parseFields(params []*ast.Field, goSource *Gosourse) []*Field {
 func (f *Function) parseParameter() bool {
 	var paramType *ast.FuncType = f.funcDecl.Type
 	//Params参数不可能为nil
-	f.Params = parseFields(paramType.Params.List, f.goSource)
+	f.Params = parseFields(paramType.Params.List, f.GoSource)
 	//Results返回值可能为nil
 	if paramType.Results != nil {
-		f.Results = parseFields(paramType.Results.List, f.goSource)
+		f.Results = parseFields(paramType.Results.List, f.GoSource)
 	}
 	return true
 }
@@ -158,7 +158,7 @@ func (f *Function) parseParameter() bool {
 // 2. 在生成变量时，可能需要使用crator来生成；
 func (f *Function) GenerateCallCode(goGenerated *GenedFile) string {
 	var call strings.Builder
-	impt := goGenerated.getImport(f.goSource.pkg)
+	impt := goGenerated.GetImport(f.GoSource.Pkg)
 	call.WriteString(impt.Name + "." + f.Name)
 	call.WriteString("(")
 	for i, param := range f.Params {
@@ -186,9 +186,9 @@ func NewFunctionParserHelper(funcDecl *ast.FuncDecl, goSource *Gosourse) *Functi
 	return &FunctionParserHelper{
 		Function: &Function{
 			funcDecl: funcDecl,
-			goSource: goSource,
+			GoSource: goSource,
 		},
-		FunctionManager: &goSource.pkg.FunctionManager,
+		FunctionManager: &goSource.Pkg.FunctionManager,
 	}
 }
 func (h *FunctionParserHelper) Parse() error {

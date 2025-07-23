@@ -10,7 +10,7 @@ import (
 
 type Gosourse struct {
 	Path    string
-	pkg     *Package
+	Pkg     *Package
 	File    *ast.File
 	Imports map[string]string //key package name,value是包路径；
 }
@@ -26,7 +26,7 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 		case *ast.InterfaceType:
 
 		case *ast.StructType:
-			class := g.pkg.FindStruct(typeSpec.Name.Name)
+			class := g.Pkg.FindStruct(typeSpec.Name.Name)
 			class.goSource = g
 			class.initGenDecl(genDecl)
 			parser = class
@@ -46,9 +46,9 @@ func (g *Gosourse) getFuncDeclParser(funcDecl *ast.FuncDecl) Parser {
 }
 func (g *Gosourse) Parse() error {
 	fmt.Printf("Parsing file: %s\n", g.Path)
-	if g.pkg.name == "" {
-		g.pkg.name = g.File.Name.Name
-	} else if g.pkg.name != g.File.Name.Name {
+	if g.Pkg.Name == "" {
+		g.Pkg.Name = g.File.Name.Name
+	} else if g.Pkg.Name != g.File.Name.Name {
 		// 这里是有问题的，需要修改
 		// 不报错了。原工程会报错
 	}
@@ -73,7 +73,7 @@ func (g *Gosourse) Parse() error {
 func NewGosourse(file *ast.File, pkg *Package, path string) *Gosourse {
 	return &Gosourse{
 		File:    file,
-		pkg:     pkg,
+		Pkg:     pkg,
 		Path:    path,
 		Imports: map[string]string{},
 	}

@@ -138,7 +138,7 @@ Variable根据自己的来源，确认生成代码；来源请参考[Field](#fie
 4. 调用构造的写法，使用default值初始化，servlet的request；
 5. 如果是servlet的method做creator的情况，则需要动态注入creator；
 ### 构造的写法
-由Typer提供，默认都是实现注入，和default的写法；实际使用中；
+由Typer提供，添加了wire参数，当时servelt对象时，使用注入，request对象不使用注入；实际使用中；
 1. servlet的struct会有注入；
 2. request的struct不会有注入；
 3. 对于原始类型，不写就是默认值；

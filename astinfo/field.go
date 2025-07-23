@@ -75,7 +75,7 @@ func (field *Field) parseType(typer *Typer, fieldType ast.Expr) error {
 		type1 := GetRawType(fieldType.Name)
 		if type1 == nil {
 			//再检查Struct类型；
-			resultType = findType(field.goSource.pkg, fieldType.Name)
+			resultType = findType(field.goSource.Pkg, fieldType.Name)
 		} else {
 			resultType = type1
 		}

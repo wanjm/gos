@@ -61,7 +61,7 @@ func (v *Struct) Name(genFile *GenedFile) string {
 	if genFile.pkg == pkg {
 		return v.StructName
 	}
-	impt := genFile.getImport(pkg)
+	impt := genFile.GetImport(pkg)
 	return impt.Name + "." + v.StructName
 }
 
@@ -69,7 +69,7 @@ func (v *Struct) FullName() string {
 	return v.Pkg.Module + "." + v.StructName
 }
 func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
-	result := genFile.getImport(v.Pkg)
+	result := genFile.GetImport(v.Pkg)
 	var sb strings.Builder
 	if result.Name != "" {
 		sb.WriteString(result.Name)

@@ -10,7 +10,7 @@ import (
 
 // Package 表示一个Go包的基本信息
 type Package struct {
-	name    string             // 包名称
+	Name    string             // 包名称
 	Path    string             // 包所在目录的绝对路径
 	Module  string             // 所属模块全路径
 	Structs map[string]*Struct // 包内结构体集合（key为结构体名称）
@@ -25,7 +25,7 @@ type Package struct {
 
 // getName
 func (pkg *Package) GetName() string {
-	name := pkg.name
+	name := pkg.Name
 	// Module Name有可能跟包名不一样，
 	// 本模块需要解析的包都是有name的。但是第三方的包可能就没有，需要从Module Name中解析
 	// 等后续有需求了再做；
@@ -80,6 +80,6 @@ func (pkg *Package) FindStruct(name string) *Struct {
 func SimplePackage(module, name string) *Package {
 	return &Package{
 		Module: module,
-		name:   name,
+		Name:   name,
 	}
 }

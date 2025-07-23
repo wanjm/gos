@@ -57,15 +57,15 @@ func (file *GenedFile) save() {
 	osfile.Write(src)
 }
 
-func (file *GenedFile) addBuilder(builder *strings.Builder) {
+func (file *GenedFile) AddBuilder(builder *strings.Builder) {
 	file.contents = append(file.contents, builder)
 }
 
 // 根据modePath获取Import信息；理论上该函数不需要modeName，但是为了最大限度的代码可读性，还是带上了modeName；
-func (file *GenedFile) getImport(pkg *Package) (result *Import) {
+func (file *GenedFile) GetImport(pkg *Package) (result *Import) {
 	var modePath, modeName string
 	modePath = pkg.Module
-	modeName = pkg.name
+	modeName = pkg.Name
 	if impt, ok := file.genCodeImport[modePath]; ok {
 		return impt
 	}

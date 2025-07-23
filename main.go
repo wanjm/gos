@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/wan_jm/servlet/astinfo"
+	"github.com/wan_jm/servlet/astinfo/callable_gen"
 )
 
 func main() {
@@ -28,7 +29,8 @@ func main() {
 	cfg := astinfo.Config{
 		InitMain: *init,
 	}
-	// cfg.Load(
+	// cfg.Load()
+	astinfo.RegisterCallableGen(&callable_gen.ServletGen{}, &callable_gen.PrpcGen{}, &callable_gen.ResutfulGen{})
 	var project = astinfo.CreateProject(path, &cfg)
 	err = project.Parse()
 	if err != nil {
