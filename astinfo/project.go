@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 
 	"golang.org/x/mod/modfile"
@@ -33,6 +34,14 @@ func (p *Project) ParseModule() error {
 		return fmt.Errorf("error parsing go.mod: %w", err)
 	}
 	p.Module = modfile.Module.Mod.Path
+	var goPath = os.Getenv("GOPATH")
+	for _, req := range modfile.Require {
+		if !req.Indirect {
+			pkg := p.FindPackage(req.Mod.Path)
+			pkg.Path = path.Join(goPath, req.Mod.Path+req.Mod.Version)
+		}
+		fmt.Printf("Module: %s\n", req.Mod.Path)
+	}
 	fmt.Printf("Module: %s\n", p.Module)
 	return nil
 }

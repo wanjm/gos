@@ -10,6 +10,7 @@ import (
 
 // Package 表示一个Go包的基本信息
 type Package struct {
+	Simple  bool               //简单解析，及仅解析包名
 	Name    string             // 包名称
 	Path    string             // 包所在目录的绝对路径
 	Module  string             // 所属模块全路径
