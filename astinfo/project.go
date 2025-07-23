@@ -5,7 +5,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"golang.org/x/mod/modfile"
 )
 
 // Project 表示一个Go项目的基本信息
@@ -27,18 +28,11 @@ func (p *Project) ParseModule() error {
 		return fmt.Errorf("error reading go.mod: %w", err)
 	}
 
-	// 直接读取第一行解析module值
-	lines := strings.Split(string(data), "\n")
-	if len(lines) == 0 {
-		return fmt.Errorf("go.mod is empty")
+	modfile, err := modfile.Parse("go.mod", data, nil)
+	if err != nil {
+		return fmt.Errorf("error parsing go.mod: %w", err)
 	}
-
-	firstLine := strings.TrimSpace(lines[0])
-	if !strings.HasPrefix(firstLine, "module ") {
-		return fmt.Errorf("invalid go.mod format, missing module declaration")
-	}
-
-	p.Module = strings.TrimSpace(firstLine[7:])
+	p.Module = modfile.Module.Mod.Path
 	fmt.Printf("Module: %s\n", p.Module)
 	return nil
 }

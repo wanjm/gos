@@ -1,10 +1,7 @@
 module github.com/wan_jm/servlet
 
-go 1.21.13
+go 1.23.0
 
-require (
-	golang.org/x/mod v0.8.0
-	golang.org/x/tools v0.6.0
-)
+toolchain go1.23.11
 
-require golang.org/x/sys v0.20.0 // indirect
+require golang.org/x/mod v0.26.0
