@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"path/filepath"
 	"strings"
 )
 
@@ -45,13 +44,13 @@ func (g *Gosourse) getFuncDeclParser(funcDecl *ast.FuncDecl) Parser {
 	}
 }
 func (g *Gosourse) Parse() error {
-	fmt.Printf("Parsing file: %s\n", g.Path)
 	if g.Pkg.Name == "" {
 		g.Pkg.Name = g.File.Name.Name
 	} else if g.Pkg.Name != g.File.Name.Name {
 		// 这里是有问题的，需要修改
 		// 不报错了。原工程会报错
 	}
+	fmt.Printf("Parsing file: %s name: %s %s\n", g.Path, g.Pkg.Name, g.Pkg.Module)
 	g.parseImport(g.File.Imports)
 	decls := g.File.Decls
 	for i := 0; i < len(decls); i++ {
@@ -89,7 +88,8 @@ func (goFile *Gosourse) parseImport(imports []*ast.ImportSpec) {
 		if importSpec.Name != nil {
 			name = importSpec.Name.Name
 		} else {
-			name = filepath.Base(pathValue)
+			// 如果没有带名字，则从Package中寻找，此处是否可能该Package还没有被解析呢？
+			name = GlobalProject.FindPackage(pathValue).Name
 		}
 		// pkg := goFile.pkg.Project.getPackage(pathValue, true)
 		// 此处是第三方package，也可能是本项目的尚未被解析的工程，其modeName为空，先补一个；

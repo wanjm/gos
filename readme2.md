@@ -12,6 +12,12 @@ Package.parse => file.foreach(goFile.parse)
 goFile.parse => type.switch{create parser;parser.parse}
 type => struct, interface, function, method ,variable
 ```
+```
+先从go.mod中解析依赖的progject；
+在解析自己这个project。这样保证了自己依赖的package都已经被知道；
+```
+### goSource解析
+1. import记录的保存；
 ### Function 解析
 1. 解析comments
 2. 解析入参和出参

@@ -50,7 +50,7 @@ func (pkg *Package) Parse() error {
 		_ = packName
 		// fmt.Printf("begin parse %s with %s\n", packName, path)
 		for filename, f := range pack.Files {
-			if strings.HasSuffix("_test.go", filename) {
+			if strings.HasSuffix(filename, "_test.go") {
 				continue
 			}
 			gofile := NewGosourse(f, pkg, filename)
