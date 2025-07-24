@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 
 	"golang.org/x/mod/modfile"
@@ -12,9 +11,10 @@ import (
 
 // Project 表示一个Go项目的基本信息
 type Project struct {
-	Name   string // 项目名称
-	Module string // 项目模块名称（从go.mod解析）
-	Path   string // 项目根目录的绝对路径
+	Name    string // 项目名称
+	Module  string // 项目模块名称（从go.mod解析）
+	Path    string // 项目根目录的绝对路径
+	Require []*modfile.Require
 }
 
 func (p *Project) ParseModule() error {
@@ -29,14 +29,7 @@ func (p *Project) ParseModule() error {
 		return fmt.Errorf("error parsing go.mod: %w", err)
 	}
 	p.Module = modfile.Module.Mod.Path
-	var goPath = os.Getenv("GOPATH")
-	for _, req := range modfile.Require {
-		if !req.Indirect {
-			pkg := GlobalProject.FindPackage(req.Mod.Path)
-			pkg.Path = path.Join(goPath, req.Mod.Path+req.Mod.Version)
-		}
-		fmt.Printf("Module: %s\n", req.Mod.Path)
-	}
+	p.Require = modfile.Require
 	fmt.Printf("Module: %s\n", p.Module)
 	return nil
 }
@@ -45,6 +38,9 @@ func (p *Project) Parse() error {
 	if err := p.ParseModule(); err != nil {
 		return err
 	}
+	return p.ParseCode()
+}
+func (p *Project) ParseCode() error {
 	// p.Packages = make(map[string]*Package)
 	// project.parse(){
 	// 	for eachdir {

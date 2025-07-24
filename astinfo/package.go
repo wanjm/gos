@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"log"
 	"path/filepath"
+	"strings"
 )
 
 // Package 表示一个Go包的基本信息
@@ -49,6 +50,9 @@ func (pkg *Package) Parse() error {
 		_ = packName
 		// fmt.Printf("begin parse %s with %s\n", packName, path)
 		for filename, f := range pack.Files {
+			if strings.HasSuffix("_test.go", filename) {
+				continue
+			}
 			gofile := NewGosourse(f, pkg, filename)
 			gofile.Parse()
 		}

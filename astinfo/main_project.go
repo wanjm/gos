@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"runtime"
 	"strings"
 	"text/template"
@@ -379,6 +380,24 @@ func (p *MainProject) GenerateCode() error {
 	}
 	p.genProjectCode()
 	return nil
+}
+
+// Parse 解析项目的代码
+func (p *MainProject) Parse() error {
+	if err := p.ParseModule(); err != nil {
+		return err
+	}
+	goPath := os.Getenv("GOPATH")
+	for _, mod := range p.Require {
+		if mod.Indirect {
+			continue
+		}
+		p := Project{
+			Path: path.Join(goPath, "pkg/mod", mod.Mod.Path+"@"+mod.Mod.Version),
+		}
+		p.Parse()
+	}
+	return p.ParseCode()
 }
 
 var GlobalProject *MainProject
