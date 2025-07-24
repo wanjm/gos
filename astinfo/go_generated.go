@@ -20,7 +20,7 @@ type GenedFile struct {
 	// Project              *Project           // 所属项目
 }
 
-func createGenedFile(fileName string, project *Project) *GenedFile {
+func createGenedFile(fileName string) *GenedFile {
 	return &GenedFile{
 		name:                 fileName,
 		genCodeImport:        make(map[string]*Import),

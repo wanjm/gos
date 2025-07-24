@@ -53,7 +53,7 @@ func (g *InitGroup) addNode(node *DependNode) {
 type InitManager struct {
 	variableMap VariableMap
 	readyNode   []*DependNode
-	project     *Project
+	project     *MainProject
 }
 
 // Generate(goGenerated *GenedFile) error
@@ -83,7 +83,7 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 	return nil
 }
 
-func (p *Project) InitInitorator() {
+func (p *MainProject) InitInitorator() {
 	p.InitManager = &InitManager{
 		variableMap: make(map[string]*InitGroup),
 		project:     p,
@@ -156,11 +156,11 @@ func (im *InitManager) initParent(node *DependNode, waittingVariableMap Variable
 		}
 	}
 }
-func (p *Project) GetVariableName(typer Typer, name string) string {
+func (p *MainProject) GetVariableName(typer Typer, name string) string {
 	return p.InitManager.variableMap.getVariable(typer, name).returnVariableName
 }
 
-func (p *Project) GetVariableNode(typer Typer, name string) *DependNode {
+func (p *MainProject) GetVariableNode(typer Typer, name string) *DependNode {
 	name = FirstLower(name)
 	return p.InitManager.variableMap.getVariable(typer, name)
 }
