@@ -15,6 +15,7 @@ type => struct, interface, function, method ,variable
 ```
 先从go.mod中解析依赖的progject；
 在解析自己这个project。这样保证了自己依赖的package都已经被知道；
+但是本工程内部的解析过程，由于是按照目录顺序解析的，所以可能会出现依赖的package还没有被解析的情况。
 ```
 ### goSource解析
 1. import记录的保存；

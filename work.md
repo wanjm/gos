@@ -9,17 +9,20 @@
 
 
 # work
-1. 解析外部package的pkg name；
-2. struct构造函数添加default配置；
-3. 添加prpc的实现；
-4. 返回值使用error；
-5. 添加http的第三个参数；
-6. servlet添加filter参数，参数可以配置；
-7. servlet class添加group配置；
-8. GlobalInjector
-9. test环境变量的注入；
-10. 
+2. field的comment解析；
+7. servlet添加filter参数，参数可以配置；
+5. 返回值使用error；
+3. struct构造函数添加default配置；
+4. 添加prpc的实现；
+6. 添加http的第三个参数；
+8. servlet class添加group配置；
+9. GlobalInjector
+10. test环境变量的注入；
+11. pack的解析按照依赖关系解析
+12. 解决解析中报的各个错误；
 # 完成的工作
 1. 解析文件
 2. 生成了initiator；
 3. 生成路由和fileter的调用；
+4. 解析外部package的pkg name；
+1. 区分简单解析和复杂解析；
