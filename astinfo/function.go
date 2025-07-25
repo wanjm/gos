@@ -14,6 +14,7 @@ type functionComment struct {
 	funcType     string //函数类型，filter，servlet，websocket，prpc，initiator,creator
 	security     []string
 	groupName    string
+	Filter       string
 }
 
 const (
@@ -59,6 +60,8 @@ func (comment *functionComment) dealValuePair(key, value string) {
 	case FilterConst:
 		comment.groupName = value
 		comment.funcType = FilterConst
+	case UserFilter:
+		comment.Filter = value
 	default:
 		if !comment.dealOldValuePair(key, value) {
 			fmt.Printf("unknown key '%s' in function comment\n", key)

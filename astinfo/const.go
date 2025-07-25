@@ -18,6 +18,7 @@ const (
 	Initiator   = "initiator"
 	Websocket   = "websocket"
 	FilterConst = "filter"
+	UserFilter  = "usefilter"
 	Security    = "security"
 	ConstMethod = "method"
 	Title       = "title" //定义函数的描述描述，供swagger使用
