@@ -11,7 +11,14 @@ import (
 	"github.com/wan_jm/servlet/astinfo"
 )
 
-type ServletGen struct{}
+type FilterInfo struct {
+	FilterName    string
+	FilterRawName string
+	Func          *astinfo.Function
+}
+type ServletGen struct {
+	filters []*FilterInfo
+}
 
 func (servlet *ServletGen) GetName() string {
 	return "servlet"
@@ -90,7 +97,16 @@ func (servlet *ServletGen) GenFilterCode(function *astinfo.Function, file *astin
 	}
 	`)
 	file.AddBuilder(&sb)
-	return name
+	if (function.Comment.Url) == "" {
+		return name
+	} else {
+		servlet.filters = append(servlet.filters, &FilterInfo{
+			FilterName:    name,
+			FilterRawName: function.Name,
+			Func:          function,
+		})
+		return ""
+	}
 }
 
 // genRouterCode
@@ -103,7 +119,6 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 	// var rawServlet = false
 	//  有request请求，需要解析request，有些情况下，服务端不需要request；
 	// 参数为context.Context, request *schema.Request
-
 	type CodeParam struct {
 		HttpMethod       string
 		MethodName       string
@@ -114,12 +129,10 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		HasRequest       bool
 		HasResponse      bool
 	}
-	var filterName string
 	tm := &CodeParam{
 		HttpMethod: method.Comment.Method,
 		MethodName: method.Name,
 		Url:        method.Comment.Url,
-		FilterName: filterName,
 	}
 	if len(method.Params) > 1 {
 		paramIndex := 1
@@ -144,6 +157,13 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 				//此处最好从名字能获取到Field，然后在调用type的parse方法，返回其对应的值；
 				tm.UrlParameterStr += fmt.Sprintf("request.%s=c.Param(\"%s\")\n", astinfo.Capitalize(name[1:]), name[1:])
 			}
+		}
+	}
+	for _, filter := range servlet.filters {
+		if filter.FilterRawName == method.Name {
+			tm.FilterName += filter.FilterName + ","
+		} else if strings.Contains(methodUrl, filter.Func.Comment.Url) {
+			tm.FilterName += filter.FilterName + ","
 		}
 	}
 	tmplText := `engine.{{.HttpMethod}} ( {{.Url}}, {{.FilterName}} func(c *gin.Context) {

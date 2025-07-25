@@ -189,7 +189,11 @@ func (sm *Server) Generate(file *GenedFile) {
 	generator := sm.callGen
 	generator.GenerateCommon(file)
 	for _, function := range sm.filters {
-		sm.GeneratedFilters = append(sm.GeneratedFilters, generator.GenFilterCode(function, file))
+		filterName := generator.GenFilterCode(function, file)
+		if filterName == "" {
+			continue
+		}
+		sm.GeneratedFilters = append(sm.GeneratedFilters, filterName)
 	}
 	for _, class := range sm.routers {
 		//generate begin;
