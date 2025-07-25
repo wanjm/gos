@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"path"
 	"strings"
 )
 
@@ -90,6 +91,10 @@ func (goFile *Gosourse) parseImport(imports []*ast.ImportSpec) {
 		} else {
 			// 如果没有带名字，则从Package中寻找，此处是否可能该Package还没有被解析呢？
 			name = GlobalProject.FindPackage(pathValue).Name
+			// 由于解析顺序的问题，可能还是找不到name，后续应该按照依赖顺序尽性解析；暂时先简单解决；
+			if name == "" {
+				name = path.Base(pathValue)
+			}
 		}
 		// pkg := goFile.pkg.Project.getPackage(pathValue, true)
 		// 此处是第三方package，也可能是本项目的尚未被解析的工程，其modeName为空，先补一个；

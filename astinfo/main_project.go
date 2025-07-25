@@ -363,6 +363,9 @@ func (p *MainProject) FindPackage(module string) *Package {
 		return pkg
 	}
 	newPkg := NewPackage(module)
+	if module == "" {
+		fmt.Printf("bad")
+	}
 	p.Packages[module] = newPkg
 	return newPkg
 }
@@ -393,7 +396,8 @@ func (p *MainProject) Parse() error {
 			continue
 		}
 		p := Project{
-			Path: path.Join(goPath, "pkg/mod", mod.Mod.Path+"@"+mod.Mod.Version),
+			Path:   path.Join(goPath, "pkg/mod", mod.Mod.Path+"@"+mod.Mod.Version),
+			Simple: true,
 		}
 		p.Parse()
 	}

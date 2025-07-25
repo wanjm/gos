@@ -11,6 +11,7 @@ import (
 
 // Project 表示一个Go项目的基本信息
 type Project struct {
+	Simple  bool
 	Name    string // 项目名称
 	Module  string // 项目模块名称（从go.mod解析）
 	Path    string // 项目根目录的绝对路径
@@ -96,6 +97,7 @@ func (p *Project) ParsePackage(dir string) error {
 	// 用mode+相对路径，得到包全路径
 	pkgPath := filepath.Join(p.Module, relPath)
 	pkg := GlobalProject.FindPackage(pkgPath)
+	pkg.Simple = p.Simple
 	pkg.Path = dir
 	if err := pkg.Parse(); err != nil {
 		return fmt.Errorf("package parse error: %w", err)

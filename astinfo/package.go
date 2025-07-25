@@ -38,7 +38,9 @@ func (pkg *Package) GetName() string {
 }
 func (pkg *Package) Parse() error {
 	path := pkg.Path
-	fmt.Printf("Parsing package: %s\n", path)
+	if !pkg.Simple {
+		fmt.Printf("Parsing package: %s\n", path)
+	}
 	pkg.fset = token.NewFileSet()
 	// 这里取绝对路径，方便打印出来的语法树可以转跳到编辑器
 	packageMap, err := parser.ParseDir(pkg.fset, path, nil, parser.AllErrors|parser.ParseComments)
@@ -53,8 +55,13 @@ func (pkg *Package) Parse() error {
 			if strings.HasSuffix(filename, "_test.go") {
 				continue
 			}
-			gofile := NewGosourse(f, pkg, filename)
-			gofile.Parse()
+			if pkg.Simple {
+				pkg.Name = f.Name.Name
+				break
+			} else {
+				gofile := NewGosourse(f, pkg, filename)
+				gofile.Parse()
+			}
 		}
 	}
 	return nil
