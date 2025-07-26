@@ -12,9 +12,11 @@ type structComment struct {
 	groupName  string
 	serverType string // NONE, RpcStruct, ServletStruct·
 	url        string // 服务的url, 对所有的方法都有效
+	AutoGen    bool
 }
 
 func (comment *structComment) dealValuePair(key, value string) {
+	comment.AutoGen = true
 	switch key {
 	case Prpc:
 		comment.serverType = Prpc
@@ -100,6 +102,39 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 	sb.WriteString("}")
 
 	return sb.String()
+}
+
+// RequiredFields 返回结构体自己的字段，过滤掉原始类型或wire标记为"-"的字段
+func (v *Struct) RequiredFields() []*Field {
+	var requiredFields []*Field
+	for _, field := range v.Fields {
+		// 过滤原始类型
+		if IsRawType(field.Type) {
+			continue
+		}
+
+		// 过滤wire标记为"-"的字段
+		if field.Tags["wire"] == `"-"` {
+			continue
+		}
+
+		requiredFields = append(requiredFields, field)
+	}
+	return requiredFields
+}
+
+// GeneredFields 返回结构体自己
+func (v *Struct) GeneredFields() []*Field {
+	// 创建一个表示结构体自身的字段
+	field := &Field{
+		Type: v,
+	}
+	return []*Field{field}
+}
+
+// GenerateDependcyCode 生成创建结构体对象的代码
+func (v *Struct) GenerateDependcyCode(goGenerated *GenedFile) string {
+	return v.GenConstructCode(goGenerated, true)
 }
 
 // 不一定每次newStruct时都会有goSrouce，所以此时只能传Pkg；

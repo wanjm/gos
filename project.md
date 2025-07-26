@@ -41,3 +41,5 @@ type HelloResponse struct {
 
 
 // @goservlet url="/hello";group="example";type="servlet";useFilter="filter1,filter2"
+// type=servlet,restful,prpc,filter,
+// autogen;

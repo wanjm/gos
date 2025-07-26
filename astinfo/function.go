@@ -149,6 +149,20 @@ func (f *Function) parseParameter() bool {
 	return true
 }
 
+func (f *Function) RequiredFields() []*Field {
+	return f.Params
+}
+
+// GeneredFields 返回函数生成的字段
+func (f *Function) GeneredFields() []*Field {
+	return f.Results
+}
+
+// GenerateDependcyCode 生成依赖代码
+func (f *Function) GenerateDependcyCode(goGenerated *GenedFile) string {
+	return f.GenerateCallCode(goGenerated)
+}
+
 // generateCallCode 生成调用代码
 // 生成pkg.functionName(var1,var2);
 // 同步生成import语句；、

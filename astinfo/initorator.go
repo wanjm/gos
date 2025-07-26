@@ -10,9 +10,15 @@ const (
 	globalPrefix = "__global_"
 )
 
+type Dependcyer interface {
+	RequiredFields() []*Field
+	GeneredFields() []*Field
+	GenerateDependcyCode(goGenerated *GenedFile) string
+}
+
 // 初始化函数依赖关系节点
 type DependNode struct {
-	Func               *Function
+	Func               Dependcyer
 	Parent             []*DependNode
 	returnVariableName string
 }
@@ -25,10 +31,11 @@ func (d *DependNode) getReturnName() string {
 
 // getReturnField 获取返回值字段
 func (d *DependNode) getReturnField() *Field {
-	if len(d.Func.Results) == 0 {
+	fields := d.Func.GeneredFields()
+	if len(fields) == 0 {
 		return nil
 	}
-	return d.Func.Results[0]
+	return fields[0]
 }
 
 type InitGroup struct {
@@ -43,7 +50,8 @@ func (g *InitGroup) addNode(node *DependNode) {
 		g.Default = node
 	} else if node.getReturnName() == "" {
 		if g.Default.getReturnName() == "" {
-			fmt.Printf("more than one function return the same type,but without name %s %s\n", g.Default.Func.Name, node.Func.Name)
+			// 这里无法获取函数名，暂时注释掉
+			fmt.Printf("more than one function return the same type,but without name\n")
 		} else {
 			g.Default = node
 		}
@@ -71,7 +79,7 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 			definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type.Name(goGenerated)))
 			call.WriteString(fmt.Sprintf("inspector.%s = ", node.returnVariableName))
 		}
-		call.WriteString(node.Func.GenerateCallCode(goGenerated))
+		call.WriteString(node.Func.GenerateDependcyCode(goGenerated))
 		call.WriteString("\n")
 	}
 	definition.WriteString("}\n")
@@ -138,24 +146,25 @@ func (im *InitManager) initInitorator() {
 		functions = functions[:index]
 	}
 	if len(functions) > 0 {
-		for _, node := range functions {
-			fmt.Printf("can't init function: %s\n", node.Func.Name)
-		}
+		// for _, node := range functions {
+		// 	fmt.Printf("can't init function\n")
+		// }
 	}
 }
 
 // initParent 初始化父节点
 func (im *InitManager) initParent(node *DependNode, waittingVariableMap VariableMap) {
-	params := node.Func.Params
+	params := node.Func.RequiredFields()
 	for _, param := range params {
 		parent := waittingVariableMap.getVariable(param.Type, param.Name)
 		if parent != nil {
 			node.Parent = append(node.Parent, parent)
 		} else {
-			fmt.Printf("can't init field: %s not found for function %s\n", param.Name, node.Func.Name)
+			fmt.Printf("can't init field: %s not found for function %s\n", param.Name, "unknown")
 		}
 	}
 }
+
 func (p *MainProject) GetVariableName(typer Typer, name string) string {
 	return p.InitManager.variableMap.getVariable(typer, name).returnVariableName
 }
