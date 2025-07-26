@@ -10,7 +10,7 @@ const (
 	globalPrefix = "__global_"
 )
 
-type Dependcyer interface {
+type VariableGenerator interface {
 	RequiredFields() []*Field
 	GeneredFields() []*Field
 	GenerateDependcyCode(goGenerated *GenedFile) string
@@ -18,7 +18,7 @@ type Dependcyer interface {
 
 // 初始化函数依赖关系节点
 type DependNode struct {
-	Func               Dependcyer
+	Func               VariableGenerator
 	Parent             []*DependNode
 	returnVariableName string
 }
@@ -59,7 +59,7 @@ func (g *InitGroup) addNode(node *DependNode) {
 }
 
 type InitManager struct {
-	variableMap VariableMap
+	variableMap VariableMap //存放已经准备好了变量对象；
 	readyNode   []*DependNode
 	project     *MainProject
 }
@@ -102,17 +102,23 @@ func (p *MainProject) InitInitorator() {
 // 返回初始化函数和map，key为Typer，value为相同返回值的数组
 func (im *InitManager) collect() ([]*DependNode, VariableMap) {
 	p := im.project
-	functions := []*DependNode{}
+	dependNode := []*DependNode{}
 	var waittingVariableMap VariableMap = make(map[string]*InitGroup)
 	// 收集initiator到functions中；
 	// 建立候选变量map
 	for _, pkg := range p.Packages {
 		for _, function := range pkg.Initiator {
-			node := waittingVariableMap.addFunction(function)
-			functions = append(functions, node)
+			node := waittingVariableMap.addVGenerator(function)
+			dependNode = append(dependNode, node)
+		}
+		for _, class := range pkg.Structs {
+			if class.comment.AutoGen {
+				node := waittingVariableMap.addVGenerator(class)
+				dependNode = append(dependNode, node)
+			}
 		}
 	}
-	return functions, waittingVariableMap
+	return dependNode, waittingVariableMap
 }
 
 // initInitorator 初始化初始化函数
@@ -189,8 +195,8 @@ func (vm VariableMap) getVariable(typer Typer, name string) *DependNode {
 	return group.Default
 }
 
-// addFunction 添加初始化函数
-func (im VariableMap) addFunction(function *Function) *DependNode {
+// addVGenerator 添加初始化函数
+func (im VariableMap) addVGenerator(function VariableGenerator) *DependNode {
 	var node = &DependNode{
 		Func: function,
 	}
