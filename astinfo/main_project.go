@@ -222,7 +222,7 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 	}, "_")
 	var declare strings.Builder
 	var receiver = Variable{
-		Type: class,
+		Type: NewPointerType(class),
 		Name: "receiver",
 		Wire: true,
 	}

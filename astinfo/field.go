@@ -113,14 +113,9 @@ func (field *Field) parseType(typer *Typer, fieldType ast.Expr) error {
 		resultType = &array
 		err = field.parseType(&array.Typer, fieldType.Elt)
 	case *ast.StarExpr:
-		pointer := PointerType{}
-		resultType = &pointer
-		if p, ok := pointer.Typer.(*PointerType); ok {
-			pointer.Depth = p.Depth + 1
-		} else {
-			pointer.Depth = 1
-		}
-		err = field.parseType(&pointer.Typer, fieldType.X)
+		var pointer Typer
+		err = field.parseType(&pointer, fieldType.X)
+		resultType = NewPointerType(pointer)
 	case *ast.Ident:
 		// 此时可能是
 		// 原始类型； string

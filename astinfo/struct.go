@@ -125,16 +125,17 @@ func (v *Struct) RequiredFields() []*Field {
 
 // GeneredFields 返回结构体自己
 func (v *Struct) GeneredFields() []*Field {
-	// 创建一个表示结构体自身的字段
+	// 创建一个表示结构体自身的变量，且是指针格式；
 	field := &Field{
-		Type: v,
+		Type: NewPointerType(v),
 	}
 	return []*Field{field}
 }
 
 // GenerateDependcyCode 生成创建结构体对象的代码
 func (v *Struct) GenerateDependcyCode(goGenerated *GenedFile) string {
-	return v.GenConstructCode(goGenerated, true)
+	a := v.GeneredFields()[0]
+	return a.Type.GenConstructCode(goGenerated, true)
 }
 
 // 不一定每次newStruct时都会有goSrouce，所以此时只能传Pkg；

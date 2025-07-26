@@ -91,9 +91,21 @@ type PointerType struct {
 	Depth int
 }
 
-// func (p *PinterType) IsPointer() bool {
-// 	return true
-// }
+//	func (p *PinterType) IsPointer() bool {
+//		return true
+//	}
+//
+// NewPointerType
+func NewPointerType(typer Typer) *PointerType {
+	depth := 1
+	if ptr, ok := typer.(*PointerType); ok {
+		depth = ptr.Depth + 1
+	}
+	return &PointerType{
+		Typer: typer,
+		Depth: depth,
+	}
+}
 
 func (p *PointerType) Name(genFile *GenedFile) string {
 	return "*" + p.Typer.Name(genFile)
