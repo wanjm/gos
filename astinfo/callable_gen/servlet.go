@@ -23,7 +23,14 @@ type ServletGen struct {
 func (servlet *ServletGen) GetName() string {
 	return "servlet"
 }
+
+var commongened bool
+
 func (servlet *ServletGen) GenerateCommon(file *astinfo.GenedFile) {
+	if commongened {
+		return
+	}
+	commongened = true
 	var content strings.Builder
 	Project := astinfo.GlobalProject
 	if Project.Cfg.Generation.ResponseKey != "" {

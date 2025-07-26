@@ -121,20 +121,17 @@ func (f *Function) Parse() error {
 func parseFields(params []*ast.Field, goSource *Gosourse) []*Field {
 	var result []*Field
 	for _, param := range params {
-		field := Field{
-			astRoot:  param,
-			goSource: goSource,
-		}
+		field := NewField(param, goSource)
 		field.Parse()
 		if len(param.Names) != 0 {
 			for _, name := range param.Names {
-				field1 := field
+				field1 := *field
 				field1.Name = name.Name
 				result = append(result, &field1)
 			}
 		} else {
 			//没有参数名，基本不会出现
-			result = append(result, &field)
+			result = append(result, field)
 		}
 	}
 	return result

@@ -38,3 +38,6 @@ type HelloResponse struct {
 }
 ```
 4. 运行go_servlet生成胶水代码，就可以完成该服务了
+
+
+// @goservlet url="/hello";group="example";type="servlet";useFilter="filter1,filter2"

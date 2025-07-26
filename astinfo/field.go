@@ -3,9 +3,25 @@ package astinfo
 import (
 	"fmt"
 	"go/ast"
+	"strings"
 )
 
 type FieldComment struct {
+	defaultValue string //记录该属性的默认值，在struct的field中有使用；
+	// isRequired   bool   //记录该字段是否必须赋值，区别于gin的默认处理方法，必传表示在报文中必须存在
+	validString string //校验变量是否符合要求的代码； $>10 && $<11
+	comment     string
+}
+
+func (comment *FieldComment) dealValuePair(key, value string) {
+	switch key {
+	case "default":
+		comment.defaultValue = value
+	case "valid":
+		comment.validString = value
+	default:
+		comment.comment = key
+	}
 }
 
 // 变量名和变量类型的定义
@@ -16,16 +32,53 @@ type Field struct {
 	Comment  FieldComment
 	astRoot  *ast.Field
 	goSource *Gosourse //解析Filed时，其他type可能来源其他Package，此时需要Import内容来找到该包；
+	Tags     map[string]string
+}
+
+func NewField(root *ast.Field, source *Gosourse) *Field {
+	return &Field{
+		astRoot:  root,
+		goSource: source,
+		Tags:     make(map[string]string),
+	}
 }
 
 // genVariableCode
 func (f *Field) GenVariableCode(goGenerated *GenedFile, wire bool) string {
+	if f.Type == nil {
+		fmt.Printf("skip gen variable for field %s as type is nil in %s\n", f.Name, f.goSource.Path)
+		return ""
+	}
 	variable := Variable{
 		Type: f.Type,
 		Name: f.Name,
 		Wire: wire,
 	}
 	return variable.Generate(goGenerated)
+}
+
+func (field *Field) parseTag(fieldType *ast.BasicLit) {
+	if fieldType != nil {
+		tag := fieldType.Value
+		tag = strings.Trim(tag, string(tag[0]))
+		// if strings.Contains(tag, "wire") {
+		// 	fmt.Print("hello")
+		// }
+		tagList := Fields(tag)
+		for _, tag := range tagList {
+			kv := strings.Split(tag, ":")
+			if len(kv) == 2 {
+				field.Tags[kv[0]] = kv[1]
+			}
+		}
+	}
+}
+func (field *Field) parseComment(fieldType *ast.CommentGroup) {
+	if fieldType == nil || len(fieldType.List) <= 0 {
+		return
+	}
+	content := strings.Trim(fieldType.List[0].Text, " /")
+	parseValidComment(content, &field.Comment)
 }
 
 // Parse() error
@@ -38,6 +91,8 @@ func (field *Field) Parse() error {
 	// var modeName, structName strings
 	// 内置slice类型；
 	field.ParseType(fieldType)
+	field.parseComment(field.astRoot.Comment)
+	field.parseTag(field.astRoot.Tag)
 	return nil
 }
 func findType(pkg *Package, typeName string) Typer {

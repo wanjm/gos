@@ -85,6 +85,13 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 			if IsRawType(field.Type) {
 				continue
 			}
+			if field.Name[0] <= 'z' && field.Name[0] >= 'a' {
+				continue
+			}
+
+			if field.Tags["wire"] == `"-"` {
+				continue
+			}
 			sb.WriteString(field.Name + ":")
 			sb.WriteString(field.GenVariableCode(genFile, wire))
 			sb.WriteString(",\n")

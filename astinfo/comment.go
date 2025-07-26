@@ -30,7 +30,7 @@ func parseComment(commentGroup *ast.CommentGroup, commentor Comment) {
 
 // 解析有效的comments
 func parseValidComment(validComment string, commentor Comment) {
-	commands := strings.Split(validComment, ";") // 多个参数以;分割
+	commands := Fields(validComment) // 多个参数以;分割
 	for _, command := range commands {
 		command = strings.Trim(command, " \t")
 		if len(command) == 0 {
