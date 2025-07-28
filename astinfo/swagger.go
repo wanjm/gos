@@ -39,10 +39,10 @@ func (r *ArrayType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 	schema.Items = &spec.SchemaOrArray{
 		Schema: &spec.Schema{},
 	}
-	if r.class == nil {
-		r.class = r.pkg.getStruct(r.typeName, false)
-	}
-	r.class.InitSchema(schema.Items.Schema, swagger)
+	// if r.class == nil {
+	// 	r.class = r.pkg.getStruct(r.typeName, false)
+	// }
+	r.Typer.(SchemaType).InitSchema(schema.Items.Schema, swagger)
 }
 
 // func (m *MapType) InitSchema(schema *spec.Schema, swagger *Swagger) {
@@ -58,6 +58,9 @@ func (s *Struct) InitSchema(schema *spec.Schema, swagger *Swagger) {
 		s.ref = swagger.getRefOfStruct(s)
 	}
 	schema.Ref = *s.ref
+}
+
+type EmptyType struct {
 }
 
 func (e *EmptyType) InitSchema(schema *spec.Schema, swagger *Swagger) {
@@ -144,24 +147,25 @@ func initOperation(title string) *spec.Operation {
 		},
 	}
 }
-func (swagger *Swagger) addServletFromFunctionManager(pkg *FunctionManager) {
+func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager) {
 	paths := swagger.swag.Paths.Paths
-	for _, servlet := range pkg.servlets {
-		var url = strings.Trim(servlet.comment.Url, "\"")
+	for _, servlet := range pkg.Server {
+		comment := servlet.Comment
+		var url = strings.Trim(comment.Url, "\"")
 		if len(url) == 0 {
 			fmt.Printf("servlet %s has no url\n", servlet.Name)
 			continue
 		}
 		pathItem := spec.PathItem{}
-		operation := initOperation(servlet.comment.title)
+		operation := initOperation(comment.title)
 		var parameter []spec.Parameter
-		switch servlet.comment.method {
+		switch comment.Method {
 		case POST, "":
 			pathItem.Post = operation
 			var props spec.SchemaProps
 			_ = props
-			if len(servlet.Params) > 1 && servlet.Params[1].class != nil {
-				ref := swagger.getRefOfStruct(servlet.Params[1].class.(*Struct))
+			if len(servlet.Params) > 1 && servlet.Params[1].Type != nil {
+				ref := swagger.getRefOfStruct(servlet.Params[1].Type.(*Struct))
 				parameter = append(parameter, spec.Parameter{
 					ParamProps: spec.ParamProps{
 						Name:     "body",
@@ -179,51 +183,52 @@ func (swagger *Swagger) addServletFromFunctionManager(pkg *FunctionManager) {
 		case GET:
 			pathItem.Get = operation
 		default:
-			fmt.Printf("servlet %s has invalid method %s,which is not supported\n", servlet.Name, servlet.comment.method)
+			fmt.Printf("servlet %s has invalid method %s,which is not supported\n", servlet.Name, servlet.Comment.Method)
 			continue
 		}
 		operation.Parameters = parameter
 		var objFieldPtr *Field
 		if len(servlet.Results) > 1 {
 			field0 := servlet.Results[0]
-			if field0.class == nil {
-				field0.findStruct(false)
-			}
+			// if field0.Type == nil {
+			// 	field0.findStruct(false)
+			// }
 			objFieldPtr = field0
 		}
-		addSecurity(servlet, operation) //apix中使用了全局的header，暂时不显示
+		// addSecurity(servlet, operation) //apix中使用了全局的header，暂时不显示
 		var response spec.Response = swagger.getSwaggerResponse(objFieldPtr)
 		operation.Responses.StatusCodeResponses[200] = response
-		paths[swagger.project.cfg.SwaggerCfg.UrlPrefix+url] = pathItem
+		paths[swagger.project.Cfg.SwaggerCfg.UrlPrefix+url] = pathItem
 	}
 }
-func addSecurity(function *Function, operation *spec.Operation) {
-	for _, header := range function.comment.security {
-		operation.Security = append(operation.Security, map[string][]string{
-			header: {"string"},
-		})
-	}
-	for _, s := range function.pkg.Project.servers {
-		if s.name == function.comment.serverName {
-			for _, filter := range s.urlFilters {
-				url := filter.url
-				filterFunction := filter.function
-				servletUrl := filterFunction.comment.Url
-				if strings.Contains(servletUrl, url) {
-					for _, header := range filterFunction.comment.security {
-						operation.Security = append(operation.Security, map[string][]string{
-							header: {"string"},
-						})
-					}
-				}
-			}
-		}
-	}
-}
+
+//	func addSecurity(function *Function, operation *spec.Operation) {
+//		// for _, header := range function.comment.security {
+//		// 	operation.Security = append(operation.Security, map[string][]string{
+//		// 		header: {"string"},
+//		// 	})
+//		// }
+//		for _, s := range function.pkg.Project.servers {
+//			if s.name == function.comment.serverName {
+//				for _, filter := range s.urlFilters {
+//					url := filter.url
+//					filterFunction := filter.function
+//					servletUrl := filterFunction.comment.Url
+//					if strings.Contains(servletUrl, url) {
+//						for _, header := range filterFunction.comment.security {
+//							operation.Security = append(operation.Security, map[string][]string{
+//								header: {"string"},
+//							})
+//						}
+//					}
+//				}
+//			}
+//		}
+//	}
 func (swagger *Swagger) GenerateCode(cfg *SwaggerCfg) string {
 
 	project := swagger.project
-	for name, pkg := range project.Package {
+	for name, pkg := range project.Packages {
 		_ = name
 		swagger.addServletFromPackage(pkg)
 	}
@@ -261,10 +266,10 @@ func (swagger *Swagger) GenerateCode(cfg *SwaggerCfg) string {
 	return (string(data))
 }
 func (swagger *Swagger) addServletFromPackage(pkg *Package) {
-	swagger.addServletFromFunctionManager(&pkg.FunctionManager)
-	for _, class := range pkg.StructMap {
-		if class.comment.serverType == SERVLET {
-			swagger.addServletFromFunctionManager(&class.FunctionManager)
+	// swagger.addServletFromFunctionManager(&pkg.FunctionManager)
+	for _, class := range pkg.Structs {
+		if class.comment.serverType == Servlet {
+			swagger.addServletFromFunctionManager(&class.MethodManager)
 		}
 	}
 }
@@ -289,60 +294,55 @@ func (swagger *Swagger) getRefOfStruct(class *Struct) *spec.Ref {
 			}
 		},
 	*/
-	for _, field := range class.fields {
-		var name = field.jsonName
+	for _, field := range class.Fields {
+		var name = field.Tags["json"]
 		if name == "-" {
 			continue
 		}
 		if len(name) == 0 {
-			name = firstLower(field.name)
+			name = FirstLower(field.Name)
 		}
 
 		schema := spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: field.comment.comment,
+				Description: field.Comment.comment,
 			},
 		}
-		if st, ok := field.class.(SchemaType); ok {
+		if st, ok := field.Type.(SchemaType); ok {
 			st.InitSchema(&schema, swagger)
 		} else {
 			// struct.field可能是一个结构体，且从来没有被初始化为struct过；
-			class1 := field.findStruct(true)
-			if class1 != nil {
-				class1.InitSchema(&schema, swagger)
-			} else {
-				fmt.Printf("ERROR: field %s is not a SchemaType in\n", field.name)
-			}
+			// class1 := field.findStruct(true)
+			// if class1 != nil {
+			// 	class1.InitSchema(&schema, swagger)
+			// } else {
+			fmt.Printf("ERROR: field %s 's type %s is not a SchemaType in\n", field.Name, field.Type.FullName())
+			// }
 		}
 		schemas[name] = schema
 	}
-	ref, _ := spec.NewRef("#/definitions/" + class.Name)
-	swagger.swag.Definitions[class.Name] = spec.Schema{
+	ref, _ := spec.NewRef("#/definitions/" + class.StructName)
+	swagger.swag.Definitions[class.StructName] = spec.Schema{
 		SchemaProps: result,
 	}
 	return &ref
 }
 
 func (swagger *Swagger) initResponseResult() {
-	rawpkg := swagger.project.rawPkg
 	class := Struct{
-		Name: "ResponseResult",
-		fields: []*Field{
+		StructName: "ResponseResult",
+		Fields: []*Field{
 			{
-				class:    swagger.project.getStruct("int", nil, nil),
-				name:     "code",
-				typeName: "int",
-				pkg:      rawpkg,
+				Type: rawTypeMap["int"],
+				Name: "code",
 			},
 			{
-				class:    swagger.project.getStruct("string", nil, nil),
-				name:     "msg",
-				typeName: "string",
-				pkg:      rawpkg,
+				Type: rawTypeMap["string"],
+				Name: "msg",
 			},
 			{
-				class: &EmptyType{},
-				name:  "obj",
+				Type: rawTypeMap["object"],
+				Name: "obj",
 			},
 		},
 	}
@@ -370,7 +370,7 @@ func (swagger *Swagger) getSwaggerResponse(objField *Field) spec.Response {
 	var objSchema = spec.Schema{
 		SchemaProps: spec.SchemaProps{},
 	}
-	objField.class.(SchemaType).InitSchema(&objSchema, swagger)
+	objField.Type.(SchemaType).InitSchema(&objSchema, swagger)
 	ref := spec.Schema{
 		SchemaProps: spec.SchemaProps{
 			Type: []string{"object"},

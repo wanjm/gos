@@ -3,6 +3,8 @@ package astinfo
 import (
 	"go/ast"
 	"strings"
+
+	"github.com/go-openapi/spec"
 )
 
 // @goservlet prpc=xxx; servlet=xxx; servlet; prpc
@@ -58,6 +60,7 @@ type Struct struct {
 	FieldMap      map[string]*Field
 	MethodManager
 	// TODO: 后续添加字段和方法解析
+	ref *spec.Ref
 }
 
 func (v *Struct) Name(genFile *GenedFile) string {
