@@ -285,6 +285,8 @@ func (sm *ServerManager) splitServers() {
 			}
 			server.routers = append(server.routers, router)
 		}
+	}
+	for _, pkg := range project.Packages {
 		for _, filter := range pkg.Filter {
 			var server *Server
 			var ok bool
@@ -292,7 +294,7 @@ func (sm *ServerManager) splitServers() {
 			if server, ok = sm.servers[groupName]; ok {
 				server.filters = append(server.filters, filter)
 			} else {
-				fmt.Printf("failed to found server %s", groupName)
+				fmt.Printf("failed to found server %s\n", groupName)
 			}
 		}
 	}

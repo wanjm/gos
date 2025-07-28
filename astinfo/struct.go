@@ -41,6 +41,8 @@ func (comment *structComment) dealValuePair(key, value string) {
 		}
 	case Url:
 		comment.url = value
+	case AutoGen:
+		comment.AutoGen = true
 	}
 }
 

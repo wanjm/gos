@@ -18,7 +18,7 @@ type VariableGenerator interface {
 
 // 初始化函数依赖关系节点
 type DependNode struct {
-	Func               VariableGenerator
+	Generator          VariableGenerator
 	Parent             []*DependNode
 	returnVariableName string
 }
@@ -31,7 +31,7 @@ func (d *DependNode) getReturnName() string {
 
 // getReturnField 获取返回值字段
 func (d *DependNode) getReturnField() *Field {
-	fields := d.Func.GeneredFields()
+	fields := d.Generator.GeneredFields()
 	if len(fields) == 0 {
 		return nil
 	}
@@ -79,7 +79,7 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 			definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type.Name(goGenerated)))
 			call.WriteString(fmt.Sprintf("inspector.%s = ", node.returnVariableName))
 		}
-		call.WriteString(node.Func.GenerateDependcyCode(goGenerated))
+		call.WriteString(node.Generator.GenerateDependcyCode(goGenerated))
 		call.WriteString("\n")
 	}
 	definition.WriteString("}\n")
@@ -160,13 +160,13 @@ func (im *InitManager) initInitorator() {
 
 // initParent 初始化父节点
 func (im *InitManager) initParent(node *DependNode, waittingVariableMap VariableMap) {
-	params := node.Func.RequiredFields()
+	params := node.Generator.RequiredFields()
 	for _, param := range params {
 		parent := waittingVariableMap.getVariable(param.Type, param.Name)
 		if parent != nil {
 			node.Parent = append(node.Parent, parent)
 		} else {
-			fmt.Printf("can't init field: %s not found for function %s\n", param.Name, "unknown")
+			fmt.Printf("can't init field: %s not found for type %s\n", param.Name, param.Type.FullName())
 		}
 	}
 }
@@ -198,7 +198,7 @@ func (vm VariableMap) getVariable(typer Typer, name string) *DependNode {
 // addVGenerator 添加初始化函数
 func (im VariableMap) addVGenerator(function VariableGenerator) *DependNode {
 	var node = &DependNode{
-		Func: function,
+		Generator: function,
 	}
 	im.addNode(node)
 	return node

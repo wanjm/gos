@@ -17,7 +17,9 @@ type FilterInfo struct {
 	Func          *astinfo.Function
 }
 type ServletGen struct {
-	filters []*FilterInfo
+	filters       []*FilterInfo
+	InternalError int
+	DataError     int
 }
 
 func (servlet *ServletGen) GetName() string {
@@ -77,6 +79,21 @@ func cJSON(c *gin.Context, code int,response any) {
 		content.WriteString("c.JSON(code, response)\n")
 		content.WriteString("}\n")
 	}
+	content.WriteString(`
+func getErrorCode(err error) (int, string) {
+	var errorCode = 0
+	var errMessage = err.Error()
+	if basicError,ok:=err.(Coder);ok{
+		errorCode = basicError.GetErrorCode()
+	}else{
+		errorCode = 1
+	}
+	return errorCode, errMessage
+}
+type Coder interface {
+	GetErrorCode() int
+}
+	`)
 	file.AddBuilder(&content)
 }
 
@@ -135,11 +152,13 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		UrlParameterStr  string
 		HasRequest       bool
 		HasResponse      bool
+		DataError        int
 	}
 	tm := &CodeParam{
 		HttpMethod: method.Comment.Method,
 		MethodName: method.Name,
 		Url:        method.Comment.Url,
+		DataError:  servlet.DataError,
 	}
 	if len(method.Params) > 1 {
 		paramIndex := 1
@@ -180,7 +199,7 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		// 利用gin的自动绑定功能，将请求内容绑定到request对象上；兼容get,post等情况
 		if err := c.ShouldBind(request); err != nil {
 			cJSON(c, 200, Response{
-				Code:    4,
+				Code:    {{.DataError}},
 				Message: "param error",
 			})
 			return
@@ -188,11 +207,11 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		{{ end }}
 		{{ if .HasResponse }}response,{{end}} err := receiver.{{.MethodName}}(c {{ if .HasRequest }},request{{ end }})
 		var code = 200
-
+		errorCode,errMessage:=getErrorCode(err)
 		cJSON(c, code, Response{
 			{{ if .HasResponse }}Object:  response,{{ end }}
-			Code:    int(err.Code),
-			Message: err.Message,
+			Code:    errorCode,
+			Message: errMessage,
 		})
 	})
 		`
