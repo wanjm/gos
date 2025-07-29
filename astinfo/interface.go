@@ -29,7 +29,7 @@ type Interface struct {
 
 	genDecl *ast.GenDecl
 	astRoot *ast.InterfaceType
-	Methods []InterfaceField
+	Methods []*InterfaceField
 }
 
 func NewInterface(name string, pkg *Package) *Interface {
@@ -48,10 +48,9 @@ func (i *Interface) Parse() error {
 func (i *Interface) parseBody() error {
 	// 方法体为空
 	for _, method := range i.astRoot.Methods.List {
-		// a := method.Type.(*ast.FuncType)
-		// function := NewFunction(a, i.GoSource)
-		// function.Parse()
-		_ = method
+		methodField := NewInterfaceField(method, i.GoSource)
+		methodField.Parse()
+		i.Methods = append(i.Methods, methodField)
 	}
 	return nil
 }

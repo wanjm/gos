@@ -24,3 +24,9 @@ type HelloRequest struct {
 type HelloResponse struct {
 	Greeting string `json:"greeting"`
 }
+
+// @goservlet type="prpc"; host="127.0.0.1:9000"
+type AC interface {
+	//@goservlet url="/hello"
+	GetName(name string) string
+}
