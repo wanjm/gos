@@ -28,23 +28,16 @@ func (servlet *ServletGen) GetName() string {
 
 var commongened bool
 
-func (servlet *ServletGen) GenerateCommon(file *astinfo.GenedFile) {
-	if commongened {
-		return
-	}
-	commongened = true
-	var content strings.Builder
-	Project := astinfo.GlobalProject
-	if Project.Cfg.Generation.ResponseKey != "" {
-		oneImport := file.GetImport(astinfo.SimplePackage(Project.Cfg.Generation.ResponseMod, "xx"))
-		content.WriteString("var responseKey " + oneImport.Name + "." + Project.Cfg.Generation.ResponseKey)
-		content.WriteString(`
-	type JsonString struct {
-		context context.Context
-		data    any
-	}
+// 定义代码生成模板
+const cJsonTemplate = `{{if .HasResponseKey}}
+var responseKey {{.ImportName}}.{{.ResponseKey}}
 
-		func (r JsonString) Render(w http.ResponseWriter) error {
+type JsonString struct {
+	context context.Context
+	data    any
+}
+
+func (r JsonString) Render(w http.ResponseWriter) error {
 	r.WriteContentType(w)
 	jsonBytes, err := json.Marshal(r.data)
 	if err != nil {
@@ -72,14 +65,12 @@ func cJSON(c *gin.Context, code int,response any) {
 		data:    response,
 	})
 }
-	`)
+{{else}}
+func cJSON(c *gin.Context, code int, response any) {
+	c.JSON(code, response)
+}
+{{end}}
 
-	} else {
-		content.WriteString("func cJSON(c *gin.Context, code int, response any) {\n")
-		content.WriteString("c.JSON(code, response)\n")
-		content.WriteString("}\n")
-	}
-	content.WriteString(`
 func getErrorCode(err error) (int, string) {
 	var errorCode = 0
 	var errMessage = err.Error()
@@ -93,39 +84,92 @@ func getErrorCode(err error) (int, string) {
 type Coder interface {
 	GetErrorCode() int
 }
-	`)
+`
+
+func (servlet *ServletGen) GenerateCommon(file *astinfo.GenedFile) {
+	if commongened {
+		return
+	}
+	commongened = true
+	var content strings.Builder
+	Project := astinfo.GlobalProject
+
+	// 准备模板数据
+	data := struct {
+		HasResponseKey bool
+		ImportName     string
+		ResponseKey    string
+	}{}
+
+	if Project.Cfg.Generation.ResponseKey != "" {
+		data.HasResponseKey = true
+		oneImport := file.GetImport(astinfo.SimplePackage(Project.Cfg.Generation.ResponseMod, "xx"))
+		data.ImportName = oneImport.Name
+		data.ResponseKey = Project.Cfg.Generation.ResponseKey
+	}
+
+	// 解析并执行模板
+	tpl, err := template.New("common").Parse(cJsonTemplate)
+	if err != nil {
+		// 处理模板解析错误
+		panic(err)
+	}
+	if err := tpl.Execute(&content, data); err != nil {
+		// 处理模板执行错误
+		panic(err)
+	}
+
 	file.AddBuilder(&content)
 }
+
+// 定义过滤器代码生成模板
+const filterTemplate = `func {{.FilterName}}(c *gin.Context) {
+	res := {{.ImportName}}.{{.FunctionName}}(c, &c.Request)
+	if res.Code != 0 {
+		cJSON(c, 200, Response{
+			Code:    int(res.Code),
+			Message: res.Message,
+		})
+		c.Abort()
+	}
+}
+`
 
 func (servlet *ServletGen) GenFilterCode(function *astinfo.Function, file *astinfo.GenedFile) string {
 	file.GetImport(astinfo.SimplePackage("github.com/gin-gonic/gin", "gin"))
 	pkg := function.GoSource.Pkg
-	//生成这个函数，pkg.file已经生成了，所以可以直接使用
-	name := "filter_" + pkg.Name + "_" + function.Name
+	// 生成过滤器函数名
+	filterName := "filter_" + pkg.Name + "_" + function.Name
 	impt := file.GetImport(pkg)
-	var sb = strings.Builder{}
-	sb.WriteString("// filter_${pkg.file.name}_${filter.function.Name}\n")
-	sb.WriteString("func ")
-	sb.WriteString(name)
-	sb.WriteString("(c *gin.Context) {\nres:=")
-	sb.WriteString(impt.Name + "." + function.Name)
-	sb.WriteString(`(c,&c.Request)
-	if(res.Code!=0){
-			cJSON(c,200, 
-			Response{
-				Code:int(res.Code),
-				Message: res.Message,
-			})
-			c.Abort()
-		}
+
+	// 准备模板数据
+	data := struct {
+		FilterName   string
+		ImportName   string
+		FunctionName string
+	}{}
+	data.FilterName = filterName
+	data.ImportName = impt.Name
+	data.FunctionName = function.Name
+
+	// 解析并执行模板
+	var sb strings.Builder
+	tpl, err := template.New("filter").Parse(filterTemplate)
+	if err != nil {
+		panic(err)
 	}
-	`)
+	if err := tpl.Execute(&sb, data); err != nil {
+		panic(err)
+	}
+
 	file.AddBuilder(&sb)
-	if (function.Comment.Url) == "" {
-		return name
+
+	// 处理URL注释逻辑
+	if function.Comment.Url == "" || function.Comment.Url == "\"\"" {
+		return filterName
 	} else {
 		servlet.filters = append(servlet.filters, &FilterInfo{
-			FilterName:    name,
+			FilterName:    filterName,
 			FilterRawName: function.Name,
 			Func:          function,
 		})
