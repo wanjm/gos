@@ -8,6 +8,7 @@ import (
 
 	"github.com/wan_jm/servlet/astinfo"
 	"github.com/wan_jm/servlet/astinfo/callable_gen"
+	rpcgen "github.com/wan_jm/servlet/astinfo/rpc_gen"
 )
 
 func main() {
@@ -34,6 +35,7 @@ func main() {
 		DataError:     4,
 		InternalError: 1,
 	}, &callable_gen.PrpcGen{}, &callable_gen.ResutfulGen{})
+	astinfo.RegisterClientGen(&rpcgen.PrpcGen{})
 	var project = astinfo.CreateProject(path, &cfg)
 	err = project.Parse()
 	if err != nil {

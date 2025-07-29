@@ -40,6 +40,10 @@ func NewInterface(name string, pkg *Package) *Interface {
 }
 func (i *Interface) Parse() error {
 	parseComment(i.genDecl.Doc, &i.Comment)
+	// Type 为空表示不是client interface，跳过处理
+	if i.Comment.Type == "" {
+		return nil
+	}
 	// 方法体为空
 	i.parseBody()
 	return nil
