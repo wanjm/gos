@@ -24,7 +24,10 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 		// 仅关注结构体，暂时不考虑接口
 		switch typeSpec.Type.(type) {
 		case *ast.InterfaceType:
-
+			class := g.Pkg.FindInterface(typeSpec.Name.Name)
+			class.GoSource = g
+			class.initGenDecl(genDecl)
+			parser = class
 		case *ast.StructType:
 			class := g.Pkg.FindStruct(typeSpec.Name.Name)
 			class.goSource = g

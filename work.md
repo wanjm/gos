@@ -20,6 +20,9 @@
 10. test环境变量的注入；
 11. pack的解析按照依赖关系解析
 12. 解决解析中报的各个错误；
+13. type AiAgentStausResp = EmptyResponse 的解析，导致AiAgentStausResp找不到
+14. type AiChatRecords []*AiChatRecord
+
 # 完成的工作
 1. 解析文件
 2. 生成了initiator；

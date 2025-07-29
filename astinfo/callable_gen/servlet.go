@@ -236,7 +236,7 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 			tm.FilterName += filter.FilterName + ","
 		}
 	}
-	tmplText := `engine.{{.HttpMethod}} ( {{.Url}}, {{.FilterName}} func(c *gin.Context) {
+	tmplText := `engine.{{.HttpMethod}} ( "{{.Url}}", {{.FilterName}} func(c *gin.Context) {
 		{{ if .HasRequest }}
 		request := {{.RequestConstruct}}
 		{{.UrlParameterStr}}	

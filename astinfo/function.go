@@ -23,20 +23,16 @@ const (
 )
 
 type Function struct {
-	Name     string //函数名
 	funcDecl *ast.FuncDecl
 	Comment  functionComment
-	GoSource *Gosourse
-
-	Params  []*Field // method params, 下标0是request
-	Results []*Field // method results（output)	Params      []*Field // method params, 下标0是request
+	FunctionField
 }
 
 func (comment *functionComment) dealValuePair(key, value string) {
 	key = strings.ToLower(key)
 	switch key {
 	case Url:
-		comment.Url = value
+		comment.Url = strings.Trim(value, "\"")
 		if len(comment.funcType) == 0 {
 			//默认是servlet
 			comment.funcType = Servlet
@@ -99,7 +95,9 @@ func (comment *functionComment) dealOldValuePair(key, value string) bool {
 func NewFunction(funcDecl *ast.FuncDecl, goSource *Gosourse) *Function {
 	return &Function{
 		funcDecl: funcDecl,
-		GoSource: goSource,
+		FunctionField: FunctionField{
+			GoSource: goSource,
+		},
 	}
 }
 
@@ -112,50 +110,9 @@ func (f *Function) GetType() string {
 func (f *Function) Parse() error {
 	parseComment(f.funcDecl.Doc, &f.Comment)
 	f.Name = f.funcDecl.Name.Name
-	f.parseParameter()
+	f.parseParameter(f.funcDecl.Type)
 	// 方法体为空
 	return nil
-}
-
-// 从ast.Field中解析出参数
-func parseFields(params []*ast.Field, goSource *Gosourse) []*Field {
-	var result []*Field
-	for _, param := range params {
-		field := NewField(param, goSource)
-		field.Parse()
-		if len(param.Names) != 0 {
-			for _, name := range param.Names {
-				field1 := *field
-				field1.Name = name.Name
-				result = append(result, &field1)
-			}
-		} else {
-			//没有参数名，基本不会出现
-			result = append(result, field)
-		}
-	}
-	return result
-}
-
-// 解析参数和返回值
-func (f *Function) parseParameter() bool {
-	var paramType *ast.FuncType = f.funcDecl.Type
-	//Params参数不可能为nil
-	f.Params = parseFields(paramType.Params.List, f.GoSource)
-	//Results返回值可能为nil
-	if paramType.Results != nil {
-		f.Results = parseFields(paramType.Results.List, f.GoSource)
-	}
-	return true
-}
-
-func (f *Function) RequiredFields() []*Field {
-	return f.Params
-}
-
-// GeneredFields 返回函数生成的字段
-func (f *Function) GeneredFields() []*Field {
-	return f.Results
 }
 
 // GenerateDependcyCode 生成依赖代码
@@ -198,10 +155,7 @@ type FunctionParserHelper struct {
 
 func NewFunctionParserHelper(funcDecl *ast.FuncDecl, goSource *Gosourse) *FunctionParserHelper {
 	return &FunctionParserHelper{
-		Function: &Function{
-			funcDecl: funcDecl,
-			GoSource: goSource,
-		},
+		Function:        NewFunction(funcDecl, goSource),
 		FunctionManager: &goSource.Pkg.FunctionManager,
 	}
 }

@@ -11,12 +11,13 @@ import (
 
 // Package 表示一个Go包的基本信息
 type Package struct {
-	Simple  bool               //简单解析，及仅解析包名
-	Name    string             // 包名称
-	Path    string             // 包所在目录的绝对路径
-	Module  string             // 所属模块全路径
-	Structs map[string]*Struct // 包内结构体集合（key为结构体名称）
-	fset    *token.FileSet     //记录fset，到时可以找到文件
+	Simple     bool                  // 简单解析，及仅解析包名
+	Name       string                // 包名称
+	Path       string                // 包所在目录的绝对路径
+	Module     string                // 所属模块全路径
+	Structs    map[string]*Struct    // 包内结构体集合（key为结构体名称）
+	Interfaces map[string]*Interface // key是Interface 的Name
+	fset       *token.FileSet        // 记录fset，到时可以找到文件
 	FunctionManager
 }
 
@@ -71,8 +72,9 @@ func (pkg *Package) Parse() error {
 func NewPackage(module string) *Package {
 	// Extract package name from module path
 	return &Package{
-		Module:  module,
-		Structs: make(map[string]*Struct),
+		Module:     module,
+		Structs:    make(map[string]*Struct),
+		Interfaces: make(map[string]*Interface),
 	}
 }
 
@@ -89,6 +91,22 @@ func (pkg *Package) FindStruct(name string) *Struct {
 	}
 	return class
 }
+
+// GetInterface
+func (pkg *Package) GetInterface(name string) *Interface {
+	return pkg.Interfaces[name]
+}
+
+// findInterface
+func (pkg *Package) FindInterface(name string) *Interface {
+	class := pkg.GetInterface(name)
+	if class == nil {
+		class = NewInterface(name, pkg)
+		pkg.Interfaces[name] = class
+	}
+	return class
+}
+
 func SimplePackage(module, name string) *Package {
 	return &Package{
 		Module: module,

@@ -25,6 +25,7 @@ const (
 	Type        = "type"
 	Group       = "group"
 	AutoGen     = "autogen"
+	Host        = "host" //rpcclient 使用
 	//desperate
 	Servlet = "servlet" //用于定义struct是servlet，所以默认groupName是servlets
 	Prpc    = "prpc"    //用于定义struct是prpc，所以默认groupName是prpc

@@ -51,7 +51,7 @@ func (g *InitGroup) addNode(node *DependNode) {
 	} else if node.getReturnName() == "" {
 		if g.Default.getReturnName() == "" {
 			// 这里无法获取函数名，暂时注释掉
-			fmt.Printf("more than one function return the same type,but without name\n")
+			fmt.Printf("more than one function return the same type %s,but without name\n", g.Default.getReturnField().Type.FullName())
 		} else {
 			g.Default = node
 		}
