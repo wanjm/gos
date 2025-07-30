@@ -24,7 +24,7 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 	case token.TYPE:
 		typeSpec := genDecl.Specs[0].(*ast.TypeSpec)
 		// 仅关注结构体，暂时不考虑接口
-		switch typeSpec.Type.(type) {
+		switch typeType := typeSpec.Type.(type) {
 		case *ast.InterfaceType:
 			// fmt.Printf("InterfaceType %s %s\n", typeSpec.Name.Name, g.Path)
 			class := g.Pkg.FindInterface(typeSpec.Name.Name)
@@ -37,6 +37,15 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 			class.goSource = g
 			class.initGenDecl(genDecl)
 			parser = class
+		case *ast.SelectorExpr:
+			pkgName := typeSpec.Type.(*ast.SelectorExpr).X.(*ast.Ident).Name
+			class := typeSpec.Type.(*ast.SelectorExpr).Sel.Name
+			pkg := GlobalProject.FindPackage(g.Imports[pkgName])
+			fmt.Printf("define alias type %s => %s %s  \n", typeSpec.Name.Name, pkgName, class)
+			typer := pkg.GetTyper(class)
+			g.Pkg.Types[typeSpec.Name.Name] = typer
+		default:
+			fmt.Printf("unknown type '%s' in '%T'\n", typeSpec.Name.Name, typeType)
 		}
 	}
 	return
