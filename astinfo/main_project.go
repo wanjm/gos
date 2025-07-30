@@ -123,6 +123,7 @@ func (p *MainProject) genPrepare(file *GenedFile) {
 	func prepare() {
 		Prepare()
 		initServer()
+		initRpcClient()
     }
 	`)
 	file.AddBuilder(&content)

@@ -250,7 +250,8 @@ func initRpcClient() {
 	}
 
 	for iface, field := range rpcClientVar {
-		impt := file.GetImport(field.GoSource.Pkg)
+		_ = field
+		impt := file.GetImport(iface.Pkg)
 		host := iface.Comment.Host
 
 		if !strings.HasPrefix(host, `"`) {
@@ -259,7 +260,7 @@ func initRpcClient() {
 
 		data.RpcFields = append(data.RpcFields, RpcFieldData{
 			ImportName: impt.Name,
-			FieldName:  field.Name,
+			FieldName:  "JsinternalClient",
 			TypeName:   iface.InterfaceName,
 			Host:       host,
 		})
