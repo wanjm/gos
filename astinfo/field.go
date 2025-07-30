@@ -31,7 +31,7 @@ type FieldBasic struct {
 	Name    string
 	Comment FieldComment
 	// astRoot  *ast.Field
-	goSource *Gosourse //解析Filed时，其他type可能来源其他Package，此时需要Import内容来找到该包；
+	GoSource *Gosourse //解析Filed时，其他type可能来源其他Package，此时需要Import内容来找到该包；
 
 	astDoc     *ast.CommentGroup // associated documentation; or nil
 	astNames   []*ast.Ident      // value names (len(Names) > 0)
@@ -42,7 +42,7 @@ type FieldBasic struct {
 // genVariableCode
 func (f *FieldBasic) GenVariableCode(goGenerated *GenedFile, wire bool) string {
 	if f.Type == nil {
-		fmt.Printf("skip gen variable for field %s as type is nil in %s\n", f.Name, f.goSource.Path)
+		fmt.Printf("skip gen variable for field %s as type is nil in %s\n", f.Name, f.GoSource.Path)
 		return ""
 	}
 	variable := Variable{
@@ -92,16 +92,11 @@ func (field *FieldBasic) Parse() error {
 }
 
 func findType(pkg *Package, typeName string) Typer {
-	typer := pkg.FindStruct(typeName)
-	if typer == nil {
-		typer1 := pkg.FindInterface(typeName)
-		if typer1 != nil {
-			return typer1
-		}
-	} else {
-		return typer
+	res := pkg.GetTyper(typeName)
+	if res == nil {
+		fmt.Printf("find type %s failed\n", typeName)
 	}
-	return nil
+	return res
 }
 
 // 在pkg内解析Type；
@@ -130,7 +125,7 @@ func (field *FieldBasic) parseType(typer *Typer, fieldType ast.Expr) error {
 		type1 := GetRawType(fieldType.Name)
 		if type1 == nil {
 			//再检查Struct类型；
-			resultType = findType(field.goSource.Pkg, fieldType.Name)
+			resultType = findType(field.GoSource.Pkg, fieldType.Name)
 		} else {
 			resultType = type1
 		}
@@ -139,10 +134,10 @@ func (field *FieldBasic) parseType(typer *Typer, fieldType ast.Expr) error {
 		// field定义的selector，就只考虑pkg1
 		pkgName := fieldType.X.(*ast.Ident).Name
 		typeName := fieldType.Sel.Name
-		pkgModePath := field.goSource.Imports[pkgName]
+		pkgModePath := field.GoSource.Imports[pkgName]
 		resultType = findType(GlobalProject.FindPackage(pkgModePath), typeName)
 	default:
-		fmt.Printf("unknown field type '%T' in '%s'\n", fieldType, field.goSource.Path)
+		fmt.Printf("unknown field type '%T' in '%s'\n", fieldType, field.GoSource.Path)
 		return nil
 	}
 	//如果将来Typer需要全局唯一，此处可以先找到唯一值，再赋值给typer；
@@ -168,7 +163,7 @@ func (field *Field) Parse() error {
 func NewField(root *ast.Field, source *Gosourse) *Field {
 	return &Field{
 		FieldBasic: FieldBasic{
-			goSource:   source,
+			GoSource:   source,
 			astDoc:     root.Doc,
 			astNames:   root.Names,
 			astType:    root.Type,
@@ -205,7 +200,7 @@ func NewVarFieldHelper(root *ast.ValueSpec, source *Gosourse) *VarFieldHelper {
 func (v *VarFieldHelper) Parse() error {
 	var root = v.astRoot
 	var field = FieldBasic{
-		goSource:   v.goSource,
+		GoSource:   v.goSource,
 		astDoc:     root.Doc,
 		astNames:   root.Names,
 		astType:    root.Type,

@@ -26,11 +26,13 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 		// 仅关注结构体，暂时不考虑接口
 		switch typeSpec.Type.(type) {
 		case *ast.InterfaceType:
+			// fmt.Printf("InterfaceType %s %s\n", typeSpec.Name.Name, g.Path)
 			class := g.Pkg.FindInterface(typeSpec.Name.Name)
 			class.GoSource = g
 			class.initGenDecl(genDecl)
 			parser = class
 		case *ast.StructType:
+			// fmt.Printf("StructType %s %s\n", typeSpec.Name.Name, g.Path)
 			class := g.Pkg.FindStruct(typeSpec.Name.Name)
 			class.goSource = g
 			class.initGenDecl(genDecl)
@@ -49,7 +51,7 @@ func (g *Gosourse) getFuncDeclParser(funcDecl *ast.FuncDecl) Parser {
 		return NewMethod(funcDecl, g)
 	}
 }
-func (g *Gosourse) Parse() error {
+func (g *Gosourse) ParseTop() error {
 	if g.Pkg.Name == "" {
 		g.Pkg.Name = g.File.Name.Name
 	} else if g.Pkg.Name != g.File.Name.Name {
@@ -58,6 +60,16 @@ func (g *Gosourse) Parse() error {
 	}
 	fmt.Printf("Parsing file: %s name: %s %s\n", g.Path, g.Pkg.Name, g.Pkg.Module)
 	g.parseImport(g.File.Imports)
+	decls := g.File.Decls
+	for i := 0; i < len(decls); i++ {
+		switch decl := decls[i].(type) {
+		case *ast.GenDecl:
+			g.getGenDeclParser(decl)
+		}
+	}
+	return nil
+}
+func (g *Gosourse) Parse() error {
 	decls := g.File.Decls
 	for i := 0; i < len(decls); i++ {
 		var parser Parser

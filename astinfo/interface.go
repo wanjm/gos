@@ -3,6 +3,7 @@ package astinfo
 import (
 	"fmt"
 	"go/ast"
+	"strings"
 )
 
 type interfaceComments struct {
@@ -15,7 +16,7 @@ func (config *interfaceComments) dealValuePair(key, value string) {
 	case Host:
 		config.Host = value
 	case Type:
-		config.Type = value
+		config.Type = strings.Trim(value, `"`)
 	default:
 		fmt.Printf("unkonw key value pair => key=%s,value=%s\n", key, value)
 	}
@@ -62,4 +63,26 @@ func (i *Interface) parseBody() error {
 func (v *Interface) initGenDecl(genDecl *ast.GenDecl) {
 	v.genDecl = genDecl
 	v.astRoot = genDecl.Specs[0].(*ast.TypeSpec).Type.(*ast.InterfaceType)
+}
+
+// Name returns the type name with package prefix if needed
+func (i *Interface) Name(genFile *GenedFile) string {
+	if genFile.pkg == i.Pkg {
+		return i.InterfaceName
+	}
+
+	impt := genFile.GetImport(i.Pkg)
+	return impt.Name + "." + i.InterfaceName
+}
+
+// FullName returns the full name of the interface with package path
+func (i *Interface) FullName() string {
+	return i.Pkg.Module + "." + i.InterfaceName
+}
+
+// GenConstructCode generates code to construct an instance of the interface
+func (i *Interface) GenConstructCode(genFile *GenedFile, wire bool) string {
+	// Interfaces cannot be constructed directly, they need to be implemented by structs
+	// Return nil value for interface
+	return ""
 }

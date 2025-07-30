@@ -2,6 +2,7 @@ package astinfo
 
 import (
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"log"
@@ -17,8 +18,10 @@ type Package struct {
 	Module     string                // 所属模块全路径
 	Structs    map[string]*Struct    // 包内结构体集合（key为结构体名称）
 	Interfaces map[string]*Interface // key是Interface 的Name
-	fset       *token.FileSet        // 记录fset，到时可以找到文件
-	GlobalVar  map[string]*VarField
+	// 由于采用了两层扫描，所以不再需要Types map了。直接调用get方法获取；
+	Types     map[string]Typer // key是Type 的Name
+	fset      *token.FileSet   // 记录fset，到时可以找到文件
+	GlobalVar map[string]*VarField
 	FunctionManager
 }
 
@@ -50,18 +53,30 @@ func (pkg *Package) Parse() error {
 		log.Printf("parse %s failed %s", path, err.Error())
 		return nil
 	}
+	// 先简单扫描；仅扫描定义，struct，interface，var；
+	var fileMap = make(map[*ast.File]*Gosourse)
 	for packName, pack := range packageMap {
 		_ = packName
-		// fmt.Printf("begin parse %s with %s\n", packName, path)
 		for filename, f := range pack.Files {
 			if strings.HasSuffix(filename, "_test.go") {
 				continue
 			}
-			if pkg.Simple {
-				pkg.Name = f.Name.Name
-				break
-			} else {
-				gofile := NewGosourse(f, pkg, filename)
+			gofile := NewGosourse(f, pkg, filename)
+			gofile.ParseTop()
+			fileMap[f] = gofile
+
+		}
+	}
+	if pkg.Simple {
+		return nil
+	}
+	//再细化扫描；
+	for packName, pack := range packageMap {
+		_ = packName
+		// fmt.Printf("begin parse %s with %s\n", packName, path)
+		for _, f := range pack.Files {
+			gofile := fileMap[f]
+			if gofile != nil {
 				gofile.Parse()
 			}
 		}
@@ -76,6 +91,8 @@ func NewPackage(module string) *Package {
 		Module:     module,
 		Structs:    make(map[string]*Struct),
 		Interfaces: make(map[string]*Interface),
+		GlobalVar:  make(map[string]*VarField),
+		Types:      make(map[string]Typer),
 	}
 }
 
@@ -89,8 +106,12 @@ func (pkg *Package) FindStruct(name string) *Struct {
 	if class == nil {
 		class = NewStruct(name, pkg)
 		pkg.Structs[name] = class
+		pkg.Types[name] = class
 	}
 	return class
+}
+func (pkg *Package) GetTyper(name string) Typer {
+	return pkg.Types[name]
 }
 
 // GetInterface
@@ -104,6 +125,7 @@ func (pkg *Package) FindInterface(name string) *Interface {
 	if class == nil {
 		class = NewInterface(name, pkg)
 		pkg.Interfaces[name] = class
+		pkg.Types[name] = class
 	}
 	return class
 }

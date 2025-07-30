@@ -2,6 +2,7 @@ package rpcgen
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"text/template"
 
@@ -203,4 +204,78 @@ func (client *RpcClient) SendRequest(ctx context.Context, name string, array []a
 		content.WriteString("var TraceIdNameInContext = \"badTraceIdName plase config in Generation TraceKeyMod\"\n")
 	}
 	file.AddBuilder(&content)
+}
+
+func (prpc *PrpcGen) InitClientVariable(rpcClientVar map[*astinfo.Interface]*astinfo.VarField, file *astinfo.GenedFile) string {
+	rpcClientTpl := `
+func initRpcClient() {
+	{{if .HasLogger}}
+	var rpclogger {{.LoggerImport}}.{{.LoggerKey}}
+	{{else}}
+	var rpclogger defaultRpcLogger
+	{{end}}
+
+	{{range .RpcFields}}
+	{{.ImportName}}.{{.FieldName}} = &{{.TypeName}}Struct{
+		client: RpcClient{
+			Prefix: {{.Host}},
+			rpcLogger: &rpclogger,
+		},
+	}
+	{{end}}
+}
+	`
+	generationCfg := astinfo.GlobalProject.Cfg.Generation
+	// 准备模板数据
+	type RpcFieldData struct {
+		ImportName string
+		FieldName  string
+		TypeName   string
+		Host       string
+	}
+
+	data := struct {
+		HasLogger    bool
+		LoggerImport string
+		LoggerKey    string
+		RpcFields    []RpcFieldData
+	}{
+		HasLogger: generationCfg.RpcLoggerKey != "",
+	}
+
+	// 处理日志配置
+	if data.HasLogger {
+		data.LoggerImport = file.GetImport(astinfo.SimplePackage(generationCfg.RpcLoggerMod, "xx")).Name
+		data.LoggerKey = generationCfg.RpcLoggerKey
+	}
+
+	for iface, field := range rpcClientVar {
+		impt := file.GetImport(field.GoSource.Pkg)
+		host := iface.Comment.Host
+
+		if !strings.HasPrefix(host, `"`) {
+			host = impt.Name + "." + host
+		}
+
+		data.RpcFields = append(data.RpcFields, RpcFieldData{
+			ImportName: impt.Name,
+			FieldName:  field.Name,
+			TypeName:   iface.InterfaceName,
+			Host:       host,
+		})
+	}
+
+	// 解析并执行模板
+	tpl, err := template.New("rpcClient").Parse(rpcClientTpl)
+	if err != nil {
+		log.Fatalf("Failed to parse rpc client template: %v", err)
+	}
+
+	var content strings.Builder
+	if err := tpl.Execute(&content, data); err != nil {
+		log.Fatalf("Failed to execute rpc client template: %v", err)
+	}
+
+	file.AddBuilder(&content)
+	return ""
 }

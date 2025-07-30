@@ -1,5 +1,7 @@
 package astinfo
 
+import "strings"
+
 type RpcClientManager struct {
 	ClientGen map[string]ClientGen
 }
@@ -21,9 +23,10 @@ func (manager *RpcClientManager) registerClientGen(gen ...ClientGen) {
 }
 
 // Generate
-func (manager *RpcClientManager) Generate() error {
+func (manager *RpcClientManager) Generate(file *GenedFile) error {
 	project := GlobalProject
 	var clients map[string][]*Interface = map[string][]*Interface{}
+	var clientVar = make(map[*Interface]*VarField)
 	for _, pkg := range project.Packages {
 		for _, iface := range pkg.Interfaces {
 			if iface.Comment.Type == "" {
@@ -31,22 +34,37 @@ func (manager *RpcClientManager) Generate() error {
 			}
 			clients[iface.Comment.Type] = append(clients[iface.Comment.Type], iface)
 		}
+		for _, varField := range pkg.GlobalVar {
+			if iface, ok := varField.Type.(*Interface); ok {
+				if iface.Comment.Type != "" {
+					clientVar[iface] = varField
+				}
+			}
+		}
 	}
 	for clientType, ifaces := range clients {
 		gen, ok := manager.ClientGen[clientType]
-		file := createGenedFile("rpc_client_" + clientType + ".go")
 		if !ok {
 			continue
 		}
+		file := createGenedFile("rpc_client_" + clientType + ".go")
+		var sb strings.Builder
 		gen.GenerateCommon(file)
+		var rpcClientVar = make(map[*Interface]*VarField)
 		for _, iface := range ifaces {
 			err := gen.Generate(iface, file)
 			if err != nil {
 				return err
 			}
+			rpcClientVar[iface] = clientVar[iface]
 		}
+		gen.InitClientVariable(rpcClientVar, file)
+		file.AddBuilder(&sb)
 		file.save()
 	}
+	// for iface, varName := range clientVar {
+
+	// }
 	return nil
 }
 
@@ -59,5 +77,6 @@ func RegisterClientGen(gen ...ClientGen) {
 type ClientGen interface {
 	GenerateCommon(file *GenedFile)
 	Generate(iface *Interface, file *GenedFile) error
-	GetName() string
+	InitClientVariable(rpcClientVar map[*Interface]*VarField, file *GenedFile) string // 返回init函数的名字；
+	GetName() string                                                                  // 返回client类型的名字；
 }

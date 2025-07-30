@@ -111,7 +111,7 @@ func (p *MainProject) genPrepare(file *GenedFile) {
 
 	cm := NewRpcClientManager()
 	cm.Prepare()
-	cm.Generate()
+	cm.Generate(file)
 
 	var content strings.Builder
 	content.WriteString("func Prepare() {\n")
