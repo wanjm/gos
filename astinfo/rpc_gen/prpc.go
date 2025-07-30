@@ -1,6 +1,7 @@
 package rpcgen
 
 import (
+	"fmt"
 	"strings"
 	"text/template"
 
@@ -192,5 +193,14 @@ func (client *RpcClient) SendRequest(ctx context.Context, name string, array []a
 	return res
 }
 `)
+	key := astinfo.GlobalProject.Cfg.Generation.TraceKey
+	module := astinfo.GlobalProject.Cfg.Generation.TraceKeyMod
+	if key != "" {
+		// prpc的发送请求是，会向http头添加traceId，需要使用该变量
+		oneImport := file.GetImport(astinfo.SimplePackage(module, "xx"))
+		content.WriteString(fmt.Sprintf("var TraceIdNameInContext = %s.%s{}\n", oneImport.Name, key))
+	} else {
+		content.WriteString("var TraceIdNameInContext = \"badTraceIdName plase config in Generation TraceKeyMod\"\n")
+	}
 	file.AddBuilder(&content)
 }

@@ -18,6 +18,7 @@ type Package struct {
 	Structs    map[string]*Struct    // 包内结构体集合（key为结构体名称）
 	Interfaces map[string]*Interface // key是Interface 的Name
 	fset       *token.FileSet        // 记录fset，到时可以找到文件
+	GlobalVar  map[string]*VarField
 	FunctionManager
 }
 

@@ -72,7 +72,10 @@ func cJSON(c *gin.Context, code int, response any) {
 {{end}}
 
 func getErrorCode(err error) (int, string) {
-	var errorCode = 0
+	if err == nil {
+		return 0, ""
+	}
+	var errorCode int
 	var errMessage = err.Error()
 	if basicError,ok:=err.(Coder);ok{
 		errorCode = basicError.GetErrorCode()
@@ -106,6 +109,9 @@ func (servlet *ServletGen) GenerateCommon(file *astinfo.GenedFile) {
 		oneImport := file.GetImport(astinfo.SimplePackage(Project.Cfg.Generation.ResponseMod, "xx"))
 		data.ImportName = oneImport.Name
 		data.ResponseKey = Project.Cfg.Generation.ResponseKey
+		file.GetImport(astinfo.SimplePackage("context", "context"))
+		file.GetImport(astinfo.SimplePackage("encoding/json", "json"))
+		file.GetImport(astinfo.SimplePackage("net/http", "http"))
 	}
 
 	// 解析并执行模板

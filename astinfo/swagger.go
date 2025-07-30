@@ -332,18 +332,9 @@ func (swagger *Swagger) initResponseResult() {
 	class := Struct{
 		StructName: "ResponseResult",
 		Fields: []*Field{
-			{
-				Type: rawTypeMap["int"],
-				Name: "code",
-			},
-			{
-				Type: rawTypeMap["string"],
-				Name: "msg",
-			},
-			{
-				Type: rawTypeMap["object"],
-				Name: "obj",
-			},
+			NewSimpleField(rawTypeMap["int"], "code"),
+			NewSimpleField(rawTypeMap["string"], "msg"),
+			NewSimpleField(rawTypeMap["object"], "obj"),
 		},
 	}
 	swagger.responseResult = &class

@@ -19,6 +19,8 @@ type Gosourse struct {
 func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 	switch genDecl.Tok {
 	case token.VAR:
+		typeSpec := genDecl.Specs[0].(*ast.ValueSpec)
+		parser = NewVarFieldHelper(typeSpec, g)
 	case token.TYPE:
 		typeSpec := genDecl.Specs[0].(*ast.TypeSpec)
 		// 仅关注结构体，暂时不考虑接口

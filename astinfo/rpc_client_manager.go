@@ -9,8 +9,12 @@ func NewRpcClientManager() *RpcClientManager {
 		ClientGen: make(map[string]ClientGen),
 	}
 }
-
-func (manager *RpcClientManager) RegisterClientGen(gen ...ClientGen) {
+func (sm *RpcClientManager) Prepare() {
+	for _, callGen := range clientGens {
+		sm.registerClientGen(callGen)
+	}
+}
+func (manager *RpcClientManager) registerClientGen(gen ...ClientGen) {
 	for _, gen := range gen {
 		manager.ClientGen[gen.GetName()] = gen
 	}
@@ -30,7 +34,7 @@ func (manager *RpcClientManager) Generate() error {
 	}
 	for clientType, ifaces := range clients {
 		gen, ok := manager.ClientGen[clientType]
-		file := createGenedFile("goservlet_project")
+		file := createGenedFile("rpc_client_" + clientType + ".go")
 		if !ok {
 			continue
 		}

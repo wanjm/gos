@@ -5,6 +5,7 @@ go 1.23.0
 toolchain go1.23.11
 
 require (
+	github.com/BurntSushi/toml v1.5.0
 	github.com/go-openapi/spec v0.21.0
 	golang.org/x/mod v0.26.0
 )

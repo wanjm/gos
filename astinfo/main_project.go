@@ -109,6 +109,10 @@ func (p *MainProject) genPrepare(file *GenedFile) {
 	sm.Prepare()
 	sm.Generate(file)
 
+	cm := NewRpcClientManager()
+	cm.Prepare()
+	cm.Generate()
+
 	var content strings.Builder
 	content.WriteString("func Prepare() {\n")
 	for _, fun := range p.initFuncs {
@@ -405,6 +409,15 @@ func (p *MainProject) GenerateCode() error {
 func (p *MainProject) Parse() error {
 	if err := p.ParseModule(); err != nil {
 		return err
+	}
+	cfg := p.Cfg
+	traceKeyMod := cfg.Generation.TraceKeyMod
+	if !strings.Contains(traceKeyMod, ".") {
+		cfg.Generation.TraceKeyMod = p.Module + "/" + traceKeyMod
+	}
+	responseMod := cfg.Generation.ResponseMod
+	if !strings.Contains(responseMod, ".") {
+		cfg.Generation.ResponseMod = p.Module + "/" + responseMod
 	}
 	goPath := os.Getenv("GOPATH")
 	for _, mod := range p.Require {

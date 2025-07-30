@@ -26,25 +26,21 @@ func (comment *FieldComment) dealValuePair(key, value string) {
 
 // 变量名和变量类型的定义
 // 用于函数的参数和返回值，struct的属性；
-type Field struct {
-	Type     Typer // 实际可以为Struct，Interface， RawType
-	Name     string
-	Comment  FieldComment
-	astRoot  *ast.Field
+type FieldBasic struct {
+	Type    Typer // 实际可以为Struct，Interface， RawType
+	Name    string
+	Comment FieldComment
+	// astRoot  *ast.Field
 	goSource *Gosourse //解析Filed时，其他type可能来源其他Package，此时需要Import内容来找到该包；
-	Tags     map[string]string
-}
 
-func NewField(root *ast.Field, source *Gosourse) *Field {
-	return &Field{
-		astRoot:  root,
-		goSource: source,
-		Tags:     make(map[string]string),
-	}
+	astDoc     *ast.CommentGroup // associated documentation; or nil
+	astNames   []*ast.Ident      // value names (len(Names) > 0)
+	astType    ast.Expr          // value type; or nil
+	astComment *ast.CommentGroup // line comments; or nil
 }
 
 // genVariableCode
-func (f *Field) GenVariableCode(goGenerated *GenedFile, wire bool) string {
+func (f *FieldBasic) GenVariableCode(goGenerated *GenedFile, wire bool) string {
 	if f.Type == nil {
 		fmt.Printf("skip gen variable for field %s as type is nil in %s\n", f.Name, f.goSource.Path)
 		return ""
@@ -73,7 +69,7 @@ func (field *Field) parseTag(fieldType *ast.BasicLit) {
 		}
 	}
 }
-func (field *Field) parseComment(fieldType *ast.CommentGroup) {
+func (field *FieldBasic) parseComment(fieldType *ast.CommentGroup) {
 	if fieldType == nil || len(fieldType.List) <= 0 {
 		return
 	}
@@ -86,21 +82,30 @@ func (field *Field) parseComment(fieldType *ast.CommentGroup) {
 // name map
 // name []arrays
 // 此函数仅解析结构，然后在外面解析名字，拆分为多个Field
-func (field *Field) Parse() error {
-	fieldType := field.astRoot.Type
-	// var modeName, structName strings
-	// 内置slice类型；
+func (field *FieldBasic) Parse() error {
+	fieldType := field.astType
+	//field.Name="名字在调用本函数的外面解析，因为一个类型可能有多个名字，需要拆分为多个Field"
 	field.ParseType(fieldType)
-	field.parseComment(field.astRoot.Comment)
-	field.parseTag(field.astRoot.Tag)
+	field.parseComment(field.astComment)
+
 	return nil
 }
+
 func findType(pkg *Package, typeName string) Typer {
-	return pkg.FindStruct(typeName)
+	typer := pkg.FindStruct(typeName)
+	if typer == nil {
+		typer1 := pkg.FindInterface(typeName)
+		if typer1 != nil {
+			return typer1
+		}
+	} else {
+		return typer
+	}
+	return nil
 }
 
 // 在pkg内解析Type；
-func (field *Field) parseType(typer *Typer, fieldType ast.Expr) error {
+func (field *FieldBasic) parseType(typer *Typer, fieldType ast.Expr) error {
 	var resultType Typer
 	var err error
 	switch fieldType := fieldType.(type) {
@@ -145,6 +150,74 @@ func (field *Field) parseType(typer *Typer, fieldType ast.Expr) error {
 	return err
 }
 
-func (field *Field) ParseType(fieldType ast.Expr) error {
+func (field *FieldBasic) ParseType(fieldType ast.Expr) error {
 	return field.parseType(&field.Type, fieldType)
+}
+
+type Field struct {
+	FieldBasic
+	Tags   map[string]string
+	astTag *ast.BasicLit
+}
+
+func (field *Field) Parse() error {
+	field.parseTag(field.astTag)
+	return field.FieldBasic.Parse()
+}
+
+func NewField(root *ast.Field, source *Gosourse) *Field {
+	return &Field{
+		FieldBasic: FieldBasic{
+			goSource:   source,
+			astDoc:     root.Doc,
+			astNames:   root.Names,
+			astType:    root.Type,
+			astComment: root.Comment,
+		},
+		astTag: root.Tag,
+		Tags:   make(map[string]string),
+	}
+}
+func NewSimpleField(typer Typer, name string) *Field {
+	return &Field{
+		FieldBasic: FieldBasic{
+			Name: name,
+			Type: typer,
+		},
+	}
+}
+
+type VarFieldHelper struct {
+	varField FieldBasic
+	astRoot  *ast.ValueSpec
+	goSource *Gosourse
+}
+
+type VarField = FieldBasic
+
+func NewVarFieldHelper(root *ast.ValueSpec, source *Gosourse) *VarFieldHelper {
+	return &VarFieldHelper{
+		astRoot:  root,
+		goSource: source,
+	}
+}
+
+func (v *VarFieldHelper) Parse() error {
+	var root = v.astRoot
+	var field = FieldBasic{
+		goSource:   v.goSource,
+		astDoc:     root.Doc,
+		astNames:   root.Names,
+		astType:    root.Type,
+		astComment: root.Comment,
+	}
+	field.Parse()
+	if len(root.Names) != 0 {
+		for _, name := range root.Names {
+			field1 := field
+			field1.Name = name.Name
+			v.goSource.Pkg.GlobalVar[name.Name] = &field1
+		}
+	}
+	return nil
 }

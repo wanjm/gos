@@ -131,9 +131,7 @@ func (v *Struct) RequiredFields() []*Field {
 // GeneredFields 返回结构体自己
 func (v *Struct) GeneredFields() []*Field {
 	// 创建一个表示结构体自身的变量，且是指针格式；
-	field := &Field{
-		Type: NewPointerType(v),
-	}
+	field := NewSimpleField(NewPointerType(v), "")
 	return []*Field{field}
 }
 

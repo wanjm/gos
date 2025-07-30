@@ -30,7 +30,7 @@ func main() {
 	cfg := astinfo.Config{
 		InitMain: *init,
 	}
-	// cfg.Load()
+	cfg.Load()
 	astinfo.RegisterCallableGen(&callable_gen.ServletGen{
 		DataError:     4,
 		InternalError: 1,
