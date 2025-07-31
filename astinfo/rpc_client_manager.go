@@ -56,7 +56,9 @@ func (manager *RpcClientManager) Generate(file *GenedFile) error {
 			if err != nil {
 				return err
 			}
-			rpcClientVar[iface] = clientVar[iface]
+			if _, ok := clientVar[iface]; ok {
+				rpcClientVar[iface] = clientVar[iface]
+			}
 		}
 		gen.InitClientVariable(rpcClientVar, file)
 		file.AddBuilder(&sb)

@@ -96,11 +96,11 @@ func (p *Project) ParsePackage(dir string) error {
 	}
 	// 用mode+相对路径，得到包全路径
 	pkgPath := filepath.Join(p.Module, relPath)
-	pkg := GlobalProject.FindPackage(pkgPath)
-	pkg.Simple = p.Simple
-	pkg.Path = dir
-	if err := pkg.Parse(); err != nil {
-		return fmt.Errorf("package parse error: %w", err)
-	}
+	GlobalProject.FindPackage(pkgPath)
+	// pkg.Simple = p.Simple
+	// pkg.Path = dir
+	// if err := pkg.Parse(); err != nil {
+	// 	return fmt.Errorf("package parse error: %w", err)
+	// }
 	return nil
 }

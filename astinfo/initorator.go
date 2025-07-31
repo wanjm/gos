@@ -91,12 +91,12 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 	return nil
 }
 
-func (p *MainProject) InitInitorator() {
-	p.InitManager = &InitManager{
+func (mp *MainProject) InitInitorator() {
+	mp.InitManager = &InitManager{
 		variableMap: make(map[string]*InitGroup),
-		project:     p,
+		project:     mp,
 	}
-	p.InitManager.initInitorator()
+	mp.InitManager.initInitorator()
 }
 
 // 返回初始化函数和map，key为Typer，value为相同返回值的数组
@@ -171,13 +171,13 @@ func (im *InitManager) initParent(node *DependNode, waittingVariableMap Variable
 	}
 }
 
-func (p *MainProject) GetVariableName(typer Typer, name string) string {
-	return p.InitManager.variableMap.getVariable(typer, name).returnVariableName
+func (mp *MainProject) GetVariableName(typer Typer, name string) string {
+	return mp.InitManager.variableMap.getVariable(typer, name).returnVariableName
 }
 
-func (p *MainProject) GetVariableNode(typer Typer, name string) *DependNode {
+func (mp *MainProject) GetVariableNode(typer Typer, name string) *DependNode {
 	name = FirstLower(name)
-	return p.InitManager.variableMap.getVariable(typer, name)
+	return mp.InitManager.variableMap.getVariable(typer, name)
 }
 
 type VariableMap map[string]*InitGroup //key是原始类型的名字"int"，"pkg.Struct"

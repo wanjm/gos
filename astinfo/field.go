@@ -147,7 +147,8 @@ func (field *FieldBasic) parseType(typer *Typer, fieldType ast.Expr) error {
 		pkgModePath := field.GoSource.Imports[pkgName]
 		resultType = findType(GlobalProject.FindPackage(pkgModePath), typeName)
 	default:
-		fmt.Printf("unknown field type '%T' in '%s'\n", fieldType, field.GoSource.Path)
+		// TODO: 需要添加日志级别，再打印日志
+		// fmt.Printf("unknown field type '%T' in '%s'\n", fieldType, field.GoSource.Path)
 		return nil
 	}
 	//如果将来Typer需要全局唯一，此处可以先找到唯一值，再赋值给typer；

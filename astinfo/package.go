@@ -23,6 +23,7 @@ type Package struct {
 	fset      *token.FileSet   // 记录fset，到时可以找到文件
 	GlobalVar map[string]*VarField
 	FunctionManager
+	finshedParse bool
 }
 
 //  Package中不包含goSource，因为
@@ -37,20 +38,26 @@ func (pkg *Package) GetName() string {
 	// 本模块需要解析的包都是有name的。但是第三方的包可能就没有，需要从Module Name中解析
 	// 等后续有需求了再做；
 	if name == "" {
+		fmt.Printf("failed to get name of pkg %s, use base name in path which is error\n", pkg.Module)
 		name = filepath.Base(pkg.Module)
 	}
 	return name
 }
+
+// 采用遇到遇到不认识的import就先深度parse的方法；
 func (pkg *Package) Parse() error {
-	path := pkg.Path
-	if !pkg.Simple {
-		fmt.Printf("Parsing package: %s\n", path)
+	if pkg.finshedParse {
+		return nil
 	}
+	defer func() {
+		pkg.finshedParse = true
+	}()
+	path := pkg.Path
 	pkg.fset = token.NewFileSet()
 	// 这里取绝对路径，方便打印出来的语法树可以转跳到编辑器
 	packageMap, err := parser.ParseDir(pkg.fset, path, nil, parser.AllErrors|parser.ParseComments)
 	if err != nil {
-		log.Printf("parse %s failed %s", path, err.Error())
+		log.Printf("parse package %s failed %s", pkg.Module, err.Error())
 		return nil
 	}
 	// 先简单扫描；仅扫描定义，struct，interface，var；
@@ -70,6 +77,7 @@ func (pkg *Package) Parse() error {
 	if pkg.Simple {
 		return nil
 	}
+	fmt.Printf("Parsing package: %s\n", path)
 	//再细化扫描；
 	for packName, pack := range packageMap {
 		_ = packName
@@ -85,14 +93,28 @@ func (pkg *Package) Parse() error {
 }
 
 // NewPackage creates a new Package instance with the given module path
-func NewPackage(module string) *Package {
+func NewPackage(module string, simple bool, absPath string) *Package {
 	// Extract package name from module path
 	return &Package{
 		Module:     module,
+		Simple:     simple,
+		Path:       absPath,
 		Structs:    make(map[string]*Struct),
 		Interfaces: make(map[string]*Interface),
 		GlobalVar:  make(map[string]*VarField),
 		Types:      make(map[string]Typer),
+	}
+}
+
+func NewSysPackage(module string) *Package {
+	return &Package{
+		Module:       module,
+		Simple:       true,
+		Path:         "",
+		finshedParse: true,
+		Name:         filepath.Base(module),
+		Structs:      make(map[string]*Struct),
+		Types:        make(map[string]Typer),
 	}
 }
 

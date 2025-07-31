@@ -6,33 +6,35 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"sort"
 	"strings"
 	"text/template"
 )
 
 type MainProject struct {
-	Project
-	Packages map[string]*Package // 项目包含的包集合（key为包全路径）
-	Cfg      *Config
+	currentProject Project
+	Packages       map[string]*Package // 项目包含的包集合（key为包全路径）
+	Cfg            *Config
 
 	*InitManager
 	initFuncs []string
+	Projects  []*Project // 项目包含的子项目集合（key为Project的module）
 }
 
-func (project *MainProject) genGoMod() {
+func (mp *MainProject) genGoMod() {
 	_, err := os.Stat("go.mod")
 	if os.IsNotExist(err) {
-		var content = "module " + project.Module + "\n" + strings.Replace(runtime.Version(), "go", "go ", 1) + "\n"
+		var content = "module " + mp.currentProject.Module + "\n" + strings.Replace(runtime.Version(), "go", "go ", 1) + "\n"
 		os.WriteFile("go.mod", []byte(content), 0660)
 	}
 }
 
 // genMain
-func (project *MainProject) genMain() {
+func (mp *MainProject) genMain() {
 	var content strings.Builder
 	content.WriteString("package main\n")
 	//	import "gitlab.plaso.cn/message-center/gen"
-	content.WriteString("import (\"flag\"\n\"" + project.Module + "/gen\")\n")
+	content.WriteString("import (\"flag\"\n\"" + mp.currentProject.Module + "/gen\")\n")
 	content.WriteString(`
 func main() {
 	parseArgument();
@@ -55,7 +57,7 @@ func run() {
 }
 
 // genBasic 生成basic.go
-func (project *MainProject) genBasic() {
+func (mp *MainProject) genBasic() {
 	os.Mkdir("basic", 0750)
 	os.WriteFile("basic/message.go", []byte(`package basic
 type Error struct {
@@ -79,16 +81,16 @@ func (error *Error) GetErrorCode() int {
 	`), 0660)
 }
 
-func (project *MainProject) genInitMain() {
+func (mp *MainProject) genInitMain() {
 	//如果是空目录，或者init为true；则生成main.go 和basic.go的Error类；
-	if !project.Cfg.InitMain {
+	if !mp.Cfg.InitMain {
 		return
 	}
-	project.genGoMod()
-	project.genMain()
-	project.genBasic()
+	mp.genGoMod()
+	mp.genMain()
+	mp.genBasic()
 }
-func (p *MainProject) genProjectCode() {
+func (mp *MainProject) genProjectCode() {
 	err := os.Mkdir("gen", 0750)
 	if err != nil && !os.IsExist(err) {
 		log.Fatal(err)
@@ -96,14 +98,14 @@ func (p *MainProject) genProjectCode() {
 	file := createGenedFile("goservlet_project")
 	file.GetImport(SimplePackage("github.com/gin-gonic/gin", "gin"))
 	os.Chdir("gen")
-	p.genBasicCode(file)
-	p.genPrepare(file)
+	mp.genBasicCode(file)
+	mp.genPrepare(file)
 	file.save()
 }
-func (p *MainProject) genPrepare(file *GenedFile) {
+func (mp *MainProject) genPrepare(file *GenedFile) {
 
-	p.InitInitorator()
-	p.InitManager.Generate(file)
+	mp.InitInitorator()
+	mp.InitManager.Generate(file)
 
 	sm := CreateServerManager()
 	sm.Prepare()
@@ -115,7 +117,7 @@ func (p *MainProject) genPrepare(file *GenedFile) {
 
 	var content strings.Builder
 	content.WriteString("func Prepare() {\n")
-	for _, fun := range p.initFuncs {
+	for _, fun := range mp.initFuncs {
 		content.WriteString(fun + "()\n")
 	}
 	content.WriteString(`
@@ -128,7 +130,7 @@ func (p *MainProject) genPrepare(file *GenedFile) {
 	`)
 	file.AddBuilder(&content)
 }
-func (MainProject *MainProject) genBasicCode(file *GenedFile) {
+func (mp *MainProject) genBasicCode(file *GenedFile) {
 	file.GetImport(SimplePackage("github.com/gin-contrib/cors", "cors"))
 	file.GetImport(SimplePackage("sync", "sync"))
 
@@ -374,45 +376,66 @@ func initServer(){
 }
 
 // GetPackage retrieves a package by module path without creation
-func (p *MainProject) GetPackage(module string) *Package {
-	return p.Packages[module]
+func (mp *MainProject) GetPackage(module string) *Package {
+	return mp.Packages[module]
 }
 
 // FindPackage finds or creates a package with automatic module path resolution
-func (p *MainProject) FindPackage(module string) *Package {
-	if pkg := p.GetPackage(module); pkg != nil {
+func (mp *MainProject) FindPackage(module string) *Package {
+	if pkg := mp.GetPackage(module); pkg != nil {
 		return pkg
 	}
-	newPkg := NewPackage(module)
-	if module == "" {
-		fmt.Printf("bad")
+
+	for _, p := range mp.Projects {
+		// 根据module寻找package
+		if strings.Contains(module, p.Module) {
+			newPkg := NewPackage(module, p.Simple, path.Join(p.Path, module[len(p.Module):]))
+			mp.Packages[module] = newPkg
+			newPkg.Parse()
+			return newPkg
+		}
 	}
-	p.Packages[module] = newPkg
+	newPkg := NewSysPackage(module)
+	mp.Packages[module] = newPkg
+	//此处识别为系统Package
 	return newPkg
 }
 
 // GenerateCode 生成项目的代码
-func (p *MainProject) GenerateCode() error {
-	p.genInitMain()
+func (mp *MainProject) GenerateCode() error {
+	mp.genInitMain()
 	// 遍历所有包
-	for _, pkg := range p.Packages {
+	for _, pkg := range mp.Packages {
 		_ = pkg
 		// 生成包的代码
 		// if err := pkg.GenerateCode(); err != nil {
 		// 	return fmt.Errorf("error generating code for package %s: %w", pkg.Name, err)
 		// }
 	}
-	p.genProjectCode()
-	NewSwagger(p).GenerateCode(&p.Cfg.SwaggerCfg)
+	mp.genProjectCode()
+	NewSwagger(mp).GenerateCode(&mp.Cfg.SwaggerCfg)
 	return nil
+}
+func escapeModulePath(s string) string {
+	var result strings.Builder
+	for _, r := range s {
+		if r >= 'A' && r <= 'Z' {
+			result.WriteRune('!')
+			result.WriteRune(r - 'A' + 'a') // 转为小写
+		} else {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
 }
 
 // Parse 解析项目的代码
-func (p *MainProject) Parse() error {
+func (mp *MainProject) Parse() error {
+	p := &mp.currentProject
 	if err := p.ParseModule(); err != nil {
 		return err
 	}
-	cfg := p.Cfg
+	cfg := mp.Cfg
 	traceKeyMod := cfg.Generation.TraceKeyMod
 	if !strings.Contains(traceKeyMod, ".") {
 		cfg.Generation.TraceKeyMod = p.Module + "/" + traceKeyMod
@@ -421,17 +444,26 @@ func (p *MainProject) Parse() error {
 	if !strings.Contains(responseMod, ".") {
 		cfg.Generation.ResponseMod = p.Module + "/" + responseMod
 	}
+	mp.Projects = append(mp.Projects, p)
 	goPath := os.Getenv("GOPATH")
 	for _, mod := range p.Require {
-		if mod.Indirect {
-			continue
-		}
+		// if mod.Indirect {
+		// 	continue
+		// }
+
 		p := Project{
-			Path:   path.Join(goPath, "pkg/mod", mod.Mod.Path+"@"+mod.Mod.Version),
+			Path:   path.Join(goPath, "pkg/mod", escapeModulePath(mod.Mod.Path)+"@"+mod.Mod.Version),
 			Simple: true,
 		}
-		p.Parse()
+		p.ParseModule()
+		if p.Module == "" {
+			p.Module = mod.Mod.Path
+		}
+		mp.Projects = append(mp.Projects, &p)
 	}
+	sort.Slice(mp.Projects, func(i, j int) bool {
+		return mp.Projects[i].Module > mp.Projects[j].Module
+	})
 	return p.ParseCode()
 }
 
@@ -445,7 +477,7 @@ func CreateProject(path string, cfg *Config) *MainProject {
 		// servers:      make(map[string]*server),
 		// creators: make(map[*Struct]*Initiator),
 	}
-	GlobalProject.Path = path
+	GlobalProject.currentProject.Path = path
 	// 由于Package中有指向Project的指针，所以RawPackage指向了此处的project，如果返回对象，则出现了两个Project，一个是返回的Project，一个是RawPackage中的Project；
 	// 返回*Project才能保证这是一个Project对象；
 	// project.initRawPackage()

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"path"
 	"strings"
 )
 
@@ -67,7 +66,8 @@ func (g *Gosourse) ParseTop() error {
 		// 这里是有问题的，需要修改
 		// 不报错了。原工程会报错
 	}
-	fmt.Printf("Parsing file: %s name: %s %s\n", g.Path, g.Pkg.Name, g.Pkg.Module)
+	// TODO: 需要添加日志级别，再打印日志
+	// fmt.Printf("Parsing file: %s name: %s %s\n", g.Path, g.Pkg.Name, g.Pkg.Module)
 	g.parseImport(g.File.Imports)
 	decls := g.File.Decls
 	for i := 0; i < len(decls); i++ {
@@ -116,11 +116,8 @@ func (goFile *Gosourse) parseImport(imports []*ast.ImportSpec) {
 			name = importSpec.Name.Name
 		} else {
 			// 如果没有带名字，则从Package中寻找，此处是否可能该Package还没有被解析呢？
-			name = GlobalProject.FindPackage(pathValue).Name
-			// 由于解析顺序的问题，可能还是找不到name，后续应该按照依赖顺序尽性解析；暂时先简单解决；
-			if name == "" {
-				name = path.Base(pathValue)
-			}
+			pkg := GlobalProject.FindPackage(pathValue)
+			name = pkg.GetName()
 		}
 		// pkg := goFile.pkg.Project.getPackage(pathValue, true)
 		// 此处是第三方package，也可能是本项目的尚未被解析的工程，其modeName为空，先补一个；
