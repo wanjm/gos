@@ -11,4 +11,9 @@
 # 解析import遇到的意外；
 ## 原以为每个import都在go.mod中，但是系统的package是个例外，其在GOROOT中；
 ## 原以为可以跳过系统package的解析，但是，还是有很多结构体都是在GOROOT中的。暂时还不解析，看看还会遇到什么问题
+## 缓存目录大小写变动github.com/BurntSushi/toml => github.com/!burnt!sushi/toml
+## 原以为不会存在两个pkg（project）其中一个是另一个的子目录；
+如下： 这是两个不同的project，他们有自己的版本，v2不是第一个的子目录；
+github.com/pelletier/go-toml v1.9.5
+github.com/pelletier/go-toml/v2 v2.2.2 
 
