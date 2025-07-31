@@ -64,7 +64,7 @@ func (field *Field) parseTag(fieldType *ast.BasicLit) {
 		for _, tag := range tagList {
 			kv := strings.Split(tag, ":")
 			if len(kv) == 2 {
-				field.Tags[kv[0]] = kv[1]
+				field.Tags[kv[0]] = strings.Trim(kv[1], "\"")
 			}
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-openapi/spec"
@@ -31,8 +32,10 @@ func (r *RawType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 	case "float32", "float64":
 		name = "number"
 	}
-
 	schema.Type = []string{name}
+}
+func (r *RawType) GetTypename() string {
+	return r.typeName
 }
 func (r *ArrayType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 	schema.Type = []string{"array"}
@@ -43,6 +46,9 @@ func (r *ArrayType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 	// 	r.class = r.pkg.getStruct(r.typeName, false)
 	// }
 	r.Typer.(SchemaType).InitSchema(schema.Items.Schema, swagger)
+}
+func (r *ArrayType) GetTypename() string {
+	return "array"
 }
 
 // func (m *MapType) InitSchema(schema *spec.Schema, swagger *Swagger) {
@@ -67,6 +73,15 @@ func (e *EmptyType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 }
 func (e *EmptyType) GetTypename() string {
 	return "obj"
+}
+func (e *EmptyType) Name(genFile *GenedFile) string {
+	panic("not support")
+}
+func (e *EmptyType) FullName() string {
+	panic("not support")
+}
+func (e *EmptyType) GenConstructCode(genFile *GenedFile, wire bool) string {
+	panic("not support")
 }
 
 type Swagger struct {
@@ -165,7 +180,8 @@ func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager) {
 			var props spec.SchemaProps
 			_ = props
 			if len(servlet.Params) > 1 && servlet.Params[1].Type != nil {
-				ref := swagger.getRefOfStruct(servlet.Params[1].Type.(*Struct))
+				t := GetBasicType(servlet.Params[1].Type)
+				ref := swagger.getRefOfStruct(t.(*Struct))
 				parameter = append(parameter, spec.Parameter{
 					ParamProps: spec.ParamProps{
 						Name:     "body",
@@ -232,15 +248,19 @@ func (swagger *Swagger) GenerateCode(cfg *SwaggerCfg) string {
 		_ = name
 		swagger.addServletFromPackage(pkg)
 	}
-	swaggerJson, _ := swagger.swag.MarshalJSON()
-	if cfg.Token == "" {
-		//如果不上传，则打印到控制台
-		//fmt.Printf("swagger:%s\n", string(swaggerJson))
+	swaggerJson, err := swagger.swag.MarshalJSON()
+	if err != nil {
+		fmt.Printf("json.Marshal(s.SwaggerProps) error: %v", err)
 		return ""
 	}
-	cmdMap := map[string]interface{}{
+	if cfg.Token == "" {
+		//如果不上传，则打印到控制台
+		fmt.Printf("swagger:%s\n", string(swaggerJson))
+		return ""
+	}
+	cmdMap := map[string]any{
 		"input": string(swaggerJson),
-		"options": map[string]interface{}{
+		"options": map[string]any{
 			"targetEndpointFolderId":        cfg.ServletFolder,
 			"targetSchemaFolderId":          cfg.SchemaFolder,
 			"endpointOverwriteBehavior":     "OVERWRITE_EXISTING",
@@ -250,7 +270,7 @@ func (swagger *Swagger) GenerateCode(cfg *SwaggerCfg) string {
 		},
 	}
 	data, _ := json.Marshal(cmdMap)
-	url := "https://api.apifox.com/v1/projects/" + cfg.ProjectId + "/import-openapi?locale=zh-CN"
+	url := "http://api.apifox.com/v1/projects/" + strconv.Itoa(cfg.ProjectId) + "/import-openapi?locale=zh-CN"
 	req, _ := http.NewRequest("POST", url, bytes.NewReader(data))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Apifox-Api-Version", "2024-03-28")
@@ -316,7 +336,7 @@ func (swagger *Swagger) getRefOfStruct(class *Struct) *spec.Ref {
 			// if class1 != nil {
 			// 	class1.InitSchema(&schema, swagger)
 			// } else {
-			fmt.Printf("ERROR: field %s 's type %s is not a SchemaType in\n", field.Name, field.Type.FullName())
+			fmt.Printf("ERROR: field %s's type %s is not a SchemaType in\n", field.Name, field.Type.FullName())
 			// }
 		}
 		schemas[name] = schema
@@ -334,7 +354,7 @@ func (swagger *Swagger) initResponseResult() {
 		Fields: []*Field{
 			NewSimpleField(rawTypeMap["int"], "code"),
 			NewSimpleField(rawTypeMap["string"], "msg"),
-			NewSimpleField(rawTypeMap["object"], "obj"),
+			NewSimpleField(&EmptyType{}, "obj"),
 		},
 	}
 	swagger.responseResult = &class

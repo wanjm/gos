@@ -24,6 +24,14 @@ func GetConstructor(typer Typer) Constructor {
 	}
 	return nil
 }
+
+func GetBasicType(typer Typer) Typer {
+	if t, ok := typer.(*PointerType); ok {
+		return GetBasicType(t.Typer)
+	}
+	return typer
+}
+
 func IsPointer(typer Typer) bool {
 	_, ok := typer.(*PointerType)
 	return ok

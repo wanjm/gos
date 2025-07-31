@@ -402,6 +402,7 @@ func (p *MainProject) GenerateCode() error {
 		// }
 	}
 	p.genProjectCode()
+	NewSwagger(p).GenerateCode(&p.Cfg.SwaggerCfg)
 	return nil
 }
 
