@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -45,7 +46,8 @@ func (r *ArrayType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 	// if r.class == nil {
 	// 	r.class = r.pkg.getStruct(r.typeName, false)
 	// }
-	r.Typer.(SchemaType).InitSchema(schema.Items.Schema, swagger)
+	basicType := GetBasicType(r.Typer)
+	basicType.(SchemaType).InitSchema(schema.Items.Schema, swagger)
 }
 func (r *ArrayType) GetTypename() string {
 	return "array"
@@ -294,12 +296,8 @@ func (swagger *Swagger) addServletFromPackage(pkg *Package) {
 	}
 }
 
-func (swagger *Swagger) getRefOfStruct(class *Struct) *spec.Ref {
+func (swagger *Swagger) addStructFieldsToSchema(class *Struct) map[string]spec.Schema {
 	schemas := make(map[string]spec.Schema)
-	result := spec.SchemaProps{
-		Type:       []string{"object"},
-		Properties: schemas,
-	}
 	/*
 		"expireType": { //结构体格式
 			"$ref": "#/definitions/schema.ExpireType"
@@ -315,6 +313,11 @@ func (swagger *Swagger) getRefOfStruct(class *Struct) *spec.Ref {
 		},
 	*/
 	for _, field := range class.Fields {
+		if field.Name == "" {
+			schemas1 := swagger.addStructFieldsToSchema(field.Type.(*Struct))
+			maps.Copy(schemas, schemas1)
+			continue
+		}
 		var name = field.Tags["json"]
 		if name == "-" {
 			continue
@@ -340,6 +343,15 @@ func (swagger *Swagger) getRefOfStruct(class *Struct) *spec.Ref {
 			// }
 		}
 		schemas[name] = schema
+	}
+	return schemas
+}
+
+func (swagger *Swagger) getRefOfStruct(class *Struct) *spec.Ref {
+	schemas := swagger.addStructFieldsToSchema(class)
+	result := spec.SchemaProps{
+		Type:       []string{"object"},
+		Properties: schemas,
 	}
 	ref, _ := spec.NewRef("#/definitions/" + class.StructName)
 	swagger.swag.Definitions[class.StructName] = spec.Schema{
@@ -381,7 +393,8 @@ func (swagger *Swagger) getSwaggerResponse(objField *Field) spec.Response {
 	var objSchema = spec.Schema{
 		SchemaProps: spec.SchemaProps{},
 	}
-	objField.Type.(SchemaType).InitSchema(&objSchema, swagger)
+	basicType := GetBasicType(objField.Type)
+	basicType.(SchemaType).InitSchema(&objSchema, swagger)
 	ref := spec.Schema{
 		SchemaProps: spec.SchemaProps{
 			Type: []string{"object"},

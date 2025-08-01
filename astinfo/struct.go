@@ -78,6 +78,27 @@ func (v *Struct) FullName() string {
 func (class *Struct) GetTypename() string {
 	return class.StructName
 }
+func needWire(field *Field) bool {
+	if IsRawType(field.Type) {
+		return false
+	}
+	if field.Name == "" || (field.Name[0] <= 'z' && field.Name[0] >= 'a') {
+		return false
+	}
+
+	if field.Tags["wire"] == `-` {
+		return false
+	}
+	return true
+}
+
+// 这里有两种情况。如果定义一个统一的wire，需要考虑一下；
+// 1. 自动注入，dal的情况；
+// 2. request请求的自动创建；
+// 3. 系统原始类型；
+// 4. 嵌套的其他结构体；对于嵌套的结构体，在注入时，是必须要找到的；
+// 5. 初步考虑可以将wire变量定义为必须注入内容结构体变量；
+// wire为true表示必须绑定结构体等；
 func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 	result := genFile.GetImport(v.Pkg)
 	var sb strings.Builder
@@ -90,20 +111,18 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 	// getAddr(Strurct{
 	//}
 	//)
-	if wire {
-		for _, field := range v.Fields {
-			if IsRawType(field.Type) {
-				continue
-			}
-			if field.Name[0] <= 'z' && field.Name[0] >= 'a' {
-				continue
-			}
-
-			if field.Tags["wire"] == `"-"` {
-				continue
-			}
+	// 1. 有default，则wire；
+	// 2. wire为ture，且不是简单结构体（needWire），则寻找值去绑定；
+	for _, field := range v.Fields {
+		v, ok := field.Tags["default"]
+		if ok || (needWire(field) && wire) {
 			sb.WriteString(field.Name + ":")
-			sb.WriteString(field.GenVariableCode(genFile, wire))
+			if ok {
+				//此处需要考虑default为字符串等各种情况；
+				sb.WriteString(v)
+			} else {
+				sb.WriteString(field.GenVariableCode(genFile, wire))
+			}
 			sb.WriteString(",\n")
 		}
 	}
@@ -117,16 +136,9 @@ func (v *Struct) RequiredFields() []*Field {
 	var requiredFields []*Field
 	for _, field := range v.Fields {
 		// 过滤原始类型
-		if IsRawType(field.Type) {
-			continue
+		if needWire(field) {
+			requiredFields = append(requiredFields, field)
 		}
-
-		// 过滤wire标记为"-"的字段
-		if field.Tags["wire"] == `"-"` {
-			continue
-		}
-
-		requiredFields = append(requiredFields, field)
 	}
 	return requiredFields
 }
