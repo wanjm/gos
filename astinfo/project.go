@@ -31,7 +31,8 @@ func (p *Project) ParseModule() error {
 	}
 	p.Module = modfile.Module.Mod.Path
 	p.Require = modfile.Require
-	fmt.Printf("Module: %s\n", p.Module)
+	// TODO
+	// fmt.Printf("Module: %s\n", p.Module)
 	return nil
 }
 

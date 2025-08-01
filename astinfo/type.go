@@ -131,7 +131,7 @@ func (p *PointerType) GenConstructCode(genFile *GenedFile, wire bool) string {
 var rawTypeMap = map[string]*RawType{}
 
 func init() {
-	rawType := []string{"int", "string", "bool", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "float32"}
+	rawType := []string{"int", "string", "bool", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "float32", "byte", "any", "error"}
 	for _, t := range rawType {
 		rawTypeMap[t] = &RawType{
 			BaseType: BaseType{

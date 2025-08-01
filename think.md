@@ -16,4 +16,10 @@
 如下： 这是两个不同的project，他们有自己的版本，v2不是第一个的子目录；
 github.com/pelletier/go-toml v1.9.5
 github.com/pelletier/go-toml/v2 v2.2.2 
-
+## 原以为一个目录只有会一个pkg，实际可能有多个
+1. ***
+2. ***_test
+3. 其他如main，但是文件中有 "//go:build ignore"注释；
+   
+## 原以为每个go的import都对应go文件；
+1. 有//go:build ignore

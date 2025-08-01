@@ -92,21 +92,21 @@ func (field *FieldBasic) Parse() error {
 }
 
 func findType(pkg *Package, typeName string) Typer {
-	// 	res := pkg.GetTyper(typeName)
-	// if res == nil {
-	// 	fmt.Printf("find type %s failed\n", typeName)
-	// }
-	// return res
-	typer := pkg.FindStruct(typeName)
-	if typer == nil {
-		typer1 := pkg.FindInterface(typeName)
-		if typer1 != nil {
-			return typer1
-		}
-	} else {
-		return typer
+	res := pkg.GetTyper(typeName)
+	if res == nil {
+		fmt.Printf("find type %s failed\n", typeName)
 	}
-	return nil
+	return res
+	// typer := pkg.FindStruct(typeName)
+	// if typer == nil {
+	// 	typer1 := pkg.FindInterface(typeName)
+	// 	if typer1 != nil {
+	// 		return typer1
+	// 	}
+	// } else {
+	// 	return typer
+	// }
+	// return nil
 }
 
 // 在pkg内解析Type；

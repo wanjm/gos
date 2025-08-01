@@ -14,6 +14,8 @@ type Gosourse struct {
 	Imports map[string]string //key package name,value是包路径；
 }
 
+var knownowType = map[string]bool{}
+
 // 解析全局变量和 struct，interface
 func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 	switch genDecl.Tok {
@@ -40,11 +42,16 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 			pkgName := typeSpec.Type.(*ast.SelectorExpr).X.(*ast.Ident).Name
 			class := typeSpec.Type.(*ast.SelectorExpr).Sel.Name
 			pkg := GlobalProject.FindPackage(g.Imports[pkgName])
-			fmt.Printf("define alias type %s => %s %s  \n", typeSpec.Name.Name, pkgName, class)
+			//TODO
+			// fmt.Printf("define alias type %s => %s %s  \n", typeSpec.Name.Name, pkgName, class)
 			typer := pkg.GetTyper(class)
 			g.Pkg.Types[typeSpec.Name.Name] = typer
 		default:
-			fmt.Printf("unknown type '%s' in '%T'\n", typeSpec.Name.Name, typeType)
+			var typeName = fmt.Sprintf("%T", typeType)
+			if _, ok := knownowType[typeName]; !ok {
+				knownowType[typeName] = true
+				fmt.Printf("unknown type '%s' in '%T'\n", typeSpec.Name.Name, typeType)
+			}
 		}
 	}
 	return
@@ -59,7 +66,14 @@ func (g *Gosourse) getFuncDeclParser(funcDecl *ast.FuncDecl) Parser {
 		return NewMethod(funcDecl, g)
 	}
 }
-func (g *Gosourse) ParseTop() error {
+func (g *Gosourse) ParseTop() bool {
+	for _, c := range g.File.Comments {
+		for _, line := range c.List {
+			if strings.Contains(line.Text, "//go:build ignore") {
+				return false
+			}
+		}
+	}
 	if g.Pkg.Name == "" {
 		g.Pkg.Name = g.File.Name.Name
 	} else if g.Pkg.Name != g.File.Name.Name {
@@ -76,7 +90,7 @@ func (g *Gosourse) ParseTop() error {
 			g.getGenDeclParser(decl)
 		}
 	}
-	return nil
+	return true
 }
 func (g *Gosourse) Parse() error {
 	decls := g.File.Decls
@@ -111,7 +125,11 @@ func NewGosourse(file *ast.File, pkg *Package, path string) *Gosourse {
 func (goFile *Gosourse) parseImport(imports []*ast.ImportSpec) {
 	for _, importSpec := range imports {
 		var name string
-		pathValue := strings.Trim(importSpec.Path.Value, "\"")
+		modulePath := importSpec.Path.Value
+		pathValue := strings.Trim(modulePath, string(modulePath[0]))
+		if pathValue == "C" {
+			continue
+		}
 		if importSpec.Name != nil {
 			name = importSpec.Name.Name
 		} else {

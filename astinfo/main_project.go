@@ -388,7 +388,10 @@ func (mp *MainProject) FindPackage(module string) *Package {
 
 	for _, p := range mp.Projects {
 		// 根据module寻找package
-		if strings.Contains(module, p.Module) {
+		if p.Module == "" {
+			panic(fmt.Sprintf("project module is empty %s\n", p.Path))
+		}
+		if strings.HasPrefix(module, p.Module) {
 			newPkg := NewPackage(module, p.Simple, path.Join(p.Path, module[len(p.Module):]))
 			mp.Packages[module] = newPkg
 			newPkg.Parse()
@@ -396,6 +399,7 @@ func (mp *MainProject) FindPackage(module string) *Package {
 		}
 	}
 	newPkg := NewSysPackage(module)
+	newPkg.Parse()
 	mp.Packages[module] = newPkg
 	//此处识别为系统Package
 	return newPkg

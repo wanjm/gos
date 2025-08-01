@@ -15,6 +15,7 @@ type functionComment struct {
 	security     []string
 	groupName    string
 	Filter       string
+	owner        *Function
 }
 
 const (
@@ -60,7 +61,7 @@ func (comment *functionComment) dealValuePair(key, value string) {
 		comment.Filter = value
 	default:
 		if !comment.dealOldValuePair(key, value) {
-			fmt.Printf("unknown key '%s' in function comment\n", key)
+			fmt.Printf("unknown key '%s' in function comment %s in %s\n", key, comment.owner.Name, comment.owner.GoSource.Path)
 		}
 	}
 }
@@ -93,12 +94,14 @@ func (comment *functionComment) dealOldValuePair(key, value string) bool {
 
 // create
 func NewFunction(funcDecl *ast.FuncDecl, goSource *Gosourse) *Function {
-	return &Function{
+	fun := &Function{
 		funcDecl: funcDecl,
 		FunctionField: FunctionField{
 			GoSource: goSource,
 		},
 	}
+	fun.Comment.owner = fun
+	return fun
 }
 
 // GetType() string

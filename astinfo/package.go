@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"log"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -49,12 +50,14 @@ func (pkg *Package) Parse() error {
 	if pkg.finshedParse {
 		return nil
 	}
+	path := pkg.Path
 	defer func() {
 		pkg.finshedParse = true
+		// fmt.Printf("finished Parsing package: %s\n", path)
 	}()
-	path := pkg.Path
 	pkg.fset = token.NewFileSet()
 	// 这里取绝对路径，方便打印出来的语法树可以转跳到编辑器
+	// fmt.Printf("Parsing package: %s\n", path)
 	packageMap, err := parser.ParseDir(pkg.fset, path, nil, parser.AllErrors|parser.ParseComments)
 	if err != nil {
 		log.Printf("parse package %s failed %s", pkg.Module, err.Error())
@@ -62,8 +65,23 @@ func (pkg *Package) Parse() error {
 	}
 	// 先简单扫描；仅扫描定义，struct，interface，var；
 	var fileMap = make(map[*ast.File]*Gosourse)
+	// 一个目录下可能有多
+	// var count = 0
+	// for packName, _ := range packageMap {
+	// 	if strings.HasSuffix(packName, "_test") {
+	// 		continue
+	// 	}
+	// 	count++
+	// }
+	// if count > 1 {
+	// 	fmt.Printf("more than one package\n")
+	// }
 	for packName, pack := range packageMap {
 		_ = packName
+		// 先跳过test,后续再说；
+		if strings.HasSuffix(packName, "_test") {
+			continue
+		}
 		for filename, f := range pack.Files {
 			if strings.HasSuffix(filename, "_test.go") {
 				continue
@@ -71,24 +89,17 @@ func (pkg *Package) Parse() error {
 			gofile := NewGosourse(f, pkg, filename)
 			gofile.ParseTop()
 			fileMap[f] = gofile
-
 		}
 	}
 	if pkg.Simple {
 		return nil
 	}
-	fmt.Printf("Parsing package: %s\n", path)
+	// TODO
 	//再细化扫描；
-	for packName, pack := range packageMap {
-		_ = packName
-		// fmt.Printf("begin parse %s with %s\n", packName, path)
-		for _, f := range pack.Files {
-			gofile := fileMap[f]
-			if gofile != nil {
-				gofile.Parse()
-			}
-		}
+	for _, gofile := range fileMap {
+		gofile.Parse()
 	}
+
 	return nil
 }
 
@@ -107,15 +118,7 @@ func NewPackage(module string, simple bool, absPath string) *Package {
 }
 
 func NewSysPackage(module string) *Package {
-	return &Package{
-		Module:       module,
-		Simple:       true,
-		Path:         "",
-		finshedParse: true,
-		Name:         filepath.Base(module),
-		Structs:      make(map[string]*Struct),
-		Types:        make(map[string]Typer),
-	}
+	return NewPackage(module, true, path.Join("/opt/google/go/src", module))
 }
 
 func (pkg *Package) Getstruct(name string) *Struct {
