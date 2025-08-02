@@ -63,16 +63,15 @@ type Struct struct {
 	ref *spec.Ref
 }
 
-func (v *Struct) Name(genFile *GenedFile) string {
-	pkg := v.Pkg
-	if genFile.pkg == pkg {
+func (v *Struct) RefName(genFile *GenedFile) string {
+	if genFile == nil || genFile.pkg == v.Pkg {
 		return v.StructName
 	}
-	impt := genFile.GetImport(pkg)
+	impt := genFile.GetImport(v.Pkg)
 	return impt.Name + "." + v.StructName
 }
 
-func (v *Struct) FullName() string {
+func (v *Struct) IDName() string {
 	return v.Pkg.Module + "." + v.StructName
 }
 func (class *Struct) GetTypename() string {

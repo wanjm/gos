@@ -76,10 +76,10 @@ func (e *EmptyType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 func (e *EmptyType) GetTypename() string {
 	return "obj"
 }
-func (e *EmptyType) Name(genFile *GenedFile) string {
+func (e *EmptyType) RefName(genFile *GenedFile) string {
 	panic("not support")
 }
-func (e *EmptyType) FullName() string {
+func (e *EmptyType) IDName() string {
 	panic("not support")
 }
 func (e *EmptyType) GenConstructCode(genFile *GenedFile, wire bool) string {
@@ -339,7 +339,7 @@ func (swagger *Swagger) addStructFieldsToSchema(class *Struct) map[string]spec.S
 			// if class1 != nil {
 			// 	class1.InitSchema(&schema, swagger)
 			// } else {
-			fmt.Printf("ERROR: field %s's type %s is not a SchemaType in\n", field.Name, field.Type.FullName())
+			fmt.Printf("ERROR: field %s's type %s is not a SchemaType in\n", field.Name, field.Type.IDName())
 			// }
 		}
 		schemas[name] = schema

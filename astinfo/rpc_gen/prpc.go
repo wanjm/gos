@@ -73,7 +73,7 @@ func (prpc *PrpcGen) genRpcClientCode(file *astinfo.GenedFile, structName string
 	var params []string
 	for i, l := 1, len(method.Params); i < l; i++ {
 		param := method.Params[i]
-		info := param.Name + " " + param.Type.Name(file)
+		info := param.Name + " " + param.Type.RefName(file)
 		params = append(params, info)
 		args = append(args, param.Name)
 	}
@@ -84,7 +84,7 @@ func (prpc *PrpcGen) genRpcClientCode(file *astinfo.GenedFile, structName string
 	var results []string
 	if len(method.Results) >= 2 {
 		resultP0 := method.Results[0]
-		info := "obj " + resultP0.Type.Name(file)
+		info := "obj " + resultP0.Type.RefName(file)
 		results = append(results, info)
 	}
 	results = append(results, "err error")

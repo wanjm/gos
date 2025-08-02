@@ -65,9 +65,9 @@ func (v *Interface) initGenDecl(genDecl *ast.GenDecl) {
 	v.astRoot = genDecl.Specs[0].(*ast.TypeSpec).Type.(*ast.InterfaceType)
 }
 
-// Name returns the type name with package prefix if needed
-func (i *Interface) Name(genFile *GenedFile) string {
-	if genFile.pkg == i.Pkg {
+// RefName returns the type name with package prefix if needed
+func (i *Interface) RefName(genFile *GenedFile) string {
+	if genFile == nil || genFile.pkg == i.Pkg {
 		return i.InterfaceName
 	}
 
@@ -75,8 +75,8 @@ func (i *Interface) Name(genFile *GenedFile) string {
 	return impt.Name + "." + i.InterfaceName
 }
 
-// FullName returns the full name of the interface with package path
-func (i *Interface) FullName() string {
+// IDName returns the full name of the interface with package path
+func (i *Interface) IDName() string {
 	return i.Pkg.Module + "." + i.InterfaceName
 }
 

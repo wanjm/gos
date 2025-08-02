@@ -51,7 +51,7 @@ func (g *InitGroup) addNode(node *DependNode) {
 	} else if node.getReturnName() == "" {
 		if g.Default.getReturnName() == "" {
 			// 这里无法获取函数名，暂时注释掉
-			fmt.Printf("more than one function return the same type %s,but without name\n", g.Default.getReturnField().Type.FullName())
+			fmt.Printf("more than one function return the same type %s,but without name\n", g.Default.getReturnField().Type.IDName())
 		} else {
 			g.Default = node
 		}
@@ -76,7 +76,7 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 	call.WriteString("func initVariable() GlobalInspector {\n")
 	for _, node := range im.readyNode {
 		if node.returnVariableName != "" {
-			definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type.Name(goGenerated)))
+			definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type.RefName(goGenerated)))
 			call.WriteString(fmt.Sprintf("inspector.%s = ", node.returnVariableName))
 		}
 		call.WriteString(node.Generator.GenerateDependcyCode(goGenerated))
@@ -166,7 +166,7 @@ func (im *InitManager) initParent(node *DependNode, waittingVariableMap Variable
 		if parent != nil {
 			node.Parent = append(node.Parent, parent)
 		} else {
-			fmt.Printf("can't init field: %s not found for type %s\n", param.Name, param.Type.FullName())
+			fmt.Printf("can't init field: %s not found for type %s\n", param.Name, param.Type.IDName())
 		}
 	}
 }
@@ -183,7 +183,7 @@ func (mp *MainProject) GetVariableNode(typer Typer, name string) *DependNode {
 type VariableMap map[string]*InitGroup //key是原始类型的名字"int"，"pkg.Struct"
 
 func (vm VariableMap) getVariable(typer Typer, name string) *DependNode {
-	group := vm[typer.FullName()]
+	group := vm[typer.IDName()]
 	if group == nil {
 		return nil
 	}
@@ -211,12 +211,12 @@ func (im VariableMap) addNode(node *DependNode) {
 		return
 	}
 	typer := returnField.Type
-	group := im[typer.FullName()]
+	group := im[typer.IDName()]
 	if group == nil {
 		group = &InitGroup{
 			Initorators: []*DependNode{},
 		}
-		im[typer.FullName()] = group
+		im[typer.IDName()] = group
 	}
 	group.addNode(node)
 }

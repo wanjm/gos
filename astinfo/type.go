@@ -5,10 +5,12 @@ package astinfo
 type Typer interface {
 	// 使用genFile作为参数的目的是，在生成代码时，需要根据genFile来生成import代码；
 	// 配合GenFileName，该函数完成是在GenFileName引用该Type时，变量类型的全称；
-	Name(genFile *GenedFile) string
-	// 该变量的全名（目前时pkg.StructName）,后续可能需要改为pkgModPath.StructName达到全局唯一的目的
-	// 保证该类的全局唯一是本函数的目的；
-	FullName() string
+	// genFile 为空，则简单返回类型名字；
+	// genFile不为空，pkg跟结构体相同，则返回结构体名字；
+	// genFile不为空，pkg跟结构体不同，则返回pkg.Name + "." + 结构体名字；同时向genFile添加import代码；
+	RefName(genFile *GenedFile) string
+	// 该变量的全名pkgModPath.StructName达到全局唯一的目的
+	IDName() string
 	Constructor
 }
 type Constructor interface {
@@ -59,11 +61,11 @@ type BaseType struct {
 // 	return false
 // }
 
-func (b *BaseType) Name(_ *GenedFile) string {
+func (b *BaseType) RefName(_ *GenedFile) string {
 	return b.typeName
 }
 
-func (b *BaseType) FullName() string {
+func (b *BaseType) IDName() string {
 	return b.typeName
 }
 
@@ -85,9 +87,9 @@ type ArrayType struct {
 	Typer
 }
 
-// Name
-func (a *ArrayType) Name(genFile *GenedFile) string {
-	return "[]" + a.Typer.Name(genFile)
+// RefName
+func (a *ArrayType) RefName(genFile *GenedFile) string {
+	return "[]" + a.Typer.RefName(genFile)
 }
 
 type RawType struct {
@@ -115,8 +117,8 @@ func NewPointerType(typer Typer) *PointerType {
 	}
 }
 
-func (p *PointerType) Name(genFile *GenedFile) string {
-	return "*" + p.Typer.Name(genFile)
+func (p *PointerType) RefName(genFile *GenedFile) string {
+	return "*" + p.Typer.RefName(genFile)
 }
 
 func (p *PointerType) GenConstructCode(genFile *GenedFile, wire bool) string {
