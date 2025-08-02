@@ -15,7 +15,6 @@ import (
 
 type SchemaType interface {
 	InitSchema(*spec.Schema, *Swagger)
-	GetTypename() string
 }
 
 func (r *RawType) InitSchema(schema *spec.Schema, swagger *Swagger) {
@@ -35,9 +34,7 @@ func (r *RawType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 	}
 	schema.Type = []string{name}
 }
-func (r *RawType) GetTypename() string {
-	return r.typeName
-}
+
 func (r *ArrayType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 	schema.Type = []string{"array"}
 	schema.Items = &spec.SchemaOrArray{
@@ -48,9 +45,6 @@ func (r *ArrayType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 	// }
 	basicType := GetBasicType(r.Typer)
 	basicType.(SchemaType).InitSchema(schema.Items.Schema, swagger)
-}
-func (r *ArrayType) GetTypename() string {
-	return "array"
 }
 
 // func (m *MapType) InitSchema(schema *spec.Schema, swagger *Swagger) {
@@ -73,9 +67,7 @@ type EmptyType struct {
 
 func (e *EmptyType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 }
-func (e *EmptyType) GetTypename() string {
-	return "obj"
-}
+
 func (e *EmptyType) RefName(genFile *GenedFile) string {
 	panic("not support")
 }

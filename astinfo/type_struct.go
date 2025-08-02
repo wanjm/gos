@@ -74,9 +74,7 @@ func (v *Struct) RefName(genFile *GenedFile) string {
 func (v *Struct) IDName() string {
 	return v.Pkg.Module + "." + v.StructName
 }
-func (class *Struct) GetTypename() string {
-	return class.StructName
-}
+
 func needWire(field *Field) bool {
 	if IsRawType(field.Type) {
 		return false
