@@ -113,8 +113,10 @@ func (f *Function) GetType() string {
 func (f *Function) Parse() error {
 	parseComment(f.funcDecl.Doc, &f.Comment)
 	f.Name = f.funcDecl.Name.Name
-	f.parseParameter(f.funcDecl.Type)
-	// 方法体为空
+	//没有类型的函数，不解析；
+	if f.Comment.funcType != "" {
+		f.parseParameter(f.funcDecl.Type)
+	}
 	return nil
 }
 
