@@ -34,10 +34,13 @@ type Interface struct {
 }
 
 func NewInterface(name string, pkg *Package) *Interface {
-	return &Interface{
+	iface := &Interface{
 		InterfaceName: name,
 		Pkg:           pkg,
 	}
+	pkg.Interfaces[name] = iface
+	pkg.Types[name] = iface
+	return iface
 }
 func (i *Interface) Parse() error {
 	parseComment(i.genDecl.Doc, &i.Comment)

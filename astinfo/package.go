@@ -23,6 +23,7 @@ type Package struct {
 	Types     map[string]Typer // key是Type 的Name
 	fset      *token.FileSet   // 记录fset，到时可以找到文件
 	GlobalVar map[string]*VarField
+	WaitAlias map[string]*Alias
 	FunctionManager
 	finshedParse bool
 }
@@ -53,6 +54,15 @@ func (pkg *Package) Parse() error {
 	path := pkg.Path
 	defer func() {
 		pkg.finshedParse = true
+		for name, alias := range pkg.WaitAlias {
+			if alias.Typer == nil {
+				typer := pkg.GetTyper(name)
+				if typer == nil {
+					fmt.Printf("Error: failed to get %s.%s = %s when parse finish\n", pkg.Module, alias.Name, name)
+				}
+				alias.Typer = typer
+			}
+		}
 		// fmt.Printf("finished Parsing package: %s\n", path)
 	}()
 	pkg.fset = token.NewFileSet()
@@ -125,6 +135,8 @@ func NewPackage(module string, simple bool, absPath string) *Package {
 		Interfaces: make(map[string]*Interface),
 		GlobalVar:  make(map[string]*VarField),
 		Types:      make(map[string]Typer),
+		WaitAlias:  make(map[string]*Alias),
+		// finshedParse: simple,
 	}
 }
 
@@ -141,8 +153,6 @@ func (pkg *Package) FindStruct(name string) *Struct {
 	class := pkg.Getstruct(name)
 	if class == nil {
 		class = NewStruct(name, pkg)
-		pkg.Structs[name] = class
-		pkg.Types[name] = class
 	}
 	return class
 }
@@ -160,8 +170,6 @@ func (pkg *Package) FindInterface(name string) *Interface {
 	class := pkg.GetInterface(name)
 	if class == nil {
 		class = NewInterface(name, pkg)
-		pkg.Interfaces[name] = class
-		pkg.Types[name] = class
 	}
 	return class
 }

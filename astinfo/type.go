@@ -71,7 +71,7 @@ func (b *BaseType) IDName() string {
 
 func (b *BaseType) GenConstructCode(genFile *GenedFile, _ bool) string {
 	switch b.typeName {
-	case "int", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64":
+	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64":
 		return "0"
 	case "float32", "float64":
 		return "0.0"
@@ -90,6 +90,12 @@ type ArrayType struct {
 // RefName
 func (a *ArrayType) RefName(genFile *GenedFile) string {
 	return "[]" + a.Typer.RefName(genFile)
+}
+
+type MapType struct {
+	BaseType
+	KeyTyper   Typer
+	ValueTyper Typer
 }
 
 type RawType struct {
@@ -133,7 +139,13 @@ func (p *PointerType) GenConstructCode(genFile *GenedFile, wire bool) string {
 var rawTypeMap = map[string]*RawType{}
 
 func init() {
-	rawType := []string{"int", "string", "bool", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "float32", "byte", "any", "error"}
+	rawType := []string{"string", "bool", "byte", "rune",
+		"int", "int8", "int16", "int32", "int64",
+		"uint", "uint8", "uint16", "uint32", "uint64",
+		"float32", "float64",
+		"any", "error",
+		"uintptr",
+	}
 	for _, t := range rawType {
 		rawTypeMap[t] = &RawType{
 			BaseType: BaseType{

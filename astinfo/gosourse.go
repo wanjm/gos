@@ -40,27 +40,43 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 			parser = class
 		case *ast.SelectorExpr:
 			pkgName := typeSpec.Type.(*ast.SelectorExpr).X.(*ast.Ident).Name
-			class := typeSpec.Type.(*ast.SelectorExpr).Sel.Name
+			className := typeSpec.Type.(*ast.SelectorExpr).Sel.Name
 			pkg := GlobalProject.FindPackage(g.Imports[pkgName])
+			alias := NewAlias(typeSpec.Name.Name, g.Pkg, typeSpec.Assign != 0)
+			alias.Typer = pkg.GetTyper(className)
+			if alias.Typer == nil {
+				fmt.Printf("ERROR: can't get %s = %s.%s\n", alias.IDName(), pkg.Module, typeSpec.Name.Name)
+			}
+			parser = alias
 			//TODO
 			// fmt.Printf("define alias type %s => %s %s  \n", typeSpec.Name.Name, pkgName, class)
-			typer := pkg.GetTyper(class)
-			g.Pkg.Types[typeSpec.Name.Name] = typer
 		case *ast.Ident:
-			typeName := typeSpec.Name.Name
-			//这种写法意味着两轮扫描；
-			if typeSpec.Assign == 0 {
-				// type A B
+			className := typeSpec.Type.(*ast.Ident).Name
+			alias := NewAlias(typeSpec.Name.Name, g.Pkg, typeSpec.Assign != 0)
+			typer := GetRawType(className)
+			if typer != nil {
+				alias.Typer = typer
 			} else {
-				// type A = B
+				alias.Typer = g.Pkg.GetTyper(className)
 			}
-			if strings.HasPrefix(typeSpec.Name.Name, "Hello") {
-				fmt.Printf("typeName %s\n", typeName)
+			parser = alias
+			if alias.Typer == nil {
+				g.Pkg.WaitAlias[className] = alias
 			}
+		case *ast.MapType:
+			alias := NewAlias(typeSpec.Name.Name, g.Pkg, typeSpec.Assign != 0)
+			alias.Typer = &MapType{}
+			parser = alias
+		case *ast.ArrayType:
+			alias := NewAlias(typeSpec.Name.Name, g.Pkg, typeSpec.Assign != 0)
+			alias.Typer = &ArrayType{}
+			parser = alias
+		case *ast.FuncType:
+		case *ast.ChanType:
 		default:
 			var typeName = fmt.Sprintf("%T", typeType)
 			if _, ok := knownowType[typeName]; !ok {
-				knownowType[typeName] = true
+				// knownowType[typeName] = trues
 				fmt.Printf("unknown type '%s' in '%T'\n", typeSpec.Name.Name, typeType)
 			}
 		}

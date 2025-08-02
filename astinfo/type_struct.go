@@ -155,10 +155,13 @@ func (v *Struct) GenerateDependcyCode(goGenerated *GenedFile) string {
 
 // 不一定每次newStruct时都会有goSrouce，所以此时只能传Pkg；
 func NewStruct(name string, pkg *Package) *Struct {
-	return &Struct{
+	class := &Struct{
 		StructName: name,
 		Pkg:        pkg,
 	}
+	pkg.Structs[name] = class
+	pkg.Types[name] = class
+	return class
 }
 
 // initGenDecl
