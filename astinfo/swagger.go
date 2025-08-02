@@ -61,6 +61,11 @@ func (s *Struct) InitSchema(schema *spec.Schema, swagger *Swagger) {
 	}
 	schema.Ref = *s.ref
 }
+func (s *Alias) InitSchema(schema *spec.Schema, swagger *Swagger) {
+	// schema.Ref = spec.Ref{
+	basicType := GetBasicType(s.Typer)
+	basicType.(SchemaType).InitSchema(schema, swagger)
+}
 
 type EmptyType struct {
 }

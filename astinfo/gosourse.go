@@ -70,6 +70,7 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 		case *ast.ArrayType:
 			alias := NewAlias(typeSpec.Name.Name, g.Pkg, typeSpec.Assign != 0)
 			alias.Typer = &ArrayType{}
+			parseType(&alias.Typer, typeType.Elt, g)
 			parser = alias
 		case *ast.FuncType:
 		case *ast.ChanType:

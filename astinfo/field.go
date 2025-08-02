@@ -110,7 +110,7 @@ func findType(pkg *Package, typeName string) Typer {
 }
 
 // 在pkg内解析Type；
-func (field *FieldBasic) parseType(typer *Typer, fieldType ast.Expr) error {
+func parseType(typer *Typer, fieldType ast.Expr, goSource *Gosourse) error {
 	var resultType Typer
 	var err error
 	switch fieldType := fieldType.(type) {
@@ -121,10 +121,10 @@ func (field *FieldBasic) parseType(typer *Typer, fieldType ast.Expr) error {
 		// ArrayType中的pkg，typeName，class指向具体的类型
 		array := ArrayType{}
 		resultType = &array
-		err = field.parseType(&array.Typer, fieldType.Elt)
+		err = parseType(&array.Typer, fieldType.Elt, goSource)
 	case *ast.StarExpr:
 		var pointer Typer
-		err = field.parseType(&pointer, fieldType.X)
+		err = parseType(&pointer, fieldType.X, goSource)
 		resultType = NewPointerType(pointer)
 	case *ast.Ident:
 		// 此时可能是
@@ -135,7 +135,7 @@ func (field *FieldBasic) parseType(typer *Typer, fieldType ast.Expr) error {
 		type1 := GetRawType(fieldType.Name)
 		if type1 == nil {
 			//再检查Struct类型；
-			resultType = findType(field.GoSource.Pkg, fieldType.Name)
+			resultType = findType(goSource.Pkg, fieldType.Name)
 		} else {
 			resultType = type1
 		}
@@ -144,7 +144,7 @@ func (field *FieldBasic) parseType(typer *Typer, fieldType ast.Expr) error {
 		// field定义的selector，就只考虑pkg1
 		pkgName := fieldType.X.(*ast.Ident).Name
 		typeName := fieldType.Sel.Name
-		pkgModePath := field.GoSource.Imports[pkgName]
+		pkgModePath := goSource.Imports[pkgName]
 		resultType = findType(GlobalProject.FindPackage(pkgModePath), typeName)
 	default:
 		// TODO: 需要添加日志级别，再打印日志
@@ -157,7 +157,7 @@ func (field *FieldBasic) parseType(typer *Typer, fieldType ast.Expr) error {
 }
 
 func (field *FieldBasic) ParseType(fieldType ast.Expr) error {
-	return field.parseType(&field.Type, fieldType)
+	return parseType(&field.Type, fieldType, field.GoSource)
 }
 
 type Field struct {
