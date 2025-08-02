@@ -46,6 +46,17 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 			// fmt.Printf("define alias type %s => %s %s  \n", typeSpec.Name.Name, pkgName, class)
 			typer := pkg.GetTyper(class)
 			g.Pkg.Types[typeSpec.Name.Name] = typer
+		case *ast.Ident:
+			typeName := typeSpec.Name.Name
+			//这种写法意味着两轮扫描；
+			if typeSpec.Assign == 0 {
+				// type A B
+			} else {
+				// type A = B
+			}
+			if strings.HasPrefix(typeSpec.Name.Name, "Hello") {
+				fmt.Printf("typeName %s\n", typeName)
+			}
 		default:
 			var typeName = fmt.Sprintf("%T", typeType)
 			if _, ok := knownowType[typeName]; !ok {

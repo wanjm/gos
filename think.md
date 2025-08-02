@@ -23,3 +23,6 @@ github.com/pelletier/go-toml/v2 v2.2.2
    
 ## 原以为每个go的import都对应go文件；
 1. 有//go:build ignore
+
+## 奇怪经历
+1. 遇到了系统调用go的库，但是不存在的情况；

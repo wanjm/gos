@@ -23,7 +23,16 @@ type => struct, interface, function, method ,variable
 1. 解析comments
 2. 解析入参和出参
 ### Type解析
+type解析支持如下几个情况
+1. type struct；
+2. type interface；
+3. type A B
+4. type A=B
+5. 其中B又分为原始类型，外pkg类型，本pkg类型； type A=[pkg.]B, type A [pkg.]B
+解析过程；
+分为三种类型解析 struct，interface，alias(解决3，4，5组合的四种情况)，其中alias中的B的解析顺序不固定，为了避免多次扫描，如果B是外包，那么B肯定已经存在（因为通过依赖关系去解析），对于B是本包，但是不存在的情况， 则需要map缓存，等解析完成时再连接起来；
 Type需要嵌套的；
+### const ,var 解析
 
 ## 对象被管理
 ### 函数管理
