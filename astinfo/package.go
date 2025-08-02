@@ -13,12 +13,12 @@ import (
 
 // Package 表示一个Go包的基本信息
 type Package struct {
-	Simple     bool                  // 简单解析，及仅解析包名
-	Name       string                // 包名称
-	Path       string                // 包所在目录的绝对路径
-	Module     string                // 所属模块全路径
-	Structs    map[string]*Struct    // 包内结构体集合（key为结构体名称）
-	Interfaces map[string]*Interface // key是Interface 的Name
+	Simple  bool               // 简单解析，及仅解析包名
+	Name    string             // 包名称
+	Path    string             // 包所在目录的绝对路径
+	Module  string             // 所属模块全路径
+	Structs map[string]*Struct // 包内结构体集合（key为结构体名称）
+	// Interfaces map[string]*Interface // key是Interface 的Name
 	// 由于采用了两层扫描，所以不再需要Types map了。直接调用get方法获取；
 	Types     map[string]Typer // key是Type 的Name
 	fset      *token.FileSet   // 记录fset，到时可以找到文件
@@ -134,14 +134,14 @@ func (pkg *Package) Parse() error {
 func NewPackage(module string, simple bool, absPath string) *Package {
 	// Extract package name from module path
 	return &Package{
-		Module:     module,
-		Simple:     simple,
-		Path:       absPath,
-		Structs:    make(map[string]*Struct),
-		Interfaces: make(map[string]*Interface),
-		GlobalVar:  make(map[string]*VarField),
-		Types:      make(map[string]Typer),
-		WaitTyper:  make(map[string][]*Typer),
+		Module:  module,
+		Simple:  simple,
+		Path:    absPath,
+		Structs: make(map[string]*Struct),
+		// Interfaces: make(map[string]*Interface),
+		GlobalVar: make(map[string]*VarField),
+		Types:     make(map[string]Typer),
+		WaitTyper: make(map[string][]*Typer),
 		// finshedParse: simple,
 	}
 }
@@ -173,20 +173,6 @@ func (pkg *Package) FillType(typeName string, typer *Typer) {
 }
 func (pkg *Package) GetTyper(name string) Typer {
 	return pkg.Types[name]
-}
-
-// GetInterface
-func (pkg *Package) GetInterface(name string) *Interface {
-	return pkg.Interfaces[name]
-}
-
-// findInterface
-func (pkg *Package) FindInterface(name string) *Interface {
-	class := pkg.GetInterface(name)
-	if class == nil {
-		class = NewInterface(name, pkg)
-	}
-	return class
 }
 
 func SimplePackage(module, name string) *Package {

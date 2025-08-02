@@ -131,8 +131,14 @@ func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 	case *ast.MapType:
 		mapType := MapType{}
 		resultType = &mapType
+	case *ast.InterfaceType:
+
+	case *ast.StructType:
+	case *ast.IndexListExpr:
 	case *ast.FuncType:
 	case *ast.ChanType:
+	case nil:
+		fmt.Printf("fieldType is nil in '%s' current not supported\n", goSource.Path)
 	default:
 		// TODO: 需要添加日志级别，再打印日志
 		fmt.Printf("unknown field type '%T' in '%s'\n", fieldType, goSource.Path)
@@ -202,6 +208,11 @@ func (v *VarFieldHelper) Parse() error {
 		astNames:   root.Names,
 		astType:    root.Type,
 		astComment: root.Comment,
+	}
+	// 目前仅支持解析普通var定于，用于完成rpc client的赋值；其他都忽略；
+	if field.astType == nil {
+		// TODO：添加级别日志；
+		return nil
 	}
 	field.Parse()
 	if len(root.Names) != 0 {

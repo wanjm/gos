@@ -28,16 +28,17 @@ func (manager *RpcClientManager) Generate(file *GenedFile) error {
 	var clients map[string][]*Interface = map[string][]*Interface{}
 	var clientVar = make(map[*Interface]*VarField)
 	for _, pkg := range project.Packages {
-		for _, iface := range pkg.Interfaces {
-			if iface.Comment.Type == "" {
-				continue
-			}
-			clients[iface.Comment.Type] = append(clients[iface.Comment.Type], iface)
-		}
+		// for _, iface := range pkg.Interfaces {
+		// 	if iface.Comment.Type == "" {
+		// 		continue
+		// 	}
+		// 	clients[iface.Comment.Type] = append(clients[iface.Comment.Type], iface)
+		// }
 		for _, varField := range pkg.GlobalVar {
 			if iface, ok := varField.Type.(*Interface); ok {
 				if iface.Comment.Type != "" {
 					clientVar[iface] = varField
+					clients[iface.Comment.Type] = append(clients[iface.Comment.Type], iface)
 				}
 			}
 		}

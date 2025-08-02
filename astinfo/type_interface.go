@@ -26,20 +26,22 @@ type Interface struct {
 	Comment       interfaceComments
 	GoSource      *Gosourse
 	InterfaceName string
-	Pkg           *Package
+	// Pkg           *Package
 
 	genDecl *ast.GenDecl
 	astRoot *ast.InterfaceType
 	Methods []*InterfaceField
 }
 
-func NewInterface(name string, pkg *Package) *Interface {
+func NewInterface(name string, goSource *Gosourse, genDecl *ast.GenDecl) *Interface {
 	iface := &Interface{
 		InterfaceName: name,
-		Pkg:           pkg,
+		GoSource:      goSource,
 	}
-	pkg.Interfaces[name] = iface
+	pkg := goSource.Pkg
+	// pkg.Interfaces[name] = iface
 	pkg.Types[name] = iface
+	iface.initGenDecl(genDecl)
 	return iface
 }
 func (i *Interface) Parse() error {
@@ -70,17 +72,18 @@ func (v *Interface) initGenDecl(genDecl *ast.GenDecl) {
 
 // RefName returns the type name with package prefix if needed
 func (i *Interface) RefName(genFile *GenedFile) string {
-	if genFile == nil || genFile.pkg == i.Pkg {
+	pkg := i.GoSource.Pkg
+	if genFile == nil || genFile.pkg == pkg {
 		return i.InterfaceName
 	}
 
-	impt := genFile.GetImport(i.Pkg)
+	impt := genFile.GetImport(pkg)
 	return impt.Name + "." + i.InterfaceName
 }
 
 // IDName returns the full name of the interface with package path
 func (i *Interface) IDName() string {
-	return i.Pkg.Module + "." + i.InterfaceName
+	return i.GoSource.Pkg.Module + "." + i.InterfaceName
 }
 
 // GenConstructCode generates code to construct an instance of the interface

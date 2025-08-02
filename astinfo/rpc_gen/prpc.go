@@ -251,7 +251,7 @@ func initRpcClient() {
 
 	for iface, field := range rpcClientVar {
 		_ = field
-		impt := file.GetImport(iface.Pkg)
+		impt := file.GetImport(iface.GoSource.Pkg)
 		host := iface.Comment.Host
 
 		if !strings.HasPrefix(host, `"`) {
