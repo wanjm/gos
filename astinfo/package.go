@@ -87,8 +87,19 @@ func (pkg *Package) Parse() error {
 				continue
 			}
 			gofile := NewGosourse(f, pkg, filename)
-			gofile.ParseTop()
-			fileMap[f] = gofile
+			if gofile.ParseTop() {
+				if pkg.Name == "" {
+					pkg.Name = packName
+				} else {
+					// 本代码默认一个目录下仅有一个package；
+					// 1. 前面的代码已经跳过了test；
+					// 2. 如果还有其他的packge，则其不应该参与解析；ParseTop应该会跳过；
+					if pkg.Name != packName {
+						fmt.Printf("package name not equal %s %s\n", pkg.Name, packName)
+					}
+				}
+				fileMap[f] = gofile
+			}
 		}
 	}
 	if pkg.Simple {

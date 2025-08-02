@@ -74,12 +74,6 @@ func (g *Gosourse) ParseTop() bool {
 			}
 		}
 	}
-	if g.Pkg.Name == "" {
-		g.Pkg.Name = g.File.Name.Name
-	} else if g.Pkg.Name != g.File.Name.Name {
-		// 这里是有问题的，需要修改
-		// 不报错了。原工程会报错
-	}
 	// TODO: 需要添加日志级别，再打印日志
 	// fmt.Printf("Parsing file: %s name: %s %s\n", g.Path, g.Pkg.Name, g.Pkg.Module)
 	g.parseImport(g.File.Imports)
