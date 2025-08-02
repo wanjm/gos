@@ -145,9 +145,15 @@ func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 		typeName := fieldType.Sel.Name
 		pkgModePath := goSource.Imports[pkgName]
 		resultType = findType(GlobalProject.FindPackage(pkgModePath), typeName)
+
+	case *ast.MapType:
+		mapType := MapType{}
+		resultType = &mapType
+	case *ast.FuncType:
+	case *ast.ChanType:
 	default:
 		// TODO: 需要添加日志级别，再打印日志
-		// fmt.Printf("unknown field type '%T' in '%s'\n", fieldType, field.GoSource.Path)
+		fmt.Printf("unknown field type '%T' in '%s'\n", fieldType, goSource.Path)
 		return nil
 	}
 	//如果将来Typer需要全局唯一，此处可以先找到唯一值，再赋值给typer；
