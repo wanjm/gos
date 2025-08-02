@@ -110,9 +110,8 @@ func findType(pkg *Package, typeName string) Typer {
 }
 
 // 在pkg内解析Type；
-func parseType(typer *Typer, fieldType ast.Expr, goSource *Gosourse) error {
+func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 	var resultType Typer
-	var err error
 	switch fieldType := fieldType.(type) {
 	case *ast.ArrayType:
 		// 内置array类型
@@ -121,10 +120,10 @@ func parseType(typer *Typer, fieldType ast.Expr, goSource *Gosourse) error {
 		// ArrayType中的pkg，typeName，class指向具体的类型
 		array := ArrayType{}
 		resultType = &array
-		err = parseType(&array.Typer, fieldType.Elt, goSource)
+		array.Typer = parseType(fieldType.Elt, goSource)
 	case *ast.StarExpr:
 		var pointer Typer
-		err = parseType(&pointer, fieldType.X, goSource)
+		pointer = parseType(fieldType.X, goSource)
 		resultType = NewPointerType(pointer)
 	case *ast.Ident:
 		// 此时可能是
@@ -152,12 +151,11 @@ func parseType(typer *Typer, fieldType ast.Expr, goSource *Gosourse) error {
 		return nil
 	}
 	//如果将来Typer需要全局唯一，此处可以先找到唯一值，再赋值给typer；
-	*typer = resultType
-	return err
+	return resultType
 }
 
-func (field *FieldBasic) ParseType(fieldType ast.Expr) error {
-	return parseType(&field.Type, fieldType, field.GoSource)
+func (field *FieldBasic) ParseType(fieldType ast.Expr) {
+	field.Type = parseType(fieldType, field.GoSource)
 }
 
 type Field struct {
