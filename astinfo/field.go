@@ -91,24 +91,6 @@ func (field *FieldBasic) Parse() error {
 	return nil
 }
 
-func findType(pkg *Package, typeName string) Typer {
-	res := pkg.GetTyper(typeName)
-	if res == nil {
-		fmt.Printf("find type %s failed\n", typeName)
-	}
-	return res
-	// typer := pkg.FindStruct(typeName)
-	// if typer == nil {
-	// 	typer1 := pkg.FindInterface(typeName)
-	// 	if typer1 != nil {
-	// 		return typer1
-	// 	}
-	// } else {
-	// 	return typer
-	// }
-	// return nil
-}
-
 // 在pkg内解析Type；
 func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 	var resultType Typer
@@ -134,7 +116,7 @@ func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 		type1 := GetRawType(fieldType.Name)
 		if type1 == nil {
 			//再检查Struct类型；
-			resultType = findType(goSource.Pkg, fieldType.Name)
+			goSource.Pkg.FillType(fieldType.Name, &resultType)
 		} else {
 			resultType = type1
 		}
@@ -144,7 +126,7 @@ func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 		pkgName := fieldType.X.(*ast.Ident).Name
 		typeName := fieldType.Sel.Name
 		pkgModePath := goSource.Imports[pkgName]
-		resultType = findType(GlobalProject.FindPackage(pkgModePath), typeName)
+		GlobalProject.FindPackage(pkgModePath).FillType(typeName, &resultType)
 
 	case *ast.MapType:
 		mapType := MapType{}

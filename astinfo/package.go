@@ -23,7 +23,7 @@ type Package struct {
 	Types     map[string]Typer // key是Type 的Name
 	fset      *token.FileSet   // 记录fset，到时可以找到文件
 	GlobalVar map[string]*VarField
-	WaitAlias map[string]*Alias
+	WaitTyper map[string][]*Typer
 	FunctionManager
 	finshedParse bool
 }
@@ -51,16 +51,22 @@ func (pkg *Package) Parse() error {
 	if pkg.finshedParse {
 		return nil
 	}
+	var a complex128
+	_ = a
 	path := pkg.Path
 	defer func() {
 		pkg.finshedParse = true
-		for name, alias := range pkg.WaitAlias {
-			if alias.Typer == nil {
-				typer := pkg.GetTyper(name)
-				if typer == nil {
-					fmt.Printf("Error: failed to get %s.%s = %s when parse finish\n", pkg.Module, alias.Name, name)
+		for name, alias := range pkg.WaitTyper {
+			if name == "OrgConfig" {
+				fmt.Printf("orgConfig")
+			}
+			typer := pkg.GetTyper(name)
+			if typer != nil {
+				for _, typer1 := range alias {
+					*typer1 = typer
 				}
-				alias.Typer = typer
+			} else {
+				fmt.Printf("Error: failed to get %s.%s when parse finish\n", pkg.Module, name)
 			}
 		}
 		// fmt.Printf("finished Parsing package: %s\n", path)
@@ -135,7 +141,7 @@ func NewPackage(module string, simple bool, absPath string) *Package {
 		Interfaces: make(map[string]*Interface),
 		GlobalVar:  make(map[string]*VarField),
 		Types:      make(map[string]Typer),
-		WaitAlias:  make(map[string]*Alias),
+		WaitTyper:  make(map[string][]*Typer),
 		// finshedParse: simple,
 	}
 }
@@ -155,6 +161,15 @@ func (pkg *Package) FindStruct(name string) *Struct {
 		class = NewStruct(name, pkg)
 	}
 	return class
+}
+
+func (pkg *Package) FillType(typeName string, typer *Typer) {
+	res := pkg.GetTyper(typeName)
+	if res == nil {
+		pkg.WaitTyper[typeName] = append(pkg.WaitTyper[typeName], typer)
+	} else {
+		*typer = res
+	}
 }
 func (pkg *Package) GetTyper(name string) Typer {
 	return pkg.Types[name]
