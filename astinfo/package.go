@@ -12,10 +12,11 @@ import (
 
 // Package 表示一个Go包的基本信息
 type Package struct {
-	Simple  bool               // 简单解析，及仅解析包名
-	Name    string             // 包名称
-	Path    string             // 包所在目录的绝对路径
-	Module  string             // 所属模块全路径
+	Simple bool   // 简单解析，及仅解析包名
+	Name   string // 包名称
+	Path   string // 包所在目录的绝对路径
+	Module string // 所属模块全路径
+	// 用于变量注入的检查，用于servlet的生成；
 	Structs map[string]*Struct // 包内结构体集合（key为结构体名称）
 	// Interfaces map[string]*Interface // key是Interface 的Name
 	// 由于采用了两层扫描，所以不再需要Types map了。直接调用get方法获取；
@@ -131,19 +132,6 @@ func NewPackage(module string, simple bool, absPath string) *Package {
 func NewSysPackage(module string) *Package {
 	return NewPackage(module, true, path.Join("/opt/google/go/src", module))
 }
-
-func (pkg *Package) Getstruct(name string) *Struct {
-	return pkg.Structs[name]
-}
-
-// findStruct
-// func (pkg *Package) FindStruct(name string) *Struct {
-// 	class := pkg.Getstruct(name)
-// 	if class == nil {
-// 		class = NewStruct(name, pkg)
-// 	}
-// 	return class
-// }
 
 func (pkg *Package) FillType(typeName string, typer *Typer) {
 	res := pkg.GetTyper(typeName)

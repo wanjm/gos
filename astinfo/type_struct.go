@@ -168,6 +168,9 @@ func (v *Struct) GenerateDependcyCode(goGenerated *GenedFile) string {
 
 func NewStruct(goSource *Gosourse, astRoot *ast.TypeSpec) *Struct {
 	name := astRoot.Name.Name
+	if name == "AiKnowLedgeDBBiz" {
+		name = "AiKnowLedgeDBBiz"
+	}
 	iface := &Struct{
 		StructName: name,
 		goSource:   goSource,

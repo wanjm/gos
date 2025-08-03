@@ -16,7 +16,7 @@ type Gosourse struct {
 var knownowType = map[string]bool{}
 
 // parseType
-func (g *Gosourse) parseType(typeSpec *ast.TypeSpec, genDecl *ast.GenDecl) {
+func (g *Gosourse) parseType(typeSpec *ast.TypeSpec) {
 	switch typeSpec.Type.(type) {
 	case *ast.InterfaceType:
 		class := NewInterface(g, typeSpec)
@@ -40,14 +40,13 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 		g.Pkg.AddParser(parser)
 	case token.TYPE:
 		//如果是一个Specs，那么是一个type定义模式；则将其送到Specs[0].Doc中；
-		if len(genDecl.Specs) == 0 {
+		if len(genDecl.Specs) == 1 {
 			typeSpec := genDecl.Specs[0].(*ast.TypeSpec)
 			typeSpec.Doc = genDecl.Doc
-			return
 		}
 		for _, spec := range genDecl.Specs {
 			typeSpec := spec.(*ast.TypeSpec)
-			g.parseType(typeSpec, genDecl)
+			g.parseType(typeSpec)
 		}
 	}
 	return
