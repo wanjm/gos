@@ -1,7 +1,6 @@
 package astinfo
 
 import (
-	"fmt"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -36,9 +35,6 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 			class.initGenDecl(genDecl)
 			parser = class
 		default:
-			if strings.HasPrefix(g.Path, "/Users/wan/git/biz_show/go_servlet") {
-				fmt.Printf("hello")
-			}
 			alias := NewAlias(typeSpec.Name.Name, g.Pkg, typeSpec.Assign != 0)
 			alias.Typer = parseType(typeSpec.Type, g)
 			parser = alias
@@ -59,7 +55,8 @@ func (g *Gosourse) getFuncDeclParser(funcDecl *ast.FuncDecl) Parser {
 func (g *Gosourse) ParseTop() bool {
 	for _, c := range g.File.Comments {
 		for _, line := range c.List {
-			if strings.Contains(line.Text, "//go:build ignore") {
+			if strings.Contains(line.Text, "//go:build ignore") ||
+				strings.Contains(line.Text, "// +build ignore") {
 				return false
 			}
 		}

@@ -108,7 +108,7 @@ func (pkg *Package) Parse() error {
 					// 1. 前面的代码已经跳过了test；
 					// 2. 如果还有其他的packge，则其不应该参与解析；ParseTop应该会跳过；
 					if pkg.Name != packName {
-						fmt.Printf("package name not equal %s %s\n", pkg.Name, packName)
+						fmt.Printf("package name not equal %s %s in %s\n", pkg.Name, packName, path)
 					}
 				}
 				fileMap[f] = gofile
