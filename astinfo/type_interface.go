@@ -28,23 +28,24 @@ type Interface struct {
 	InterfaceName string
 	// Pkg           *Package
 
-	genDecl *ast.GenDecl
-	astRoot *ast.InterfaceType
+	// genDecl *ast.GenDecl
+	astRoot *ast.TypeSpec
 	Methods []*InterfaceField
 }
 
-func NewInterface(name string, goSource *Gosourse, genDecl *ast.GenDecl, interfaceType *ast.InterfaceType) *Interface {
+func NewInterface(goSource *Gosourse, astRoot *ast.TypeSpec) *Interface {
+	name := astRoot.Name.Name
 	iface := &Interface{
 		InterfaceName: name,
 		GoSource:      goSource,
+		astRoot:       astRoot,
 	}
 	pkg := goSource.Pkg
 	pkg.Types[name] = iface
-	iface.initGenDecl(genDecl, interfaceType)
 	return iface
 }
 func (i *Interface) Parse() error {
-	parseComment(i.genDecl.Doc, &i.Comment)
+	parseComment(i.astRoot.Doc, &i.Comment)
 	// Type 为空表示不是client interface，跳过处理
 	if i.Comment.Type == "" {
 		return nil
@@ -56,7 +57,8 @@ func (i *Interface) Parse() error {
 
 func (i *Interface) parseBody() error {
 	// 方法体为空
-	for _, method := range i.astRoot.Methods.List {
+	interfaceType := i.astRoot.Type.(*ast.InterfaceType)
+	for _, method := range interfaceType.Methods.List {
 		methodField := NewInterfaceField(method, i.GoSource)
 		methodField.Parse()
 		i.Methods = append(i.Methods, methodField)
@@ -64,10 +66,10 @@ func (i *Interface) parseBody() error {
 	return nil
 }
 
-func (v *Interface) initGenDecl(genDecl *ast.GenDecl, interfaceType *ast.InterfaceType) {
-	v.genDecl = genDecl
-	v.astRoot = interfaceType
-}
+// func (v *Interface) initGenDecl(genDecl *ast.GenDecl, interfaceType *ast.InterfaceType) {
+// 	v.genDecl = genDecl
+// 	v.astRoot = interfaceType
+// }
 
 // RefName returns the type name with package prefix if needed
 func (i *Interface) RefName(genFile *GenedFile) string {

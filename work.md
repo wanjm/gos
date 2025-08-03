@@ -9,27 +9,28 @@
 
 
 # work
-3. 错误日志分级，用参数控制；
-4. test环境变量的注入；
-5. servlet添加filter参数，参数可以配置；
-6. 返回值使用error；
-7. 添加http的第三个参数；
-8. servlet class添加group配置；
-9. GlobalInjector
-10. 解决解析中报的各个错误；
-11. 添加prpc的实现；
-12. go_servlet的parse能力，自动跳过文件版本不匹配或则会ignore的文件，还有其他build标记；
-13. 打印依赖关系树
-14. package中不需要保存Structs，仅有servlet类型的struct需要保存；可以用service，servlet来保存，其他都用typer保存；
-15. field中的匿名结构体和匿名interface还没有解析；
-16. type,var等多行解析的需求；  
+1. 错误日志分级，用参数控制；
+2. 跳过gen目录的解析；
+3. test环境变量的注入；
+4. servlet添加filter参数，参数可以配置；
+5. 返回值使用error；
+6. 添加http的第三个参数；
+7. servlet class添加group配置；
+8.  GlobalInjector
+9.  解决解析中报的各个错误；
+10. 添加prpc的实现；
+11. go_servlet的parse能力，自动跳过文件版本不匹配或则会ignore的文件，还有其他build标记；
+12. 打印依赖关系树
+13. package中不需要保存Structs，仅有servlet类型的struct需要保存；可以用service，servlet来保存，其他都用typer保存；
+14. field中的匿名结构体和匿名interface还没有解析；
+15. type,var等多行解析的需求；  
 ```
 type (
     a b 
     c d
 ) 
 ```
-17.  )
+1.   )
 
 # 完成的工作
 1. 解析文件

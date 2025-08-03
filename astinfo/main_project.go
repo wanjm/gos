@@ -233,7 +233,7 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 	var name = strings.Join([]string{
 		"init",
 		class.comment.groupName,
-		class.Pkg.Name,
+		class.goSource.Pkg.Name,
 		class.StructName,
 		"router",
 	}, "_")

@@ -137,13 +137,13 @@ func (pkg *Package) Getstruct(name string) *Struct {
 }
 
 // findStruct
-func (pkg *Package) FindStruct(name string) *Struct {
-	class := pkg.Getstruct(name)
-	if class == nil {
-		class = NewStruct(name, pkg)
-	}
-	return class
-}
+// func (pkg *Package) FindStruct(name string) *Struct {
+// 	class := pkg.Getstruct(name)
+// 	if class == nil {
+// 		class = NewStruct(name, pkg)
+// 	}
+// 	return class
+// }
 
 func (pkg *Package) FillType(typeName string, typer *Typer) {
 	res := pkg.GetTyper(typeName)

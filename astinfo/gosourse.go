@@ -19,13 +19,11 @@ var knownowType = map[string]bool{}
 func (g *Gosourse) parseType(typeSpec *ast.TypeSpec, genDecl *ast.GenDecl) {
 	switch typeSpec.Type.(type) {
 	case *ast.InterfaceType:
-		class := NewInterface(typeSpec.Name.Name, g, genDecl, typeSpec.Type.(*ast.InterfaceType))
+		class := NewInterface(g, typeSpec)
 		g.Pkg.AddParser(class)
 	case *ast.StructType:
 		// fmt.Printf("StructType %s %s\n", typeSpec.Name.Name, g.Path)
-		class := g.Pkg.FindStruct(typeSpec.Name.Name)
-		class.goSource = g
-		class.initGenDecl(genDecl, typeSpec.Type.(*ast.StructType))
+		class := NewStruct(g, typeSpec)
 		g.Pkg.AddParser(class)
 	default:
 		alias := NewAlias(typeSpec, g, typeSpec.Assign != 0)
@@ -41,6 +39,12 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 		parser = NewVarFieldHelper(typeSpec, g)
 		g.Pkg.AddParser(parser)
 	case token.TYPE:
+		//如果是一个Specs，那么是一个type定义模式；则将其送到Specs[0].Doc中；
+		if len(genDecl.Specs) == 0 {
+			typeSpec := genDecl.Specs[0].(*ast.TypeSpec)
+			typeSpec.Doc = genDecl.Doc
+			return
+		}
 		for _, spec := range genDecl.Specs {
 			typeSpec := spec.(*ast.TypeSpec)
 			g.parseType(typeSpec, genDecl)

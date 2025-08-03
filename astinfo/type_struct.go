@@ -50,29 +50,31 @@ func (comment *structComment) dealValuePair(key, value string) {
 
 // Struct 表示一个Go结构体的基本信息
 type Struct struct {
-	StructName    string    // 结构体名称
-	goSource      *Gosourse //该变量在解析结构体时赋值，也就是说该变量不为空，则该结构体已经被解析；
-	Pkg           *Package  //该变量肯定不为空，但是goSource不一定；
-	genDecl       *ast.GenDecl
-	astStructType *ast.StructType
-	comment       structComment
-	Fields        []*Field
-	FieldMap      map[string]*Field
+	StructName string    // 结构体名称
+	goSource   *Gosourse //该变量在解析结构体时赋值，也就是说该变量不为空，则该结构体已经被解析；
+	// Pkg        *Package  //该变量肯定不为空，但是goSource不一定；
+	astRoot *ast.TypeSpec
+	// genDecl       *ast.GenDecl
+	// astStructType *ast.StructType
+	comment  structComment
+	Fields   []*Field
+	FieldMap map[string]*Field
 	MethodManager
 	// TODO: 后续添加字段和方法解析
 	ref *spec.Ref
 }
 
 func (v *Struct) RefName(genFile *GenedFile) string {
-	if genFile == nil || genFile.pkg == v.Pkg {
+	pkg := v.goSource.Pkg
+	if genFile == nil || genFile.pkg == pkg {
 		return v.StructName
 	}
-	impt := genFile.GetImport(v.Pkg)
+	impt := genFile.GetImport(pkg)
 	return impt.Name + "." + v.StructName
 }
 
 func (v *Struct) IDName() string {
-	return v.Pkg.Module + "." + v.StructName
+	return v.goSource.Pkg.Module + "." + v.StructName
 }
 
 func needWire(field *Field) bool {
@@ -97,7 +99,7 @@ func needWire(field *Field) bool {
 // 5. 初步考虑可以将wire变量定义为必须注入内容结构体变量；
 // wire为true表示必须绑定结构体等；
 func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
-	result := genFile.GetImport(v.Pkg)
+	result := genFile.GetImport(v.goSource.Pkg)
 	var sb strings.Builder
 	if result.Name != "" {
 		sb.WriteString(result.Name)
@@ -154,21 +156,34 @@ func (v *Struct) GenerateDependcyCode(goGenerated *GenedFile) string {
 }
 
 // 不一定每次newStruct时都会有goSrouce，所以此时只能传Pkg；
-func NewStruct(name string, pkg *Package) *Struct {
-	class := &Struct{
+// func NewStruct(name string, pkg *Package) *Struct {
+// 	class := &Struct{
+// 		StructName: name,
+// 		Pkg:        pkg,
+// 	}
+// 	pkg.Structs[name] = class
+// 	pkg.Types[name] = class
+// 	return class
+// }
+
+func NewStruct(goSource *Gosourse, astRoot *ast.TypeSpec) *Struct {
+	name := astRoot.Name.Name
+	iface := &Struct{
 		StructName: name,
-		Pkg:        pkg,
+		goSource:   goSource,
+		astRoot:    astRoot,
 	}
-	pkg.Structs[name] = class
-	pkg.Types[name] = class
-	return class
+	pkg := goSource.Pkg
+	pkg.Structs[name] = iface
+	pkg.Types[name] = iface
+	return iface
 }
 
 // initGenDecl
-func (v *Struct) initGenDecl(genDecl *ast.GenDecl, structType *ast.StructType) {
-	v.genDecl = genDecl
-	v.astStructType = structType
-}
+// func (v *Struct) initGenDecl(genDecl *ast.GenDecl, structType *ast.StructType) {
+// 	v.genDecl = genDecl
+// 	v.astStructType = structType
+// }
 
 // 解析结构体的注释和字段
 func (v *Struct) Parse() error {
@@ -180,14 +195,14 @@ func (v *Struct) Parse() error {
 
 // parseComment
 func (class *Struct) ParseComment() error {
-	parseComment(class.genDecl.Doc, &class.comment)
+	parseComment(class.astRoot.Doc, &class.comment)
 	return nil
 }
 
 // parseField
 func (v *Struct) ParseField() error {
 	// v.goSource在解析结构体时，被赋值，解析field也是在解析结构体时，所以v.goSource不为空
-	v.Fields = parseFields(v.astStructType.Fields.List, v.goSource)
+	v.Fields = parseFields(v.astRoot.Type.(*ast.StructType).Fields.List, v.goSource)
 	v.FieldMap = make(map[string]*Field)
 	for _, field := range v.Fields {
 		v.FieldMap[field.Name] = field
