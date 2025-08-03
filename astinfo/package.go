@@ -92,6 +92,10 @@ func (pkg *Package) Parse() error {
 			if strings.HasSuffix(filename, "_test.go") {
 				continue
 			}
+			if isIgnoreFile(f) {
+				continue
+			}
+			pkg.Name = pack.Name
 			gofile := NewGosourse(f, pkg, filename)
 			gofile.Parse()
 		}

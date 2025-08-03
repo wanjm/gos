@@ -33,14 +33,14 @@ type Interface struct {
 	Methods []*InterfaceField
 }
 
-func NewInterface(name string, goSource *Gosourse, genDecl *ast.GenDecl) *Interface {
+func NewInterface(name string, goSource *Gosourse, genDecl *ast.GenDecl, interfaceType *ast.InterfaceType) *Interface {
 	iface := &Interface{
 		InterfaceName: name,
 		GoSource:      goSource,
 	}
 	pkg := goSource.Pkg
 	pkg.Types[name] = iface
-	iface.initGenDecl(genDecl)
+	iface.initGenDecl(genDecl, interfaceType)
 	return iface
 }
 func (i *Interface) Parse() error {
@@ -64,9 +64,9 @@ func (i *Interface) parseBody() error {
 	return nil
 }
 
-func (v *Interface) initGenDecl(genDecl *ast.GenDecl) {
+func (v *Interface) initGenDecl(genDecl *ast.GenDecl, interfaceType *ast.InterfaceType) {
 	v.genDecl = genDecl
-	v.astRoot = genDecl.Specs[0].(*ast.TypeSpec).Type.(*ast.InterfaceType)
+	v.astRoot = interfaceType
 }
 
 // RefName returns the type name with package prefix if needed

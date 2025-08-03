@@ -165,9 +165,9 @@ func NewStruct(name string, pkg *Package) *Struct {
 }
 
 // initGenDecl
-func (v *Struct) initGenDecl(genDecl *ast.GenDecl) {
+func (v *Struct) initGenDecl(genDecl *ast.GenDecl, structType *ast.StructType) {
 	v.genDecl = genDecl
-	v.astStructType = genDecl.Specs[0].(*ast.TypeSpec).Type.(*ast.StructType)
+	v.astStructType = structType
 }
 
 // 解析结构体的注释和字段

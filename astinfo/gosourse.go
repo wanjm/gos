@@ -19,13 +19,13 @@ var knownowType = map[string]bool{}
 func (g *Gosourse) parseType(typeSpec *ast.TypeSpec, genDecl *ast.GenDecl) {
 	switch typeSpec.Type.(type) {
 	case *ast.InterfaceType:
-		class := NewInterface(typeSpec.Name.Name, g, genDecl)
+		class := NewInterface(typeSpec.Name.Name, g, genDecl, typeSpec.Type.(*ast.InterfaceType))
 		g.Pkg.AddParser(class)
 	case *ast.StructType:
 		// fmt.Printf("StructType %s %s\n", typeSpec.Name.Name, g.Path)
 		class := g.Pkg.FindStruct(typeSpec.Name.Name)
 		class.goSource = g
-		class.initGenDecl(genDecl)
+		class.initGenDecl(genDecl, typeSpec.Type.(*ast.StructType))
 		g.Pkg.AddParser(class)
 	default:
 		alias := NewAlias(typeSpec, g, typeSpec.Assign != 0)
@@ -39,6 +39,7 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 	case token.VAR:
 		typeSpec := genDecl.Specs[0].(*ast.ValueSpec)
 		parser = NewVarFieldHelper(typeSpec, g)
+		g.Pkg.AddParser(parser)
 	case token.TYPE:
 		for _, spec := range genDecl.Specs {
 			typeSpec := spec.(*ast.TypeSpec)
@@ -79,7 +80,19 @@ func (g *Gosourse) getFuncDeclParser(funcDecl *ast.FuncDecl) Parser {
 //		}
 //		return true
 //	}
+func isIgnoreFile(file *ast.File) bool {
+	for _, c := range file.Comments {
+		for _, line := range c.List {
+			if strings.Contains(line.Text, "//go:build ignore") ||
+				strings.Contains(line.Text, "// +build ignore") {
+				return true
+			}
+		}
+	}
+	return false
+}
 func (g *Gosourse) Parse() error {
+	g.parseImport(g.File.Imports)
 	decls := g.File.Decls
 	for i := 0; i < len(decls); i++ {
 		switch decl := decls[i].(type) {
