@@ -2,6 +2,7 @@ package astinfo
 
 import (
 	"fmt"
+	"go/build"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -41,6 +42,15 @@ func (p *Project) Parse() error {
 		return err
 	}
 	return p.ParseCode()
+}
+func (p *Project) ParseCode1() error {
+	pkg, err := build.ImportDir(p.Path, 0)
+	if err != nil {
+		fmt.Printf("无法解析目录: %v\n", err)
+		return nil
+	}
+	fmt.Print(pkg.Name, "\n")
+	return nil
 }
 func (p *Project) ParseCode() error {
 	// p.Packages = make(map[string]*Package)

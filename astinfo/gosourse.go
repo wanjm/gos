@@ -15,6 +15,24 @@ type Gosourse struct {
 
 var knownowType = map[string]bool{}
 
+// parseType
+func (g *Gosourse) parseType(typeSpec *ast.TypeSpec, genDecl *ast.GenDecl) {
+	switch typeSpec.Type.(type) {
+	case *ast.InterfaceType:
+		class := NewInterface(typeSpec.Name.Name, g, genDecl)
+		g.Pkg.AddParser(class)
+	case *ast.StructType:
+		// fmt.Printf("StructType %s %s\n", typeSpec.Name.Name, g.Path)
+		class := g.Pkg.FindStruct(typeSpec.Name.Name)
+		class.goSource = g
+		class.initGenDecl(genDecl)
+		g.Pkg.AddParser(class)
+	default:
+		alias := NewAlias(typeSpec, g, typeSpec.Assign != 0)
+		g.Pkg.AddParser(alias)
+	}
+}
+
 // 解析全局变量和 struct，interface
 func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 	switch genDecl.Tok {
@@ -22,22 +40,9 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 		typeSpec := genDecl.Specs[0].(*ast.ValueSpec)
 		parser = NewVarFieldHelper(typeSpec, g)
 	case token.TYPE:
-		typeSpec := genDecl.Specs[0].(*ast.TypeSpec)
-		// 仅关注结构体，暂时不考虑接口
-		switch typeSpec.Type.(type) {
-		case *ast.InterfaceType:
-			class := NewInterface(typeSpec.Name.Name, g, genDecl)
-			parser = class
-		case *ast.StructType:
-			// fmt.Printf("StructType %s %s\n", typeSpec.Name.Name, g.Path)
-			class := g.Pkg.FindStruct(typeSpec.Name.Name)
-			class.goSource = g
-			class.initGenDecl(genDecl)
-			parser = class
-		default:
-			alias := NewAlias(typeSpec.Name.Name, g.Pkg, typeSpec.Assign != 0)
-			alias.Typer = parseType(typeSpec.Type, g)
-			parser = alias
+		for _, spec := range genDecl.Specs {
+			typeSpec := spec.(*ast.TypeSpec)
+			g.parseType(typeSpec, genDecl)
 		}
 	}
 	return
@@ -52,39 +57,39 @@ func (g *Gosourse) getFuncDeclParser(funcDecl *ast.FuncDecl) Parser {
 		return NewMethod(funcDecl, g)
 	}
 }
-func (g *Gosourse) ParseTop() bool {
-	for _, c := range g.File.Comments {
-		for _, line := range c.List {
-			if strings.Contains(line.Text, "//go:build ignore") ||
-				strings.Contains(line.Text, "// +build ignore") {
-				return false
-			}
-		}
-	}
-	// TODO: 需要添加日志级别，再打印日志
-	// fmt.Printf("Parsing file: %s name: %s %s\n", g.Path, g.Pkg.Name, g.Pkg.Module)
-	g.parseImport(g.File.Imports)
+
+//	func (g *Gosourse) ParseTop() bool {
+//		for _, c := range g.File.Comments {
+//			for _, line := range c.List {
+//				if strings.Contains(line.Text, "//go:build ignore") ||
+//					strings.Contains(line.Text, "// +build ignore") {
+//					return false
+//				}
+//			}
+//		}
+//		// TODO: 需要添加日志级别，再打印日志
+//		// fmt.Printf("Parsing file: %s name: %s %s\n", g.Path, g.Pkg.Name, g.Pkg.Module)
+//		g.parseImport(g.File.Imports)
+//		decls := g.File.Decls
+//		for i := 0; i < len(decls); i++ {
+//			switch decl := decls[i].(type) {
+//			case *ast.GenDecl:
+//				g.getGenDeclParser(decl)
+//			}
+//		}
+//		return true
+//	}
+func (g *Gosourse) Parse() error {
 	decls := g.File.Decls
 	for i := 0; i < len(decls); i++ {
 		switch decl := decls[i].(type) {
 		case *ast.GenDecl:
 			g.getGenDeclParser(decl)
-		}
-	}
-	return true
-}
-func (g *Gosourse) Parse() error {
-	decls := g.File.Decls
-	for i := 0; i < len(decls); i++ {
-		var parser Parser
-		switch decl := decls[i].(type) {
-		case *ast.GenDecl:
-			parser = g.getGenDeclParser(decl)
 		case *ast.FuncDecl:
-			parser = g.getFuncDeclParser(decl)
-		}
-		if parser != nil {
-			parser.Parse()
+			p := g.getFuncDeclParser(decl)
+			if p != nil {
+				g.Pkg.AddParser(p)
+			}
 		}
 	}
 	// 方法体为空

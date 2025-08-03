@@ -2,7 +2,6 @@ package astinfo
 
 import (
 	"fmt"
-	"go/ast"
 	"go/parser"
 	"go/token"
 	"log"
@@ -20,6 +19,7 @@ type Package struct {
 	Structs map[string]*Struct // 包内结构体集合（key为结构体名称）
 	// Interfaces map[string]*Interface // key是Interface 的Name
 	// 由于采用了两层扫描，所以不再需要Types map了。直接调用get方法获取；
+	parsers   []Parser         // 先扫描文件，生成parsers,然后依次进行parser解析；
 	Types     map[string]Typer // key是Type 的Name
 	fset      *token.FileSet   // 记录fset，到时可以找到文件
 	GlobalVar map[string]*VarField
@@ -44,6 +44,11 @@ func (pkg *Package) GetName() string {
 		name = filepath.Base(pkg.Module)
 	}
 	return name
+}
+
+// addParser
+func (pkg *Package) AddParser(parser Parser) {
+	pkg.parsers = append(pkg.parsers, parser)
 }
 
 // 采用遇到遇到不认识的import就先深度parse的方法；
@@ -76,19 +81,7 @@ func (pkg *Package) Parse() error {
 		log.Printf("parse package %s failed %s", pkg.Module, err.Error())
 		return nil
 	}
-	// 先简单扫描；仅扫描定义，struct，interface，var；
-	var fileMap = make(map[*ast.File]*Gosourse)
 	// 一个目录下可能有多
-	// var count = 0
-	// for packName, _ := range packageMap {
-	// 	if strings.HasSuffix(packName, "_test") {
-	// 		continue
-	// 	}
-	// 	count++
-	// }
-	// if count > 1 {
-	// 	fmt.Printf("more than one package\n")
-	// }
 	for packName, pack := range packageMap {
 		_ = packName
 		// 先跳过test,后续再说；
@@ -100,19 +93,7 @@ func (pkg *Package) Parse() error {
 				continue
 			}
 			gofile := NewGosourse(f, pkg, filename)
-			if gofile.ParseTop() {
-				if pkg.Name == "" {
-					pkg.Name = packName
-				} else {
-					// 本代码默认一个目录下仅有一个package；
-					// 1. 前面的代码已经跳过了test；
-					// 2. 如果还有其他的packge，则其不应该参与解析；ParseTop应该会跳过；
-					if pkg.Name != packName {
-						fmt.Printf("package name not equal %s %s in %s\n", pkg.Name, packName, path)
-					}
-				}
-				fileMap[f] = gofile
-			}
+			gofile.Parse()
 		}
 	}
 	if pkg.Simple {
@@ -120,8 +101,8 @@ func (pkg *Package) Parse() error {
 	}
 	// TODO
 	//再细化扫描；
-	for _, gofile := range fileMap {
-		gofile.Parse()
+	for _, parser := range pkg.parsers {
+		parser.Parse()
 	}
 
 	return nil
