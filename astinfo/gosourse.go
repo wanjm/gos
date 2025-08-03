@@ -35,9 +35,11 @@ func (g *Gosourse) parseType(typeSpec *ast.TypeSpec) {
 func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 	switch genDecl.Tok {
 	case token.VAR:
-		typeSpec := genDecl.Specs[0].(*ast.ValueSpec)
-		parser = NewVarFieldHelper(typeSpec, g)
-		g.Pkg.AddParser(parser)
+		for _, spec := range genDecl.Specs {
+			typeSpec := spec.(*ast.ValueSpec)
+			parser = NewVarFieldHelper(typeSpec, g)
+			g.Pkg.AddParser(parser)
+		}
 	case token.TYPE:
 		//如果是一个Specs，那么是一个type定义模式；则将其送到Specs[0].Doc中；
 		if len(genDecl.Specs) == 1 {

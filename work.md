@@ -23,14 +23,7 @@
 12. 打印依赖关系树
 13. package中不需要保存Structs，仅有servlet类型的struct需要保存；可以用service，servlet来保存，其他都用typer保存；
 14. field中的匿名结构体和匿名interface还没有解析；
-15. type,var等多行解析的需求；  
-```
-type (
-    a b 
-    c d
-) 
-```
-1.   )
+15. var的多行解析需求；
 
 # 完成的工作
 1. 解析文件
@@ -43,3 +36,24 @@ type (
 8.  pack的解析按照依赖关系解析
 9.  type AiChatRecords []*AiChatRecord
 10. type AiAgentStausResp = EmptyResponse 的解析，导致AiAgentStausResp找不到
+11. type等多行解析的需求；  
+```
+type (
+    a b 
+    c d
+)
+// this is doc of type 
+type A struct { // this is nothing;
+    //this is Doc of Age;
+    Age int  //this is comments of Age;
+} // this is comments of A
+
+type (
+    // this is doc of Age 
+    A struct { // this is nothing;
+        //this is Doc of Age;
+        Age int  //this is comments of Age;
+    } 
+)// this is comments of A
+
+```
