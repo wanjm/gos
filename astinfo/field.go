@@ -32,6 +32,7 @@ type FieldBasic struct {
 	Comment FieldComment
 	// astRoot  *ast.Field
 	GoSource *Gosourse //解析Filed时，其他type可能来源其他Package，此时需要Import内容来找到该包；
+	parser   []Parser
 
 	astDoc     *ast.CommentGroup // associated documentation; or nil
 	astNames   []*ast.Ident      // value names (len(Names) > 0)
@@ -132,11 +133,13 @@ func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 		mapType := MapType{}
 		resultType = &mapType
 	case *ast.InterfaceType:
-
+		//匿名interface；
 	case *ast.StructType:
+		//匿名结构体
 	case *ast.IndexListExpr:
 	case *ast.FuncType:
 	case *ast.ChanType:
+	///...号参数在目前的解析情况下不会遇到；
 	case nil:
 		fmt.Printf("fieldType is nil in '%s' current not supported\n", goSource.Path)
 	default:

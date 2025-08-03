@@ -1,6 +1,7 @@
 package astinfo
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -26,8 +27,6 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 		// 仅关注结构体，暂时不考虑接口
 		switch typeSpec.Type.(type) {
 		case *ast.InterfaceType:
-
-			// fmt.Printf("InterfaceType %s %s\n", typeSpec.Name.Name, g.Path)
 			class := NewInterface(typeSpec.Name.Name, g, genDecl)
 			parser = class
 		case *ast.StructType:
@@ -37,6 +36,9 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 			class.initGenDecl(genDecl)
 			parser = class
 		default:
+			if strings.HasPrefix(g.Path, "/Users/wan/git/biz_show/go_servlet") {
+				fmt.Printf("hello")
+			}
 			alias := NewAlias(typeSpec.Name.Name, g.Pkg, typeSpec.Assign != 0)
 			alias.Typer = parseType(typeSpec.Type, g)
 			parser = alias

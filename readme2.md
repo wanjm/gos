@@ -84,6 +84,9 @@ FunctionManager 管理了
 2. group 
 2. title 该struct的说明
 3. url 该struct服务的url前缀
+## rpc client定义；
+1. type=prpc,servlet;
+2. 此处用到全局VAR扫描，仅仅只是var AClient ClientInterface这一种情况；function,channel 
 # 开发技巧
 ## funtion/method 将自己塞到functionManager中去；
 1. function/method是被functionManager管理的，那是由functionManager来管理她，还是她把自己送到functionManager中去呢？

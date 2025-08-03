@@ -39,7 +39,6 @@ func NewInterface(name string, goSource *Gosourse, genDecl *ast.GenDecl) *Interf
 		GoSource:      goSource,
 	}
 	pkg := goSource.Pkg
-	// pkg.Interfaces[name] = iface
 	pkg.Types[name] = iface
 	iface.initGenDecl(genDecl)
 	return iface

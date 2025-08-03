@@ -7,6 +7,9 @@
 6. 路由注册函数
 7. 
 
+# 解析能力限制；
+1. rcpClient用到全局VAR扫描，仅仅只是var AClient ClientInterface这一种情况；  
+2. 变量类型解析，仅仅是为了支持 servlet参数调用，struct的field解析，此时这些参数都是为了注入变量，所以此时不支持
 
 # 解析import遇到的意外；
 ## 原以为每个import都在go.mod中，但是系统的package是个例外，其在GOROOT中；

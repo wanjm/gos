@@ -21,8 +21,9 @@ func NewMethod(funcDecl *ast.FuncDecl, goSource *Gosourse) *Method {
 // 首先解析receiver；找到自己所属的Struct；
 func (m *Method) Parse() error {
 	m.Function.Parse()
-	if err := m.parseReceiver(); err != nil {
-		return err
+	// 如果function类型为空，则不继续解析
+	if m.Comment.funcType != "" {
+		return m.parseReceiver()
 	}
 	return nil
 }
@@ -51,6 +52,7 @@ out:
 		}
 	}
 	// 由于代码的位置关系，这一步不一定会找到，所以自己创建了。
+	// 虽然现在先解析类型，在解析函数，但是只能再一个文件内容保持这个顺序，如果定义在多个文件，还是不能保证结构体肯定存在；
 	receiver := m.GoSource.Pkg.FindStruct(nameIndent.Name)
 	m.Receiver = receiver
 	receiver.MethodManager.AddCallable(m)
