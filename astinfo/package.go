@@ -136,10 +136,10 @@ func NewPackage(module string, simple bool, absPath string) *Package {
 		Path:    absPath,
 		Structs: make(map[string]*Struct),
 		// Interfaces: make(map[string]*Interface),
-		GlobalVar:    make(map[string]*VarField),
-		Types:        make(map[string]Typer),
-		WaitTyper:    make(map[string][]*Typer),
-		finshedParse: simple,
+		GlobalVar: make(map[string]*VarField),
+		Types:     make(map[string]Typer),
+		WaitTyper: make(map[string][]*Typer),
+		// finshedParse: simple,
 	}
 }
 

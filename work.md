@@ -9,8 +9,6 @@
 
 
 # work
-1. type AiChatRecords []*AiChatRecord
-2. type AiAgentStausResp = EmptyResponse 的解析，导致AiAgentStausResp找不到
 3. 错误日志分级，用参数控制；
 4. test环境变量的注入；
 5. servlet添加filter参数，参数可以配置；
@@ -22,13 +20,25 @@
 11. 添加prpc的实现；
 12. go_servlet的parse能力，自动跳过文件版本不匹配或则会ignore的文件，还有其他build标记；
 13. 打印依赖关系树
+14. package中不需要保存Structs，仅有servlet类型的struct需要保存；可以用service，servlet来保存，其他都用typer保存；
+15. field中的匿名结构体和匿名interface还没有解析；
+16. type,var等多行解析的需求；  
+```
+type (
+    a b 
+    c d
+) 
+```
+17.  )
 
 # 完成的工作
 1. 解析文件
 2. 生成了initiator；
 3. 生成路由和fileter的调用；
 4. 解析外部package的pkg name；
-1. 区分简单解析和复杂解析；
-2. field的comment解析；
-3. struct构造函数添加default配置；
-11. pack的解析按照依赖关系解析
+5. 区分简单解析和复杂解析；
+6. field的comment解析；
+7. struct构造函数添加default配置；
+8.  pack的解析按照依赖关系解析
+9.  type AiChatRecords []*AiChatRecord
+10. type AiAgentStausResp = EmptyResponse 的解析，导致AiAgentStausResp找不到
