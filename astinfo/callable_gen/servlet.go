@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 	"text/template"
 
@@ -18,10 +17,19 @@ type FilterInfo struct {
 }
 type ServletGen struct {
 	filters       []*FilterInfo
+	filterMap     map[string]*FilterInfo
 	InternalError int
 	DataError     int
 }
 
+func NewServletGen(dataError, internalError int) *ServletGen {
+	servlet := &ServletGen{
+		DataError:     dataError,
+		InternalError: internalError,
+		filterMap:     make(map[string]*FilterInfo),
+	}
+	return servlet
+}
 func (servlet *ServletGen) GetName() string {
 	return "servlet"
 }
@@ -174,11 +182,13 @@ func (servlet *ServletGen) GenFilterCode(function *astinfo.Function, file *astin
 	if function.Comment.Url == "" || function.Comment.Url == "\"\"" {
 		return filterName
 	} else {
-		servlet.filters = append(servlet.filters, &FilterInfo{
+		filterInfo := &FilterInfo{
 			FilterName:    filterName,
 			FilterRawName: function.Name,
 			Func:          function,
-		})
+		}
+		servlet.filterMap[function.Name] = filterInfo
+		servlet.filters = append(servlet.filters, filterInfo)
 		return ""
 	}
 }
@@ -214,7 +224,7 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		paramIndex := 1
 		requestParam := method.Params[paramIndex]
 		if !astinfo.IsPointer(requestParam.Type) {
-			fmt.Print("only pointer is supported in " + strconv.Itoa(paramIndex) + " parameter(start from 0) for method " + method.Name)
+			fmt.Printf("only pointer is supported in %s of file %s \n", method.Name, method.GoSource.Path)
 			os.Exit(0)
 		}
 		tm.HasRequest = true
@@ -235,10 +245,20 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 			}
 		}
 	}
+	userFilters := strings.Split(method.Comment.Filter, ",")
+	for _, filter := range userFilters {
+		filter = strings.Trim(filter, "\t ")
+		if filter != "" {
+			filterInfo := servlet.filterMap[filter]
+			if filterInfo == nil {
+				fmt.Printf("filter %s not found in file %s for %s \n", filter, method.GoSource.Path, method.Name)
+			} else {
+				tm.FilterName += filterInfo.FilterName + ","
+			}
+		}
+	}
 	for _, filter := range servlet.filters {
-		if filter.FilterRawName == method.Name {
-			tm.FilterName += filter.FilterName + ","
-		} else if strings.Contains(methodUrl, filter.Func.Comment.Url) {
+		if strings.Contains(methodUrl, filter.Func.Comment.Url) {
 			tm.FilterName += filter.FilterName + ","
 		}
 	}

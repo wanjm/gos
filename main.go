@@ -31,10 +31,7 @@ func main() {
 		InitMain: *init,
 	}
 	cfg.Load()
-	astinfo.RegisterCallableGen(&callable_gen.ServletGen{
-		DataError:     4,
-		InternalError: 1,
-	}, &callable_gen.PrpcGen{}, &callable_gen.ResutfulGen{})
+	astinfo.RegisterCallableGen(callable_gen.NewServletGen(4, 1), &callable_gen.PrpcGen{}, &callable_gen.ResutfulGen{})
 	astinfo.RegisterClientGen(&rpcgen.PrpcGen{})
 	var project = astinfo.CreateProject(path, &cfg)
 	err = project.Parse()

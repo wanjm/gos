@@ -58,7 +58,7 @@ func (comment *functionComment) dealValuePair(key, value string) {
 		comment.groupName = value
 		comment.funcType = FilterConst
 	case UserFilter:
-		comment.Filter = value
+		comment.Filter = strings.Trim(value, "\"")
 	default:
 		if !comment.dealOldValuePair(key, value) {
 			fmt.Printf("unknown key '%s' in function comment %s in %s\n", key, comment.owner.Name, comment.owner.GoSource.Path)
