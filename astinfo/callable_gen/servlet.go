@@ -212,6 +212,7 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		UrlParameterStr  string
 		HasRequest       bool
 		HasResponse      bool
+		ResponseNilCode  string
 		DataError        int
 	}
 	tm := &CodeParam{
@@ -232,6 +233,7 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 	}
 	if len(method.Results) > 1 {
 		tm.HasResponse = true
+		tm.ResponseNilCode = method.Results[0].GenNilCode(file)
 	}
 
 	//获取可能存在的url中的参数
@@ -275,11 +277,12 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 			return
 		}
 		{{ end }}
-		{{ if .HasResponse }}response,{{end}} err := receiver.{{.MethodName}}(c {{ if .HasRequest }},request{{ end }})
+		{{ if .HasResponse }}a,{{end}} err := receiver.{{.MethodName}}(c {{ if .HasRequest }},request{{ end }})
+		{{.ResponseNilCode}}
 		var code = 200
 		errorCode,errMessage:=getErrorCode(err)
 		cJSON(c, code, Response{
-			{{ if .HasResponse }}Object:  response,{{ end }}
+			{{ if .HasResponse }}Object:  a,{{ end }}
 			Code:    errorCode,
 			Message: errMessage,
 		})

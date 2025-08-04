@@ -148,6 +148,17 @@ func (v *Struct) GeneredFields() []*Field {
 	field := NewSimpleField(NewPointerType(v), "")
 	return []*Field{field}
 }
+func (field *Struct) GenNilCode(file *GenedFile) string {
+	var sb strings.Builder
+	for _, f := range field.Fields {
+		if _, ok := f.Type.(*ArrayType); ok {
+			sb.WriteString("{\na:=&a." + f.Name + "\n")
+			sb.WriteString(f.GenNilCode(file))
+			sb.WriteString("}\n")
+		}
+	}
+	return sb.String()
+}
 
 // GenerateDependcyCode 生成创建结构体对象的代码
 func (v *Struct) GenerateDependcyCode(goGenerated *GenedFile) string {

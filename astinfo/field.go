@@ -26,6 +26,12 @@ func (comment *FieldComment) dealValuePair(key, value string) {
 
 // 变量名和变量类型的定义
 // 用于函数的参数和返回值，struct的属性；
+
+// FieldBasic 用于 FunctionField，VarField，Field；
+// FunctionField用于Function和InterfaceField；
+// InterfaceField用于Interface；
+// VarField用于全局Var定义；
+// Field用于Function的参数和返回值，以及Struct的属性；
 type FieldBasic struct {
 	Type    Typer // 实际可以为Struct，Interface， RawType
 	Name    string
@@ -174,6 +180,21 @@ type Field struct {
 func (field *Field) Parse() error {
 	field.parseTag(field.astTag)
 	return field.FieldBasic.Parse()
+}
+func (field *Field) GenNilCode(file *GenedFile) string {
+	nt := field.Type
+	if IsPointer(field.Type) {
+		nt = GetBasicType(nt)
+	}
+	switch nt := nt.(type) {
+	case *Struct:
+		return nt.GenNilCode(file)
+	case *ArrayType:
+		name := field.Type.RefName(file)
+		return fmt.Sprintf("if *a == nil {\n*a = %s{}\n}", name)
+	default:
+		return ""
+	}
 }
 
 func NewField(root *ast.Field, source *Gosourse) *Field {
