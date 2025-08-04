@@ -25,6 +25,20 @@
 14. field中的匿名结构体和匿名interface还没有解析；
 15. var的多行解析需求；
 
+## 暂时不解析：
+```
+type Pointer[T any] struct {
+        // Mention *T in a field to disallow conversion between Pointer types.
+        // See go.dev/issue/56603 for more details.
+        // Use *T, not T, to avoid spurious recursive type definition errors.
+        _ [0]*T
+
+        _ noCopy
+        v unsafe.Pointer
+}
+此处的类型T会报错；
+```
+
 # 完成的工作
 1. 解析文件
 2. 生成了initiator；

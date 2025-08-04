@@ -67,20 +67,7 @@ func (s *Alias) InitSchema(schema *spec.Schema, swagger *Swagger) {
 	basicType.(SchemaType).InitSchema(schema, swagger)
 }
 
-type EmptyType struct {
-}
-
-func (e *EmptyType) InitSchema(schema *spec.Schema, swagger *Swagger) {
-}
-
-func (e *EmptyType) RefName(genFile *GenedFile) string {
-	panic("not support")
-}
-func (e *EmptyType) IDName() string {
-	panic("not support")
-}
-func (e *EmptyType) GenConstructCode(genFile *GenedFile, wire bool) string {
-	panic("not support")
+func (e *BaseType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 }
 
 type Swagger struct {
@@ -363,7 +350,7 @@ func (swagger *Swagger) initResponseResult() {
 		Fields: []*Field{
 			NewSimpleField(rawTypeMap["int"], "code"),
 			NewSimpleField(rawTypeMap["string"], "msg"),
-			NewSimpleField(&EmptyType{}, "obj"),
+			NewSimpleField(&BaseType{}, "obj"),
 		},
 	}
 	swagger.responseResult = &class

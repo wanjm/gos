@@ -12,6 +12,7 @@ type Typer interface {
 	// 该变量的全名pkgModPath.StructName达到全局唯一的目的
 	IDName() string
 	Constructor
+	Parser
 }
 type Constructor interface {
 	GenConstructCode(genFile *GenedFile, wire bool) string
@@ -67,6 +68,9 @@ func (b *BaseType) RefName(_ *GenedFile) string {
 
 func (b *BaseType) IDName() string {
 	return b.typeName
+}
+func (b *BaseType) Parse() error {
+	return nil
 }
 
 func (b *BaseType) GenConstructCode(genFile *GenedFile, _ bool) string {

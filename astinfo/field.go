@@ -137,9 +137,19 @@ func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 	case *ast.StructType:
 		//匿名结构体
 	case *ast.IndexListExpr:
+		//var a className[k, v]
+		// ast.IndexListExpr.X=>className;
+		// ast.IndexListExpr.Indices=>[k, v];
+		className := fieldType.X.(*ast.Ident).Name
+		goSource.Pkg.FillType(className, &resultType)
 	case *ast.FuncType:
 	case *ast.ChanType:
 	///...号参数在目前的解析情况下不会遇到；
+	case *ast.IndexExpr:
+		//atomic.Pointer[func()]
+		//ast.IndexExpr.X=>atomic.Pointer;
+		//ast.IndexExpr.Index=>func();
+		//fmt.Printf("fieldType is nil in '%s' current not supported\n", goSource.Path)
 	case nil:
 		fmt.Printf("fieldType is nil in '%s' current not supported\n", goSource.Path)
 	default:

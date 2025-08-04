@@ -102,12 +102,13 @@ func (pkg *Package) Parse() error {
 		}
 	}
 	if pkg.Simple {
-		return nil
-	}
-	// TODO
-	//再细化扫描；
-	for _, parser := range pkg.parsers {
-		parser.Parse()
+		for _, parser := range pkg.Types {
+			parser.Parse()
+		}
+	} else {
+		for _, parser := range pkg.parsers {
+			parser.Parse()
+		}
 	}
 
 	return nil
