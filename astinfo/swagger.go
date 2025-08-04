@@ -69,6 +69,10 @@ func (s *Alias) InitSchema(schema *spec.Schema, swagger *Swagger) {
 
 func (e *BaseType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 }
+func (p *PointerType) InitSchema(schema *spec.Schema, swagger *Swagger) {
+	basicType := GetBasicType(p.Typer)
+	basicType.(SchemaType).InitSchema(schema, swagger)
+}
 
 type Swagger struct {
 	swag    *spec.Swagger
@@ -323,7 +327,7 @@ func (swagger *Swagger) addStructFieldsToSchema(class *Struct) map[string]spec.S
 			// if class1 != nil {
 			// 	class1.InitSchema(&schema, swagger)
 			// } else {
-			fmt.Printf("ERROR: field %s's type %s is not a SchemaType in\n", field.Name, field.Type.IDName())
+			fmt.Printf("ERROR: field %s::%s %T is not a SchemaType\n", field.Type.IDName(), field.Name, field.Type)
 			// }
 		}
 		schemas[name] = schema
