@@ -6,7 +6,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/wan_jm/go_servlet/astinfo"
+	"github.com/wanjm/go_servlet/astinfo"
 )
 
 type PrpcGen struct {
