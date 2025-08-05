@@ -146,8 +146,8 @@ func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 		//var a className[k, v]
 		// ast.IndexListExpr.X=>className;
 		// ast.IndexListExpr.Indices=>[k, v];
-		className := fieldType.X.(*ast.Ident).Name
-		goSource.Pkg.FillType(className, &resultType)
+		// className := fieldType.X.(*ast.Ident).Name
+		// goSource.Pkg.FillType(className, &resultType)
 	case *ast.FuncType:
 	case *ast.ChanType:
 	///...号参数在目前的解析情况下不会遇到；
