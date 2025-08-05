@@ -3,7 +3,7 @@ package callable_gen
 import (
 	"strings"
 
-	"github.com/wan_jm/servlet/astinfo"
+	"github.com/wan_jm/go_servlet/astinfo"
 )
 
 type ResutfulGen struct {

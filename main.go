@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/wan_jm/servlet/astinfo"
-	"github.com/wan_jm/servlet/astinfo/callable_gen"
-	rpcgen "github.com/wan_jm/servlet/astinfo/rpc_gen"
+	"github.com/wan_jm/go_servlet/astinfo"
+	"github.com/wan_jm/go_servlet/astinfo/callable_gen"
+	rpcgen "github.com/wan_jm/go_servlet/astinfo/rpc_gen"
 )
 
 func main() {
