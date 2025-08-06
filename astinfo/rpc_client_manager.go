@@ -61,7 +61,7 @@ func (manager *RpcClientManager) Generate(file *GenedFile) error {
 				rpcClientVar[iface] = clientVar[iface]
 			}
 		}
-		gen.InitClientVariable(rpcClientVar, file)
+		GlobalProject.InitFuncs4Server = append(GlobalProject.InitFuncs4Server, gen.InitClientVariable(rpcClientVar, file))
 		file.AddBuilder(&sb)
 		file.save()
 	}

@@ -17,8 +17,9 @@ type MainProject struct {
 	Cfg            *Config
 
 	*InitManager
-	initFuncs []string
-	Projects  []*Project // 项目包含的子项目集合（key为Project的module）
+	InitFuncs4All    []string   // 启动服务器和启动test都是用的方法；
+	InitFuncs4Server []string   // 启动服务器用的方法；
+	Projects         []*Project // 项目包含的子项目集合（key为Project的module）
 }
 
 func (mp *MainProject) genGoMod() {
@@ -115,19 +116,34 @@ func (mp *MainProject) genPrepare(file *GenedFile) {
 	cm.Prepare()
 	cm.Generate(file)
 
-	var content strings.Builder
-	content.WriteString("func Prepare() {\n")
-	for _, fun := range mp.initFuncs {
-		content.WriteString(fun + "()\n")
+	// 定义模板字符串
+	const prepareTemplate = `
+// gened by mp.genPrepare
+func Prepare() {
+	//from mp.InitFuncs4All
+{{range .InitFuncs4All}}	{{.}}()
+{{end}}}
+
+func prepare() {
+	Prepare()
+	//from mp.InitFuncs4Server
+{{range .InitFuncs4Server}}	{{.}}()
+{{end}}}
+// gened by mp.genPrepare
+`
+
+	// 创建并解析模板
+	tpl, err := template.New("prepare").Parse(prepareTemplate)
+	if err != nil {
+		panic("Failed to parse prepare template: " + err.Error())
 	}
-	content.WriteString(`
-	}	
-	func prepare() {
-		Prepare()
-		initServer()
-		initRpcClient()
-    }
-	`)
+
+	// 渲染模板到strings.Builder
+	var content strings.Builder
+	if err := tpl.Execute(&content, mp); err != nil {
+		panic("Failed to execute prepare template: " + err.Error())
+	}
+
 	file.AddBuilder(&content)
 }
 func (mp *MainProject) genBasicCode(file *GenedFile) {
@@ -319,6 +335,9 @@ func (sm *ServerManager) splitServers() {
 
 // Generate
 func (sm *ServerManager) Generate(file *GenedFile) {
+	if len(sm.servers) == 0 {
+		return
+	}
 	for _, server := range sm.servers {
 		//一个server一个文件；
 		file1 := createGenedFile(server.Name)
@@ -371,7 +390,7 @@ func initServer(){
 	if err != nil {
 		log.Fatalf("执行模板失败: %v", err)
 	}
-
+	GlobalProject.InitFuncs4Server = append(GlobalProject.InitFuncs4Server, "initServer")
 	file.AddBuilder(&sb)
 }
 

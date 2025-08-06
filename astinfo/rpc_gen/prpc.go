@@ -278,5 +278,5 @@ func initRpcClient() {
 	}
 
 	file.AddBuilder(&content)
-	return ""
+	return "initRpcClient"
 }

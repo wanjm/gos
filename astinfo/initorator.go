@@ -87,7 +87,7 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 	call.WriteString("}\n")
 	goGenerated.AddBuilder(&definition)
 	goGenerated.AddBuilder(&call)
-	im.project.initFuncs = append(im.project.initFuncs, "initVariable")
+	im.project.InitFuncs4All = append(im.project.InitFuncs4All, "initVariable")
 	return nil
 }
 
