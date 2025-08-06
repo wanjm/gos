@@ -137,6 +137,7 @@ func NewSysPackage(module string) *Package {
 func (pkg *Package) FillType(typeName string, typer *Typer) {
 	res := pkg.GetTyper(typeName)
 	if res == nil {
+		fmt.Printf("failed to get type %s in package %s\n", typeName, pkg.Module)
 		pkg.WaitTyper[typeName] = append(pkg.WaitTyper[typeName], typer)
 	} else {
 		*typer = res

@@ -46,6 +46,6 @@ func (a *Alias) GenConstructCode(genFile *GenedFile, wire bool) string {
 
 // Parse() error
 func (a *Alias) Parse() error {
-	a.Typer = parseType(a.astRoot.Type, a.Gosourse)
+	a.Typer = parseType(a.astRoot.Type, a.Gosourse, nil)
 	return nil
 }

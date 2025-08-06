@@ -89,17 +89,18 @@ func (field *FieldBasic) parseComment(fieldType *ast.CommentGroup) {
 // name map
 // name []arrays
 // 此函数仅解析结构，然后在外面解析名字，拆分为多个Field
-func (field *FieldBasic) Parse() error {
+func (field *FieldBasic) Parse(typeMap map[string]*Field) error {
 	fieldType := field.astType
 	//field.Name="名字在调用本函数的外面解析，因为一个类型可能有多个名字，需要拆分为多个Field"
-	field.ParseType(fieldType)
+	field.ParseType(fieldType, typeMap)
 	field.parseComment(field.astComment)
 
 	return nil
 }
 
 // 在pkg内解析Type；
-func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
+// 只有从结构体调入该函数时，typeMap才可能不为空；
+func parseType(fieldType ast.Expr, goSource *Gosourse, typeMap map[string]*Field) Typer {
 	var resultType Typer
 	switch fieldType := fieldType.(type) {
 	case *ast.ArrayType:
@@ -109,21 +110,27 @@ func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 		// ArrayType中的pkg，typeName，class指向具体的类型
 		array := ArrayType{}
 		resultType = &array
-		array.Typer = parseType(fieldType.Elt, goSource)
+		array.Typer = parseType(fieldType.Elt, goSource, typeMap)
 	case *ast.StarExpr:
 		var pointer Typer
-		pointer = parseType(fieldType.X, goSource)
+		pointer = parseType(fieldType.X, goSource, typeMap)
 		resultType = NewPointerType(pointer)
 	case *ast.Ident:
 		// 此时可能是
 		// 原始类型； string
+		// 结构体的范型参数；
 		// 同package的结构体，
 		// field.Type =
 		// 先检查原始类型；
 		type1 := GetRawType(fieldType.Name)
 		if type1 == nil {
+			type1 := typeMap[fieldType.Name]
+			if type1 != nil {
+				resultType = type1.Type
+			} else {
+				goSource.Pkg.FillType(fieldType.Name, &resultType)
+			}
 			//再检查Struct类型；
-			goSource.Pkg.FillType(fieldType.Name, &resultType)
 		} else {
 			resultType = type1
 		}
@@ -132,8 +139,12 @@ func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 		// field定义的selector，就只考虑pkg1
 		pkgName := fieldType.X.(*ast.Ident).Name
 		typeName := fieldType.Sel.Name
+		// 解析import时，已经跳过了import C；
+		//但是解析Field时，还有可能是C，所以也要跳过；
 		pkgModePath := goSource.Imports[pkgName]
-		GlobalProject.FindPackage(pkgModePath).FillType(typeName, &resultType)
+		if pkgName != "C" || pkgModePath != "" {
+			GlobalProject.FindPackage(pkgModePath).FillType(typeName, &resultType)
+		}
 
 	case *ast.MapType:
 		mapType := MapType{}
@@ -167,8 +178,8 @@ func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 	return resultType
 }
 
-func (field *FieldBasic) ParseType(fieldType ast.Expr) {
-	field.Type = parseType(fieldType, field.GoSource)
+func (field *FieldBasic) ParseType(fieldType ast.Expr, typeMap map[string]*Field) {
+	field.Type = parseType(fieldType, field.GoSource, typeMap)
 }
 
 type Field struct {
@@ -177,9 +188,9 @@ type Field struct {
 	astTag *ast.BasicLit
 }
 
-func (field *Field) Parse() error {
+func (field *Field) Parse(typeMap map[string]*Field) error {
 	field.parseTag(field.astTag)
-	return field.FieldBasic.Parse()
+	return field.FieldBasic.Parse(typeMap)
 }
 func (field *Field) GenNilCode(file *GenedFile) string {
 	nt := field.Type
@@ -254,7 +265,7 @@ func (v *VarFieldHelper) Parse() error {
 		// TODO：添加级别日志；
 		return nil
 	}
-	field.Parse()
+	field.Parse(nil)
 	if len(root.Names) != 0 {
 		for _, name := range root.Names {
 			field1 := field

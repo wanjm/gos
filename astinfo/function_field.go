@@ -22,20 +22,20 @@ func (f *FunctionField) GeneredFields() []*Field {
 
 func (f *FunctionField) parseParameter(paramType *ast.FuncType) bool {
 	//Params参数不可能为nil
-	f.Params = parseFields(paramType.Params.List, f.GoSource)
+	f.Params = parseFields(paramType.Params.List, f.GoSource, nil)
 	//Results返回值可能为nil
 	if paramType.Results != nil {
-		f.Results = parseFields(paramType.Results.List, f.GoSource)
+		f.Results = parseFields(paramType.Results.List, f.GoSource, nil)
 	}
 	return true
 }
 
 // 从ast.Field中解析出参数
-func parseFields(params []*ast.Field, goSource *Gosourse) []*Field {
+func parseFields(params []*ast.Field, goSource *Gosourse, typeMap map[string]*Field) []*Field {
 	var result []*Field
 	for _, param := range params {
 		field := NewField(param, goSource)
-		field.Parse()
+		field.Parse(typeMap)
 		if len(param.Names) != 0 {
 			for _, name := range param.Names {
 				field1 := *field
