@@ -185,7 +185,13 @@ func (field *Field) GenNilCode(file *GenedFile) string {
 	nt := field.Type
 	if IsPointer(field.Type) {
 		nt = GetBasicType(nt)
+		res := "if a!=nil {\n" + field.genNilCode(nt, file) + "\n}\n"
+		return res
 	}
+	return field.genNilCode(nt, file)
+}
+
+func (field *Field) genNilCode(nt Typer, file *GenedFile) string {
 	switch nt := nt.(type) {
 	case *Struct:
 		return nt.GenNilCode(file)

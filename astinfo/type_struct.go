@@ -151,8 +151,13 @@ func (v *Struct) GeneredFields() []*Field {
 func (field *Struct) GenNilCode(file *GenedFile) string {
 	var sb strings.Builder
 	for _, f := range field.Fields {
-		if _, ok := f.Type.(*ArrayType); ok {
+		switch f.Type.(type) {
+		case *ArrayType, *Struct:
 			sb.WriteString("{\na:=&a." + f.Name + "\n")
+			sb.WriteString(f.GenNilCode(file))
+			sb.WriteString("}\n")
+		case *PointerType:
+			sb.WriteString("{\na:=a." + f.Name + "\n")
 			sb.WriteString(f.GenNilCode(file))
 			sb.WriteString("}\n")
 		}
