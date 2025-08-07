@@ -1,6 +1,7 @@
 package astinfo
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -52,6 +53,42 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 		}
 	}
 	return
+}
+
+// 在一个go文件中解析一个类型，其可能为:
+// 原始类型； string
+// 结构体的范型参数；
+// 同package的结构体，
+// field.Type =
+// 先检查原始类型；
+// 来自 import . "****"
+func (g *Gosourse) getType(typeName string, typeMap map[string]*Field) Typer {
+	//check raw type
+	type1 := GetRawType(typeName)
+	if type1 != nil {
+		return type1
+	}
+	//check typeMap
+	type2 := typeMap[typeName]
+	if type2 != nil {
+		return type2.Type
+	}
+	//check pkg
+	type3 := g.Pkg.GetTyper(typeName)
+	if type3 != nil {
+		return type3
+	}
+	// check import .
+	pkgModule := g.Imports["."]
+	pkg := GlobalProject.FindPackage(pkgModule)
+	if pkg != nil {
+		type3 = pkg.GetTyper(typeName)
+		if type3 != nil {
+			return type3
+		}
+	}
+	fmt.Printf("failed to find type %s in %s\n", typeName, g.Path)
+	return nil
 }
 
 // 解析函数和方法

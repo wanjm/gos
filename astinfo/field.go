@@ -100,6 +100,10 @@ func (field *FieldBasic) Parse(typeMap map[string]*Field) error {
 
 // 在pkg内解析Type；
 // 只有从结构体调入该函数时，typeMap才可能不为空；
+// type TypeA[K,V] struct{****}
+// type TypeB[K] K;
+// type TypeC[K]=K;
+// type TypeD[K] interface{***}
 func parseType(fieldType ast.Expr, goSource *Gosourse, typeMap map[string]*Field) Typer {
 	var resultType Typer
 	switch fieldType := fieldType.(type) {
@@ -116,36 +120,18 @@ func parseType(fieldType ast.Expr, goSource *Gosourse, typeMap map[string]*Field
 		pointer = parseType(fieldType.X, goSource, typeMap)
 		resultType = NewPointerType(pointer)
 	case *ast.Ident:
-		// 此时可能是
-		// 原始类型； string
-		// 结构体的范型参数；
-		// 同package的结构体，
-		// field.Type =
-		// 先检查原始类型；
-		type1 := GetRawType(fieldType.Name)
-		if type1 == nil {
-			type1 := typeMap[fieldType.Name]
-			if type1 != nil {
-				resultType = type1.Type
-			} else {
-				goSource.Pkg.FillType(fieldType.Name, &resultType)
-			}
-			//再检查Struct类型；
-		} else {
-			resultType = type1
-		}
+		resultType = goSource.getType(fieldType.Name, typeMap)
 	case *ast.SelectorExpr:
 		// 其他package的结构体，=》pkg1.Struct
 		// field定义的selector，就只考虑pkg1
 		pkgName := fieldType.X.(*ast.Ident).Name
 		typeName := fieldType.Sel.Name
 		// 解析import时，已经跳过了import C；
-		//但是解析Field时，还有可能是C，所以也要跳过；
+		// 但是解析Field时，还有可能是C，所以也要跳过；
 		pkgModePath := goSource.Imports[pkgName]
-		if pkgName != "C" || pkgModePath != "" {
-			GlobalProject.FindPackage(pkgModePath).FillType(typeName, &resultType)
+		if pkgName != "C" {
+			resultType = GlobalProject.FindPackage(pkgModePath).GetTyper(typeName)
 		}
-
 	case *ast.MapType:
 		mapType := MapType{}
 		resultType = &mapType
@@ -166,6 +152,9 @@ func parseType(fieldType ast.Expr, goSource *Gosourse, typeMap map[string]*Field
 		//atomic.Pointer[func()]
 		//ast.IndexExpr.X=>atomic.Pointer;
 		//ast.IndexExpr.Index=>func();
+		//fmt.Printf("fieldType is nil in '%s' current not supported\n", goSource.Path)
+	case *ast.ParenExpr:
+		//onExit (func(interface{}))
 		//fmt.Printf("fieldType is nil in '%s' current not supported\n", goSource.Path)
 	case nil:
 		fmt.Printf("fieldType is nil in '%s' current not supported\n", goSource.Path)
@@ -274,4 +263,12 @@ func (v *VarFieldHelper) Parse() error {
 		}
 	}
 	return nil
+}
+
+func FieldListToMap(fields []*Field) map[string]*Field {
+	res := make(map[string]*Field)
+	for _, field := range fields {
+		res[field.Name] = field
+	}
+	return res
 }

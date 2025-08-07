@@ -222,14 +222,7 @@ func (class *Struct) ParseComment() error {
 // parseField
 func (v *Struct) ParseField() error {
 	// v.goSource在解析结构体时，被赋值，解析field也是在解析结构体时，所以v.goSource不为空
-	var typeMap map[string]*Field
-	if v.TypeParameter != nil {
-		typeMap = make(map[string]*Field)
-		for _, field := range v.TypeParameter {
-			typeMap[field.Name] = field
-		}
-	}
-	v.Fields = parseFields(v.astRoot.Type.(*ast.StructType).Fields.List, v.goSource, typeMap)
+	v.Fields = parseFields(v.astRoot.Type.(*ast.StructType).Fields.List, v.goSource, FieldListToMap(v.TypeParameter))
 	// v.FieldMap = make(map[string]*Field)
 	// for _, field := range v.Fields {
 	// 	v.FieldMap[field.Name] = field

@@ -134,15 +134,6 @@ func NewSysPackage(module string) *Package {
 	return NewPackage(module, true, path.Join("/opt/google/go/src", module))
 }
 
-func (pkg *Package) FillType(typeName string, typer *Typer) {
-	res := pkg.GetTyper(typeName)
-	if res == nil {
-		fmt.Printf("failed to get type %s in package %s\n", typeName, pkg.Module)
-		pkg.WaitTyper[typeName] = append(pkg.WaitTyper[typeName], typer)
-	} else {
-		*typer = res
-	}
-}
 func (pkg *Package) GetTyper(name string) Typer {
 	return pkg.Types[name]
 }
