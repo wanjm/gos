@@ -404,12 +404,12 @@ func (mp *MainProject) FindPackage(module string) *Package {
 		if strings.HasPrefix(module, p.Module) {
 			newPkg := NewPackage(module, p.Simple, path.Join(p.Path, module[len(p.Module):]))
 			mp.Packages[module] = newPkg
-			newPkg.Parse()
+			newPkg.SimpleParse()
 			return newPkg
 		}
 	}
 	newPkg := NewSysPackage(module)
-	newPkg.Parse()
+	newPkg.SimpleParse()
 	mp.Packages[module] = newPkg
 	//此处识别为系统Package
 	return newPkg
