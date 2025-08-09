@@ -3,7 +3,7 @@ package callable_gen
 import (
 	"strings"
 
-	"github.com/wanjm/go_servlet/astinfo"
+	"github.com/wanjm/gos/astinfo"
 )
 
 type PrpcGen struct{}

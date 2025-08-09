@@ -148,7 +148,7 @@ func init() {
 		"uint", "uint8", "uint16", "uint32", "uint64",
 		"float32", "float64",
 		"any", "error",
-		"uintptr", "complex128", "complex64",
+		"uintptr", "complex128", "complex64", "comparable",
 	}
 	for _, t := range rawType {
 		rawTypeMap[t] = &RawType{

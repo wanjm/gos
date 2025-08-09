@@ -56,9 +56,10 @@ type Struct struct {
 	astRoot *ast.TypeSpec
 	// genDecl       *ast.GenDecl
 	// astStructType *ast.StructType
-	comment  structComment
-	Fields   []*Field
-	FieldMap map[string]*Field
+	comment       structComment
+	Fields        []*Field
+	TypeParameter []*Field
+	// FieldMap      map[string]*Field
 	MethodManager
 	// TODO: 后续添加字段和方法解析
 	ref *spec.Ref
@@ -151,8 +152,13 @@ func (v *Struct) GeneredFields() []*Field {
 func (field *Struct) GenNilCode(file *GenedFile) string {
 	var sb strings.Builder
 	for _, f := range field.Fields {
-		if _, ok := f.Type.(*ArrayType); ok {
+		switch f.Type.(type) {
+		case *ArrayType, *Struct:
 			sb.WriteString("{\na:=&a." + f.Name + "\n")
+			sb.WriteString(f.GenNilCode(file))
+			sb.WriteString("}\n")
+		case *PointerType:
+			sb.WriteString("{\na:=a." + f.Name + "\n")
 			sb.WriteString(f.GenNilCode(file))
 			sb.WriteString("}\n")
 		}
@@ -201,6 +207,9 @@ func (v *Struct) Parse() error {
 	if err := v.ParseComment(); err != nil {
 		return err
 	}
+	if v.astRoot.TypeParams != nil {
+		v.TypeParameter = parseFields(v.astRoot.TypeParams.List, v.goSource, nil)
+	}
 	return v.ParseField()
 }
 
@@ -213,10 +222,10 @@ func (class *Struct) ParseComment() error {
 // parseField
 func (v *Struct) ParseField() error {
 	// v.goSource在解析结构体时，被赋值，解析field也是在解析结构体时，所以v.goSource不为空
-	v.Fields = parseFields(v.astRoot.Type.(*ast.StructType).Fields.List, v.goSource)
-	v.FieldMap = make(map[string]*Field)
-	for _, field := range v.Fields {
-		v.FieldMap[field.Name] = field
-	}
+	v.Fields = parseFields(v.astRoot.Type.(*ast.StructType).Fields.List, v.goSource, FieldListToMap(v.TypeParameter))
+	// v.FieldMap = make(map[string]*Field)
+	// for _, field := range v.Fields {
+	// 	v.FieldMap[field.Name] = field
+	// }
 	return nil
 }

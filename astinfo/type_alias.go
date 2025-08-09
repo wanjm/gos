@@ -46,6 +46,11 @@ func (a *Alias) GenConstructCode(genFile *GenedFile, wire bool) string {
 
 // Parse() error
 func (a *Alias) Parse() error {
-	a.Typer = parseType(a.astRoot.Type, a.Gosourse)
+	var typeMap map[string]*Field
+	if a.astRoot.TypeParams != nil {
+		typeParameter := parseFields(a.astRoot.TypeParams.List, a.Gosourse, nil)
+		typeMap = FieldListToMap(typeParameter)
+	}
+	a.Typer = parseType(a.astRoot.Type, a.Gosourse, typeMap)
 	return nil
 }

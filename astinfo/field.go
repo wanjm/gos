@@ -89,17 +89,22 @@ func (field *FieldBasic) parseComment(fieldType *ast.CommentGroup) {
 // name map
 // name []arrays
 // 此函数仅解析结构，然后在外面解析名字，拆分为多个Field
-func (field *FieldBasic) Parse() error {
+func (field *FieldBasic) Parse(typeMap map[string]*Field) error {
 	fieldType := field.astType
 	//field.Name="名字在调用本函数的外面解析，因为一个类型可能有多个名字，需要拆分为多个Field"
-	field.ParseType(fieldType)
+	field.ParseType(fieldType, typeMap)
 	field.parseComment(field.astComment)
 
 	return nil
 }
 
 // 在pkg内解析Type；
-func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
+// 只有从结构体调入该函数时，typeMap才可能不为空；
+// type TypeA[K,V] struct{****}
+// type TypeB[K] K;
+// type TypeC[K]=K;
+// type TypeD[K] interface{***}
+func parseType(fieldType ast.Expr, goSource *Gosourse, typeMap map[string]*Field) Typer {
 	var resultType Typer
 	switch fieldType := fieldType.(type) {
 	case *ast.ArrayType:
@@ -109,32 +114,24 @@ func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 		// ArrayType中的pkg，typeName，class指向具体的类型
 		array := ArrayType{}
 		resultType = &array
-		array.Typer = parseType(fieldType.Elt, goSource)
+		array.Typer = parseType(fieldType.Elt, goSource, typeMap)
 	case *ast.StarExpr:
 		var pointer Typer
-		pointer = parseType(fieldType.X, goSource)
+		pointer = parseType(fieldType.X, goSource, typeMap)
 		resultType = NewPointerType(pointer)
 	case *ast.Ident:
-		// 此时可能是
-		// 原始类型； string
-		// 同package的结构体，
-		// field.Type =
-		// 先检查原始类型；
-		type1 := GetRawType(fieldType.Name)
-		if type1 == nil {
-			//再检查Struct类型；
-			goSource.Pkg.FillType(fieldType.Name, &resultType)
-		} else {
-			resultType = type1
-		}
+		resultType = goSource.getType(fieldType.Name, typeMap)
 	case *ast.SelectorExpr:
 		// 其他package的结构体，=》pkg1.Struct
 		// field定义的selector，就只考虑pkg1
 		pkgName := fieldType.X.(*ast.Ident).Name
 		typeName := fieldType.Sel.Name
+		// 解析import时，已经跳过了import C；
+		// 但是解析Field时，还有可能是C，所以也要跳过；
 		pkgModePath := goSource.Imports[pkgName]
-		GlobalProject.FindPackage(pkgModePath).FillType(typeName, &resultType)
-
+		if pkgName != "C" {
+			resultType = GlobalProject.FindPackage(pkgModePath).GetTyper(typeName)
+		}
 	case *ast.MapType:
 		mapType := MapType{}
 		resultType = &mapType
@@ -156,6 +153,9 @@ func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 		//ast.IndexExpr.X=>atomic.Pointer;
 		//ast.IndexExpr.Index=>func();
 		//fmt.Printf("fieldType is nil in '%s' current not supported\n", goSource.Path)
+	case *ast.ParenExpr:
+		//onExit (func(interface{}))
+		//fmt.Printf("fieldType is nil in '%s' current not supported\n", goSource.Path)
 	case nil:
 		fmt.Printf("fieldType is nil in '%s' current not supported\n", goSource.Path)
 	default:
@@ -167,8 +167,8 @@ func parseType(fieldType ast.Expr, goSource *Gosourse) Typer {
 	return resultType
 }
 
-func (field *FieldBasic) ParseType(fieldType ast.Expr) {
-	field.Type = parseType(fieldType, field.GoSource)
+func (field *FieldBasic) ParseType(fieldType ast.Expr, typeMap map[string]*Field) {
+	field.Type = parseType(fieldType, field.GoSource, typeMap)
 }
 
 type Field struct {
@@ -177,15 +177,21 @@ type Field struct {
 	astTag *ast.BasicLit
 }
 
-func (field *Field) Parse() error {
+func (field *Field) Parse(typeMap map[string]*Field) error {
 	field.parseTag(field.astTag)
-	return field.FieldBasic.Parse()
+	return field.FieldBasic.Parse(typeMap)
 }
 func (field *Field) GenNilCode(file *GenedFile) string {
 	nt := field.Type
 	if IsPointer(field.Type) {
 		nt = GetBasicType(nt)
+		res := "if a!=nil {\n" + field.genNilCode(nt, file) + "\n}\n"
+		return res
 	}
+	return field.genNilCode(nt, file)
+}
+
+func (field *Field) genNilCode(nt Typer, file *GenedFile) string {
 	switch nt := nt.(type) {
 	case *Struct:
 		return nt.GenNilCode(file)
@@ -248,7 +254,7 @@ func (v *VarFieldHelper) Parse() error {
 		// TODO：添加级别日志；
 		return nil
 	}
-	field.Parse()
+	field.Parse(nil)
 	if len(root.Names) != 0 {
 		for _, name := range root.Names {
 			field1 := field
@@ -257,4 +263,12 @@ func (v *VarFieldHelper) Parse() error {
 		}
 	}
 	return nil
+}
+
+func FieldListToMap(fields []*Field) map[string]*Field {
+	res := make(map[string]*Field)
+	for _, field := range fields {
+		res[field.Name] = field
+	}
+	return res
 }
