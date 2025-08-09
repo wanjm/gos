@@ -2,31 +2,16 @@ package biz
 
 import (
 	"context"
-
-	"github.com/wan_jm/servlet_example/basic"
-	"gorm.io/gorm"
 )
 
-// @goservlet type=servlet;url="/example"
-type Hello struct {
-	Mysql *gorm.DB
-}
+// @gos type=servlet;url="/example"
+type Hello struct{}
 
-// @goservlet url="/hello";
-func (hello *Hello) SayHello(ctx context.Context, req *HelloRequest) (res HelloResponse, err basic.Error) {
-	res.Greeting = "hello " + req.Name
-	return
+// @gos url="/hello"; title="hello"
+func (hello *Hello) SayHello(ctx context.Context, req *HelloRequest) (string, error) {
+	return "hello " + req.Name, nil
 }
 
 type HelloRequest struct {
 	Name string `json:"name"`
-}
-type HelloResponse struct {
-	Greeting string `json:"greeting"`
-}
-
-// @goservlet type="prpc"; host="127.0.0.1:9000"
-type AC interface {
-	//@goservlet url="/hello"
-	GetName(name string) string
 }
