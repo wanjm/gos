@@ -16,7 +16,7 @@ type Generation struct {
 	AutoGen      bool
 }
 type Config struct {
-	InitMain   bool
+	InitMain   string // 改为字符串类型，存储模块名称
 	Generation Generation
 	SwaggerCfg SwaggerCfg
 }

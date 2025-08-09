@@ -25,7 +25,7 @@ type MainProject struct {
 func (mp *MainProject) genGoMod() {
 	_, err := os.Stat("go.mod")
 	if os.IsNotExist(err) {
-		var content = "module " + mp.currentProject.Module + "\n" + strings.Replace(runtime.Version(), "go", "go ", 1) + "\n"
+		var content = "module " + mp.Cfg.InitMain + "\n" + strings.Replace(runtime.Version(), "go", "go ", 1) + "\n"
 		os.WriteFile("go.mod", []byte(content), 0660)
 	}
 }
@@ -82,15 +82,6 @@ func (error *Error) GetErrorCode() int {
 	`), 0660)
 }
 
-func (mp *MainProject) genInitMain() {
-	//如果是空目录，或者init为true；则生成main.go 和basic.go的Error类；
-	if !mp.Cfg.InitMain {
-		return
-	}
-	mp.genGoMod()
-	mp.genMain()
-	mp.genBasic()
-}
 func (mp *MainProject) genProjectCode() {
 	err := os.Mkdir("gen", 0750)
 	if err != nil && !os.IsExist(err) {
@@ -426,7 +417,6 @@ func (mp *MainProject) FindPackage(module string) *Package {
 
 // GenerateCode 生成项目的代码
 func (mp *MainProject) GenerateCode() error {
-	mp.genInitMain()
 	// 遍历所有包
 	for _, pkg := range mp.Packages {
 		_ = pkg
@@ -435,7 +425,12 @@ func (mp *MainProject) GenerateCode() error {
 		// 	return fmt.Errorf("error generating code for package %s: %w", pkg.Name, err)
 		// }
 	}
+	if mp.Cfg.InitMain != "" {
+		mp.genMain()
+		mp.genBasic()
+	}
 	mp.genProjectCode()
+
 	NewSwagger(mp).GenerateCode(&mp.Cfg.SwaggerCfg)
 	return nil
 }
@@ -454,6 +449,11 @@ func escapeModulePath(s string) string {
 
 // Parse 解析项目的代码
 func (mp *MainProject) Parse() error {
+	if mp.Cfg.InitMain != "" { // 检查是否非空字符串
+		mp.genGoMod()
+		// 设置项目模块名称
+		mp.currentProject.Module = mp.Cfg.InitMain
+	}
 	p := &mp.currentProject
 	if err := p.ParseModule(); err != nil {
 		return err

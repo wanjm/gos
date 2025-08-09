@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"log"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -14,7 +14,8 @@ import (
 func main() {
 	var path string
 	flag.StringVar(&path, "p", ".", "需要生成代码工程的根目录")
-	init := flag.Bool("i", false, "初始化文件")
+	var modName string
+	flag.StringVar(&modName, "i", "", "指定模块名称")
 	h := flag.Bool("h", false, "显示帮助文件")
 	flag.Parse()
 	if *h {
@@ -23,20 +24,26 @@ func main() {
 	}
 	path, err := filepath.Abs(path)
 	if err != nil {
-		log.Printf("open %s failed with %s", path, err.Error())
+		fmt.Printf("open %s failed with %s", path, err.Error())
 		return
 	}
 	os.Chdir(path)
 	cfg := astinfo.Config{
-		InitMain: *init,
+		InitMain: modName, // 直接赋值模块名称
 	}
 	cfg.Load()
 	astinfo.RegisterCallableGen(callable_gen.NewServletGen(4, 1), &callable_gen.PrpcGen{}, &callable_gen.ResutfulGen{})
 	astinfo.RegisterClientGen(&rpcgen.PrpcGen{})
 	var project = astinfo.CreateProject(path, &cfg)
+	
+	// 移除原来的判断，因为现在InitMain直接存储模块名称
+	// if len(modName) > 0 {
+	// 	project.CurrentProject().Module = modName
+	// }
+	
 	err = project.Parse()
 	if err != nil {
-		log.Printf("parse project failed with %s", err.Error())
+		fmt.Printf("parse project failed with %s", err.Error())
 		return
 	}
 	project.GenerateCode()
