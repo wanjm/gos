@@ -301,9 +301,14 @@ func (sm *ServerManager) splitServers() {
 				continue
 			}
 			if server, ok = sm.servers[groupName]; !ok {
+				gen := sm.generator[router.comment.serverType]
+				if gen == nil {
+					fmt.Printf("failed to found generator %s\n", router.comment.serverType)
+					continue
+				}
 				server = &Server{
 					Name:    groupName,
-					callGen: sm.generator[router.comment.serverType],
+					callGen: gen,
 				}
 				sm.servers[groupName] = server
 			}
