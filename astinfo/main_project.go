@@ -326,9 +326,9 @@ func (sm *ServerManager) splitServers() {
 
 // Generate
 func (sm *ServerManager) Generate(file *GenedFile) {
-	if len(sm.servers) == 0 {
-		return
-	}
+	// if len(sm.servers) == 0 {
+	// 	return
+	// }
 	for _, server := range sm.servers {
 		//一个server一个文件；
 		file1 := createGenedFile(server.Name)
