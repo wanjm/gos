@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-const TagPrefix = "@goservlet"
+const TagPrefix = "@gos"
 
 // const GolangRawType = "rawType"
 

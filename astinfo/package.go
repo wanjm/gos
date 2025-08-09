@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
-	"log"
 	"path"
 	"path/filepath"
 	"strings"
@@ -79,7 +78,7 @@ func (pkg *Package) Parse() error {
 	// fmt.Printf("Parsing package: %s\n", path)
 	packageMap, err := parser.ParseDir(pkg.fset, path, nil, parser.AllErrors|parser.ParseComments)
 	if err != nil {
-		log.Printf("parse package %s failed %s", pkg.Module, err.Error())
+		fmt.Printf("parse package %s failed %s\n", pkg.Module, err.Error())
 		return nil
 	}
 	// 一个目录下可能有多
@@ -134,14 +133,6 @@ func NewSysPackage(module string) *Package {
 	return NewPackage(module, true, path.Join("/opt/google/go/src", module))
 }
 
-func (pkg *Package) FillType(typeName string, typer *Typer) {
-	res := pkg.GetTyper(typeName)
-	if res == nil {
-		pkg.WaitTyper[typeName] = append(pkg.WaitTyper[typeName], typer)
-	} else {
-		*typer = res
-	}
-}
 func (pkg *Package) GetTyper(name string) Typer {
 	return pkg.Types[name]
 }

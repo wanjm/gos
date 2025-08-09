@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/wanjm/go_servlet/astinfo"
+	"github.com/wanjm/gos/astinfo"
 )
 
 type FilterInfo struct {

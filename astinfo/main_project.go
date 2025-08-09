@@ -17,14 +17,15 @@ type MainProject struct {
 	Cfg            *Config
 
 	*InitManager
-	initFuncs []string
-	Projects  []*Project // 项目包含的子项目集合（key为Project的module）
+	InitFuncs4All    []string   // 启动服务器和启动test都是用的方法；
+	InitFuncs4Server []string   // 启动服务器用的方法；
+	Projects         []*Project // 项目包含的子项目集合（key为Project的module）
 }
 
 func (mp *MainProject) genGoMod() {
 	_, err := os.Stat("go.mod")
 	if os.IsNotExist(err) {
-		var content = "module " + mp.currentProject.Module + "\n" + strings.Replace(runtime.Version(), "go", "go ", 1) + "\n"
+		var content = "module " + mp.Cfg.InitMain + "\n" + strings.Replace(runtime.Version(), "go", "go ", 1) + "\n"
 		os.WriteFile("go.mod", []byte(content), 0660)
 	}
 }
@@ -81,15 +82,6 @@ func (error *Error) GetErrorCode() int {
 	`), 0660)
 }
 
-func (mp *MainProject) genInitMain() {
-	//如果是空目录，或者init为true；则生成main.go 和basic.go的Error类；
-	if !mp.Cfg.InitMain {
-		return
-	}
-	mp.genGoMod()
-	mp.genMain()
-	mp.genBasic()
-}
 func (mp *MainProject) genProjectCode() {
 	err := os.Mkdir("gen", 0750)
 	if err != nil && !os.IsExist(err) {
@@ -115,19 +107,34 @@ func (mp *MainProject) genPrepare(file *GenedFile) {
 	cm.Prepare()
 	cm.Generate(file)
 
-	var content strings.Builder
-	content.WriteString("func Prepare() {\n")
-	for _, fun := range mp.initFuncs {
-		content.WriteString(fun + "()\n")
+	// 定义模板字符串
+	const prepareTemplate = `
+// gened by mp.genPrepare
+func Prepare() {
+	//from mp.InitFuncs4All
+{{range .InitFuncs4All}}	{{.}}()
+{{end}}}
+
+func prepare() {
+	Prepare()
+	//from mp.InitFuncs4Server
+{{range .InitFuncs4Server}}	{{.}}()
+{{end}}}
+// gened by mp.genPrepare
+`
+
+	// 创建并解析模板
+	tpl, err := template.New("prepare").Parse(prepareTemplate)
+	if err != nil {
+		panic("Failed to parse prepare template: " + err.Error())
 	}
-	content.WriteString(`
-	}	
-	func prepare() {
-		Prepare()
-		initServer()
-		initRpcClient()
-    }
-	`)
+
+	// 渲染模板到strings.Builder
+	var content strings.Builder
+	if err := tpl.Execute(&content, mp); err != nil {
+		panic("Failed to execute prepare template: " + err.Error())
+	}
+
 	file.AddBuilder(&content)
 }
 func (mp *MainProject) genBasicCode(file *GenedFile) {
@@ -319,6 +326,9 @@ func (sm *ServerManager) splitServers() {
 
 // Generate
 func (sm *ServerManager) Generate(file *GenedFile) {
+	// if len(sm.servers) == 0 {
+	// 	return
+	// }
 	for _, server := range sm.servers {
 		//一个server一个文件；
 		file1 := createGenedFile(server.Name)
@@ -371,7 +381,7 @@ func initServer(){
 	if err != nil {
 		log.Fatalf("执行模板失败: %v", err)
 	}
-
+	GlobalProject.InitFuncs4Server = append(GlobalProject.InitFuncs4Server, "initServer")
 	file.AddBuilder(&sb)
 }
 
@@ -407,7 +417,6 @@ func (mp *MainProject) FindPackage(module string) *Package {
 
 // GenerateCode 生成项目的代码
 func (mp *MainProject) GenerateCode() error {
-	mp.genInitMain()
 	// 遍历所有包
 	for _, pkg := range mp.Packages {
 		_ = pkg
@@ -416,7 +425,12 @@ func (mp *MainProject) GenerateCode() error {
 		// 	return fmt.Errorf("error generating code for package %s: %w", pkg.Name, err)
 		// }
 	}
+	if mp.Cfg.InitMain != "" {
+		mp.genMain()
+		mp.genBasic()
+	}
 	mp.genProjectCode()
+
 	NewSwagger(mp).GenerateCode(&mp.Cfg.SwaggerCfg)
 	return nil
 }
@@ -435,6 +449,11 @@ func escapeModulePath(s string) string {
 
 // Parse 解析项目的代码
 func (mp *MainProject) Parse() error {
+	if mp.Cfg.InitMain != "" { // 检查是否非空字符串
+		mp.genGoMod()
+		// 设置项目模块名称
+		mp.currentProject.Module = mp.Cfg.InitMain
+	}
 	p := &mp.currentProject
 	if err := p.ParseModule(); err != nil {
 		return err

@@ -1,4 +1,4 @@
-module github.com/wanjm/go_servlet
+module github.com/wanjm/gos
 
 go 1.23.0
 
