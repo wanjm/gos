@@ -17,7 +17,14 @@ func main() {
 	var modName string
 	flag.StringVar(&modName, "i", "", "指定模块名称")
 	h := flag.Bool("h", false, "显示帮助文件")
+	v := flag.Bool("v", false, "显示版本信息") // 添加-v参数
 	flag.Parse()
+
+	if *v { // 检查是否指定了-v参数
+		fmt.Println("gos version 0.2.1") // 打印版本号
+		return                           // 退出程序
+	}
+
 	if *h {
 		flag.Usage()
 		return
@@ -35,12 +42,12 @@ func main() {
 	astinfo.RegisterCallableGen(callable_gen.NewServletGen(4, 1), &callable_gen.PrpcGen{}, &callable_gen.ResutfulGen{})
 	astinfo.RegisterClientGen(&rpcgen.PrpcGen{})
 	var project = astinfo.CreateProject(path, &cfg)
-	
+
 	// 移除原来的判断，因为现在InitMain直接存储模块名称
 	// if len(modName) > 0 {
 	// 	project.CurrentProject().Module = modName
 	// }
-	
+
 	err = project.Parse()
 	if err != nil {
 		fmt.Printf("parse project failed with %s", err.Error())
