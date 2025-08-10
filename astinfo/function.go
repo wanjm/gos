@@ -31,9 +31,10 @@ type Function struct {
 
 func (comment *functionComment) dealValuePair(key, value string) {
 	key = strings.ToLower(key)
+	value = strings.Trim(value, "\"")
 	switch key {
 	case Url:
-		comment.Url = strings.Trim(value, "\"")
+		comment.Url = value
 		if len(comment.funcType) == 0 {
 			//默认是servlet
 			comment.funcType = Servlet
@@ -46,7 +47,7 @@ func (comment *functionComment) dealValuePair(key, value string) {
 	case ConstMethod:
 		comment.Method = strings.ToUpper(value)
 	case Title:
-		comment.title = strings.Trim(value, "\"")
+		comment.title = value
 	case Type:
 		comment.funcType = value
 		if value == Websocket {
@@ -58,7 +59,7 @@ func (comment *functionComment) dealValuePair(key, value string) {
 		comment.groupName = value
 		comment.funcType = FilterConst
 	case UserFilter:
-		comment.Filter = strings.Trim(value, "\"")
+		comment.Filter = value
 	default:
 		if !comment.dealOldValuePair(key, value) {
 			fmt.Printf("unknown key '%s' in function comment %s in %s\n", key, comment.owner.Name, comment.owner.GoSource.Path)
