@@ -98,6 +98,7 @@ func (mp *MainProject) genPrepare(file *GenedFile) {
 
 	mp.InitInitorator()
 	mp.InitManager.Generate(file)
+	mp.InitManager.GenterateTestCode(file)
 
 	sm := CreateServerManager()
 	sm.Prepare()

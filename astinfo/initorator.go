@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"text/template"
 )
 
 const (
@@ -88,6 +89,60 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 	goGenerated.AddBuilder(&call)
 	im.project.InitFuncs4All = append(im.project.InitFuncs4All, "initVariable")
 	return nil
+}
+
+// GenterateTestCode 生成测试代码
+func (im *InitManager) GenterateTestCode(goGenerated *GenedFile) {
+	goGenerated.GetImport(SimplePackage("reflect", "reflect"))
+	var testCode strings.Builder
+	textTemplate := `
+var nameValue map[string]interface{}
+var typeValue map[reflect.Type]interface{}
+
+func addValue(value any) {
+	t := reflect.TypeOf(value)
+	typeValue[t] = value
+}
+func GetValue(value any) {
+	t := reflect.TypeOf(value)
+	reflect.ValueOf(value).Set(reflect.ValueOf(typeValue[t]))
+}
+
+// GetValueByName
+func GetValueByName(name string) any {
+	return nameValue[name]
+}
+func PrepareTest() {
+	Prepare()
+	typeValue = make(map[reflect.Type]interface{})
+	nameValue = make(map[string]interface{})
+	{{range $username, $value := .NameValue}}	
+    	nameValue["{{$username}}"] = {{$value}}
+	{{end}}
+	{{range $value := .TypeValue}}	
+    	typeValue[reflect.TypeOf({{$value}})] = {{$value}}
+	{{end}}
+}`
+
+	tmpl, err := template.New("test").Parse(textTemplate)
+	if err != nil {
+		panic(err)
+	}
+	var typeValue []string
+	for _, v := range im.variableMap {
+		typeValue = append(typeValue, v.Default.returnVariableName)
+	}
+	err = tmpl.Execute(&testCode, struct {
+		NameValue map[string]string
+		TypeValue []string
+	}{
+		NameValue: im.nameValue,
+		TypeValue: typeValue,
+	})
+	if err != nil {
+		panic(err)
+	}
+	goGenerated.AddBuilder(&testCode)
 }
 
 func (mp *MainProject) InitInitorator() {
