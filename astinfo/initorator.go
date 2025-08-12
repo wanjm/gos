@@ -62,6 +62,7 @@ type InitManager struct {
 	variableMap VariableMap //存放已经准备好了变量对象；
 	readyNode   []*DependNode
 	project     *MainProject
+	nameValue   map[string]string // 用于生成nameValue map[string]any代码的map
 }
 
 // Generate(goGenerated *GenedFile) error
@@ -93,6 +94,7 @@ func (mp *MainProject) InitInitorator() {
 	mp.InitManager = &InitManager{
 		variableMap: make(map[string]*InitGroup),
 		project:     mp,
+		nameValue:   make(map[string]string),
 	}
 	mp.InitManager.initInitorator()
 }
@@ -136,7 +138,10 @@ func (im *InitManager) initInitorator() {
 		for _, node := range functions {
 			if im.variableMap.checkReady(node) {
 				if node.getReturnField() != nil {
-					node.returnVariableName = globalPrefix + node.getReturnName() + "_" + strconv.Itoa(globalIndex)
+					var realName = node.getReturnName()
+					node.returnVariableName = globalPrefix + realName + "_" + strconv.Itoa(globalIndex)
+					// 如果realName为空，则覆盖，因为原本就没有计划要；
+					im.nameValue[realName] = node.returnVariableName
 					globalIndex++
 				}
 				found = true
