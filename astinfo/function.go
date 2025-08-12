@@ -19,9 +19,24 @@ type functionComment struct {
 }
 
 const (
-	POST = "POST"
-	GET  = "GET"
+	POST    = "POST"
+	GET     = "GET"
+	DELETE  = "DELETE"
+	PUT     = "PUT"
+	PATCH   = "PATCH"
+	OPTIONS = "OPTIONS"
+	HEAD    = "HEAD"
 )
+
+var methodMap = map[string]string{
+	POST:    POST,
+	GET:     GET,
+	DELETE:  DELETE,
+	PUT:     PUT,
+	PATCH:   PATCH,
+	OPTIONS: OPTIONS,
+	HEAD:    HEAD,
+}
 
 type Function struct {
 	funcDecl *ast.FuncDecl
@@ -46,6 +61,9 @@ func (comment *functionComment) dealValuePair(key, value string) {
 		comment.security = strings.Split(value, ",")
 	case ConstMethod:
 		comment.Method = strings.ToUpper(value)
+		if _, ok := methodMap[comment.Method]; !ok {
+			fmt.Printf("method '%s' is not supported in function comment %s in %s\n", comment.Method, comment.owner.Name, comment.owner.GoSource.Path)
+		}
 	case Title:
 		comment.title = value
 	case Type:

@@ -112,7 +112,7 @@ func (im *InitManager) collect() ([]*DependNode, VariableMap) {
 			dependNode = append(dependNode, node)
 		}
 		for _, class := range pkg.Structs {
-			if class.comment.AutoGen {
+			if class.Comment.AutoGen {
 				node := waittingVariableMap.addVGenerator(class)
 				dependNode = append(dependNode, node)
 			}

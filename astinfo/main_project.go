@@ -239,7 +239,7 @@ func (sm *Server) Generate(file *GenedFile) {
 func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 	var name = strings.Join([]string{
 		"init",
-		class.comment.groupName,
+		class.Comment.GroupName,
 		class.goSource.Pkg.Name,
 		class.StructName,
 		"router",
@@ -296,14 +296,14 @@ func (sm *ServerManager) splitServers() {
 		for _, router := range pkg.Structs {
 			var server *Server
 			var ok bool
-			var groupName = router.comment.groupName
+			var groupName = router.Comment.GroupName
 			if groupName == "" {
 				continue
 			}
 			if server, ok = sm.servers[groupName]; !ok {
-				gen := sm.generator[router.comment.serverType]
+				gen := sm.generator[router.Comment.serverType]
 				if gen == nil {
-					fmt.Printf("failed to found generator %s\n", router.comment.serverType)
+					fmt.Printf("failed to found generator %s\n", router.Comment.serverType)
 					continue
 				}
 				server = &Server{
