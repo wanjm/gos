@@ -99,15 +99,20 @@ func (im *InitManager) GenterateTestCode(goGenerated *GenedFile) {
 var nameValue map[string]interface{}
 var typeValue map[reflect.Type]interface{}
 
-func addValue(value any) {
-	t := reflect.TypeOf(value)
-	typeValue[t] = value
-}
 func GetValue(value any) {
-	t := reflect.TypeOf(value)
-	reflect.ValueOf(value).Set(reflect.ValueOf(typeValue[t]))
+	// 检查是否为指针类型（否则无法设置值）
+	val := reflect.ValueOf(value)
+	if val.Kind() != reflect.Ptr || val.IsNil() {
+		return // 不是指针或指针为nil，无法设置值
+	}
+	// 获取指针指向的元素类型
+	t := val.Elem().Type()
+	// 查找对应的值
+	if v, ok := typeValue[t]; ok {
+		// 设置值
+		val.Elem().Set(reflect.ValueOf(v))
+	}
 }
-
 // GetValueByName
 func GetValueByName(name string) any {
 	return nameValue[name]
