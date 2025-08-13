@@ -401,6 +401,12 @@ func (mp *MainProject) FindPackage(module string) *Package {
 	if pkg := mp.GetPackage(module); pkg != nil {
 		return pkg
 	}
+	if module == mp.currentProject.Module+"/gen" {
+		newPkg := NewPackage(module, true, path.Join(mp.currentProject.Path, "gen"))
+		newPkg.finshedParse = true
+		newPkg.Name = "gen"
+		return newPkg
+	}
 
 	for _, p := range mp.Projects {
 		// 根据module寻找package
