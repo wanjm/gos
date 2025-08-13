@@ -18,6 +18,9 @@ type structComment struct {
 }
 
 func (comment *structComment) dealValuePair(key, value string) {
+	if value != "" {
+		value = strings.Trim(value, "\"")
+	}
 	comment.AutoGen = true
 	switch key {
 	case Prpc:
