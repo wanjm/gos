@@ -43,6 +43,7 @@ func main() {
 		callable_gen.NewServletGen(4, 1),
 		&callable_gen.PrpcGen{},
 		&callable_gen.ResutfulGen{},
+		&callable_gen.RawGen{},
 	)
 	astinfo.RegisterClientGen(&rpcgen.PrpcGen{})
 	var project = astinfo.CreateProject(path, &cfg)
