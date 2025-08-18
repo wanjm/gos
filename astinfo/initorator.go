@@ -178,6 +178,11 @@ func (im *InitManager) collect() ([]*DependNode, VariableMap) {
 		for _, className := range pkg.SortedStructNames {
 			class := pkg.Structs[className]
 			if class.Comment.AutoGen {
+				exist := waittingVariableMap.getVariable(class, "")
+				// 自动生成代码如果遇到其他有名字的，则放弃；
+				if exist != nil && exist.getReturnName() == "" {
+					continue
+				}
 				node := waittingVariableMap.addVGenerator(class)
 				dependNode = append(dependNode, node)
 			}
