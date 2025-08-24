@@ -98,6 +98,7 @@ func (mp *MainProject) genPrepare(file *GenedFile) {
 
 	mp.InitInitorator()
 	mp.InitManager.Generate(file)
+	mp.InitManager.GenterateTestCode(file)
 
 	sm := CreateServerManager()
 	sm.Prepare()
@@ -239,7 +240,7 @@ func (sm *Server) Generate(file *GenedFile) {
 func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 	var name = strings.Join([]string{
 		"init",
-		class.comment.groupName,
+		class.Comment.GroupName,
 		class.goSource.Pkg.Name,
 		class.StructName,
 		"router",
@@ -296,14 +297,19 @@ func (sm *ServerManager) splitServers() {
 		for _, router := range pkg.Structs {
 			var server *Server
 			var ok bool
-			var groupName = router.comment.groupName
+			var groupName = router.Comment.GroupName
 			if groupName == "" {
 				continue
 			}
 			if server, ok = sm.servers[groupName]; !ok {
+				gen := sm.generator[router.Comment.serverType]
+				if gen == nil {
+					fmt.Printf("failed to found generator %s\n", router.Comment.serverType)
+					continue
+				}
 				server = &Server{
 					Name:    groupName,
-					callGen: sm.generator[router.comment.serverType],
+					callGen: gen,
 				}
 				sm.servers[groupName] = server
 			}
@@ -395,6 +401,12 @@ func (mp *MainProject) FindPackage(module string) *Package {
 	if pkg := mp.GetPackage(module); pkg != nil {
 		return pkg
 	}
+	if module == mp.currentProject.Module+"/gen" {
+		newPkg := NewPackage(module, true, path.Join(mp.currentProject.Path, "gen"))
+		newPkg.finshedParse = true
+		newPkg.Name = "gen"
+		return newPkg
+	}
 
 	for _, p := range mp.Projects {
 		// 根据module寻找package
@@ -404,12 +416,12 @@ func (mp *MainProject) FindPackage(module string) *Package {
 		if strings.HasPrefix(module, p.Module) {
 			newPkg := NewPackage(module, p.Simple, path.Join(p.Path, module[len(p.Module):]))
 			mp.Packages[module] = newPkg
-			newPkg.Parse()
+			newPkg.SimpleParse()
 			return newPkg
 		}
 	}
 	newPkg := NewSysPackage(module)
-	newPkg.Parse()
+	newPkg.SimpleParse()
 	mp.Packages[module] = newPkg
 	//此处识别为系统Package
 	return newPkg

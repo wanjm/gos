@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"strings"
 	"text/template"
 
@@ -218,7 +219,7 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 	tm := &CodeParam{
 		HttpMethod: method.Comment.Method,
 		MethodName: method.Name,
-		Url:        method.Comment.Url,
+		Url:        path.Join(method.Receiver.Comment.Url, method.Comment.Url),
 		DataError:  servlet.DataError,
 	}
 	if len(method.Params) > 1 {

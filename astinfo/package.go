@@ -2,6 +2,7 @@ package astinfo
 
 import (
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"path"
@@ -19,9 +20,10 @@ type Package struct {
 	Structs map[string]*Struct // 包内结构体集合（key为结构体名称）
 	// Interfaces map[string]*Interface // key是Interface 的Name
 	// 由于采用了两层扫描，所以不再需要Types map了。直接调用get方法获取；
-	parsers   []Parser         // 先扫描文件，生成parsers,然后依次进行parser解析；
-	Types     map[string]Typer // key是Type 的Name
-	fset      *token.FileSet   // 记录fset，到时可以找到文件
+	parsers   []Parser             // 先扫描文件，生成parsers,然后依次进行parser解析；
+	Types     map[string]Typer     // key是Type 的Name
+	fset      *token.FileSet       // 记录fset，到时可以找到文件
+	Files     map[string]*ast.File // Go source files by filename
 	GlobalVar map[string]*VarField
 	WaitTyper map[string][]*Typer // 有些类型先被使用，再定义，此时在此处将内容缓存下载，最后统一解析；
 	FunctionManager
@@ -52,15 +54,10 @@ func (pkg *Package) AddParser(parser Parser) {
 }
 
 // 采用遇到遇到不认识的import就先深度parse的方法；
-func (pkg *Package) Parse() error {
-	if pkg.finshedParse {
-		return nil
-	}
-	var a complex128
-	_ = a
+func (pkg *Package) SimpleParse() error {
+
 	path := pkg.Path
 	defer func() {
-		pkg.finshedParse = true
 		for name, alias := range pkg.WaitTyper {
 			typer := pkg.GetTyper(name)
 			if typer != nil {
@@ -88,17 +85,28 @@ func (pkg *Package) Parse() error {
 		if strings.HasSuffix(packName, "_test") {
 			continue
 		}
-		for filename, f := range pack.Files {
-			if strings.HasSuffix(filename, "_test.go") {
-				continue
-			}
+		for _, f := range pack.Files {
 			if isIgnoreFile(f) {
 				continue
 			}
 			pkg.Name = pack.Name
-			gofile := NewGosourse(f, pkg, filename)
-			gofile.Parse()
+			pkg.Files = pack.Files
+			break
 		}
+	}
+	return nil
+}
+func (pkg *Package) Parse() error {
+	if pkg.finshedParse {
+		return nil
+	}
+	pkg.finshedParse = true
+	for filename, f := range pkg.Files {
+		if strings.HasSuffix(filename, "_test.go") {
+			continue
+		}
+		gofile := NewGosourse(f, pkg, filename)
+		gofile.Parse()
 	}
 	if pkg.Simple {
 		for _, parser := range pkg.Types {
@@ -134,6 +142,9 @@ func NewSysPackage(module string) *Package {
 }
 
 func (pkg *Package) GetTyper(name string) Typer {
+	if !pkg.finshedParse {
+		pkg.Parse()
+	}
 	return pkg.Types[name]
 }
 

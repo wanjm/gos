@@ -19,9 +19,24 @@ type functionComment struct {
 }
 
 const (
-	POST = "POST"
-	GET  = "GET"
+	POST    = "POST"
+	GET     = "GET"
+	DELETE  = "DELETE"
+	PUT     = "PUT"
+	PATCH   = "PATCH"
+	OPTIONS = "OPTIONS"
+	HEAD    = "HEAD"
 )
+
+var methodMap = map[string]string{
+	POST:    POST,
+	GET:     GET,
+	DELETE:  DELETE,
+	PUT:     PUT,
+	PATCH:   PATCH,
+	OPTIONS: OPTIONS,
+	HEAD:    HEAD,
+}
 
 type Function struct {
 	funcDecl *ast.FuncDecl
@@ -31,9 +46,10 @@ type Function struct {
 
 func (comment *functionComment) dealValuePair(key, value string) {
 	key = strings.ToLower(key)
+	value = strings.Trim(value, "\"")
 	switch key {
 	case Url:
-		comment.Url = strings.Trim(value, "\"")
+		comment.Url = value
 		if len(comment.funcType) == 0 {
 			//默认是servlet
 			comment.funcType = Servlet
@@ -45,8 +61,11 @@ func (comment *functionComment) dealValuePair(key, value string) {
 		comment.security = strings.Split(value, ",")
 	case ConstMethod:
 		comment.Method = strings.ToUpper(value)
+		if _, ok := methodMap[comment.Method]; !ok {
+			fmt.Printf("method '%s' is not supported in function comment %s in %s\n", comment.Method, comment.owner.Name, comment.owner.GoSource.Path)
+		}
 	case Title:
-		comment.title = strings.Trim(value, "\"")
+		comment.title = value
 	case Type:
 		comment.funcType = value
 		if value == Websocket {
@@ -58,7 +77,7 @@ func (comment *functionComment) dealValuePair(key, value string) {
 		comment.groupName = value
 		comment.funcType = FilterConst
 	case UserFilter:
-		comment.Filter = strings.Trim(value, "\"")
+		comment.Filter = value
 	default:
 		if !comment.dealOldValuePair(key, value) {
 			fmt.Printf("unknown key '%s' in function comment %s in %s\n", key, comment.owner.Name, comment.owner.GoSource.Path)

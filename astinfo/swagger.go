@@ -278,7 +278,7 @@ func (swagger *Swagger) GenerateCode(cfg *SwaggerCfg) string {
 func (swagger *Swagger) addServletFromPackage(pkg *Package) {
 	// swagger.addServletFromFunctionManager(&pkg.FunctionManager)
 	for _, class := range pkg.Structs {
-		if class.comment.serverType == Servlet {
+		if class.Comment.serverType == Servlet {
 			swagger.addServletFromFunctionManager(&class.MethodManager)
 		}
 	}

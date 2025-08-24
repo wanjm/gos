@@ -11,38 +11,41 @@ import (
 // @goservlet type=xxx ;  prpc, servlet, websocket, restful,
 // @goservlet group=xxx; 如果不存在，则跟type同名
 type structComment struct {
-	groupName  string
+	GroupName  string
 	serverType string // NONE, RpcStruct, ServletStruct·
-	url        string // 服务的url, 对所有的方法都有效
+	Url        string // 服务的url, 对所有的方法都有效
 	AutoGen    bool
 }
 
 func (comment *structComment) dealValuePair(key, value string) {
+	if value != "" {
+		value = strings.Trim(value, "\"")
+	}
 	comment.AutoGen = true
 	switch key {
 	case Prpc:
 		comment.serverType = Prpc
 		if len(value) == 0 {
-			comment.groupName = Prpc
+			comment.GroupName = Prpc
 		} else {
-			comment.groupName = value
+			comment.GroupName = value
 		}
 	case Servlet:
 		comment.serverType = Servlet
 		if len(value) == 0 {
-			comment.groupName = Servlet
+			comment.GroupName = Servlet
 		} else {
-			comment.groupName = value
+			comment.GroupName = value
 		}
 	case Group:
-		comment.groupName = value
+		comment.GroupName = value
 	case Type:
 		comment.serverType = value
-		if len(comment.groupName) == 0 {
-			comment.groupName = comment.serverType
+		if len(comment.GroupName) == 0 {
+			comment.GroupName = comment.serverType
 		}
 	case Url:
-		comment.url = value
+		comment.Url = value
 	case AutoGen:
 		comment.AutoGen = true
 	}
@@ -56,7 +59,7 @@ type Struct struct {
 	astRoot *ast.TypeSpec
 	// genDecl       *ast.GenDecl
 	// astStructType *ast.StructType
-	comment       structComment
+	Comment       structComment
 	Fields        []*Field
 	TypeParameter []*Field
 	// FieldMap      map[string]*Field
@@ -215,7 +218,7 @@ func (v *Struct) Parse() error {
 
 // parseComment
 func (class *Struct) ParseComment() error {
-	parseComment(class.astRoot.Doc, &class.comment)
+	parseComment(class.astRoot.Doc, &class.Comment)
 	return nil
 }
 
