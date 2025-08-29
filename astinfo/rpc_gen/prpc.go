@@ -34,7 +34,8 @@ func (prpc *PrpcGen) Generate(class *astinfo.Interface, file *astinfo.GenedFile)
 // 修改genRpcClientCode函数为使用template的形式
 func (prpc *PrpcGen) genRpcClientCode(file *astinfo.GenedFile, structName string, method *astinfo.InterfaceField) {
 	// 定义模板字符串
-	const clientTemplate = `func (receiver *{{.StructName}}) {{.MethodName}}(ctx context.Context, {{.Params}}) ({{.Results}}) {
+	const clientTemplate = `
+	func (receiver *{{.StructName}}) {{.MethodName}}(ctx context.Context, {{.Params}}) ({{.Results}}) {
     var argument = []interface{}{ {{.Args}} }
 
     var res = receiver.client.SendRequest(ctx, {{.Url}}, argument)
