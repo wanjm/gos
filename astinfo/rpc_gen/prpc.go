@@ -7,6 +7,7 @@ import (
 	"text/template"
 
 	"github.com/wanjm/gos/astinfo"
+	"github.com/wanjm/gos/astinfo/callable_gen"
 )
 
 type PrpcGen struct {
@@ -120,6 +121,7 @@ func (prpc *PrpcGen) GenerateCommon(file *astinfo.GenedFile) {
 	if generated {
 		return
 	}
+	callable_gen.GenBasicError(file)
 	generated = true
 	file.GetImport(astinfo.SimplePackage("bytes", "bytes"))
 	file.GetImport(astinfo.SimplePackage("encoding/json", "json"))
@@ -129,19 +131,6 @@ func (prpc *PrpcGen) GenerateCommon(file *astinfo.GenedFile) {
 	file.GetImport(astinfo.SimplePackage("context", "context"))
 	var content strings.Builder
 	content.WriteString(`
-type Error struct {
-	Code    int    "json:\"code\""
-	Message string "json:\"message\""
-}
-
-func (error *Error) Error() string {
-	return error.Message
-}
-
-type RpcResult struct {
-	C int    "json:\"c\""
-	O [2]any "json:\"o\""
-}
 type rpcLogger interface {
 	LogRequest(ctx context.Context, url, request string)
 	LogResponse(ctx context.Context, url, response string)
