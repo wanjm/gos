@@ -87,12 +87,12 @@ func (mp *MainProject) genProjectCode() {
 	if err != nil && !os.IsExist(err) {
 		log.Fatal(err)
 	}
-	file := createGenedFile("goservlet_project")
+	file := CreateGenedFile("goservlet_project")
 	file.GetImport(SimplePackage("github.com/gin-gonic/gin", "gin"))
 	os.Chdir("gen")
 	mp.genBasicCode(file)
 	mp.genPrepare(file)
-	file.save()
+	file.Save()
 }
 func (mp *MainProject) genPrepare(file *GenedFile) {
 
@@ -337,9 +337,9 @@ func (sm *ServerManager) Generate(file *GenedFile) {
 	// }
 	for _, server := range sm.servers {
 		//一个server一个文件；
-		file1 := createGenedFile(server.Name)
+		file1 := CreateGenedFile(server.Name)
 		server.Generate(file1)
-		file1.save()
+		file1.Save()
 	}
 	tmplText :=
 		`
@@ -362,6 +362,22 @@ func initServer(){
 			routerInitor(router)
 		}
 	}
+		func getErrorCode(err error) (int, string) {
+	if err == nil {
+		return 0, ""
+	}
+	var errorCode int
+	var errMessage = err.Error()
+	if basicError,ok:=err.(Coder);ok{
+		errorCode = basicError.GetErrorCode()
+	}else{
+		errorCode = 1
+	}
+	return errorCode, errMessage
+}
+type Coder interface {
+	GetErrorCode() int
+}
 `
 	tmpl, err := template.New("personInfo").Parse(tmplText)
 	if err != nil {

@@ -46,6 +46,7 @@ func (prpc *PrpcGen) GenerateCommon(file *astinfo.GenedFile) {
 	file.GetImport(astinfo.SimplePackage("github.com/rs/xid", "xid"))
 	file.GetImport(astinfo.SimplePackage("context", "context"))
 	GenBasicError(file)
+	generateCommon()
 }
 
 func (prpc *PrpcGen) GenFilterCode(function *astinfo.Function, file *astinfo.GenedFile) string {
@@ -116,9 +117,10 @@ func (prpc *PrpcGen) GenRouterCode(method *astinfo.Method, file *astinfo.GenedFi
 	c.Request = Request.WithContext(context.WithValue(Request.Context(), TraceIdNameInContext, tid))
 	{{ if .HasResponse }}response,{{end}} err := receiver.{{.MethodName}}(c {{ if .HasRequest }},{{.ParamString}}{{ end }})
 	var code any
-	if err.Code != 0 {
-		code = &Error{Code: int(err.Code), Message: err.Message}
-	}
+	errorCode,errMessage:=getErrorCode(err)
+			if errorCode != 0 {
+			code = &Error{Code: errorCode, Message: errMessage}
+		}
 	cJSON(c,200, map[string]any{
 		{{if .HasResponse}}
 		"o": []any{code, response},

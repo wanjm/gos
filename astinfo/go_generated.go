@@ -20,7 +20,7 @@ type GenedFile struct {
 	// Project              *Project           // 所属项目
 }
 
-func createGenedFile(fileName string) *GenedFile {
+func CreateGenedFile(fileName string) *GenedFile {
 	return &GenedFile{
 		name:                 fileName,
 		genCodeImport:        make(map[string]*Import),
@@ -33,7 +33,7 @@ func createGenedFile(fileName string) *GenedFile {
 // 生成package语句
 // 生成import语句
 // 按照file.contents的顺序，生成文件内容
-func (file *GenedFile) save() {
+func (file *GenedFile) Save() {
 	if len(file.contents) == 0 {
 		return
 	}
