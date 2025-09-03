@@ -58,7 +58,7 @@ func generateCommon() {
 		return
 	}
 	var file *astinfo.GenedFile
-	file = astinfo.CreateGenedFile("buuild_in_common")
+	file = astinfo.CreateGenedFile("build_in_common")
 	file.GetImport(astinfo.SimplePackage("github.com/gin-gonic/gin", "gin"))
 	commongened = true
 	var content strings.Builder

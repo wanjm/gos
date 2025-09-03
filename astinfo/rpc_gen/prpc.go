@@ -52,7 +52,8 @@ func (prpc *PrpcGen) genRpcClientCode(file *astinfo.GenedFile, structName string
     //无论object是否位指针，都需要取地址
     json.Unmarshal(*res.O[1].(*json.RawMessage), &obj)
     {{end}}    return
-}`
+}
+`
 
 	// 准备模板数据
 	data := struct {
@@ -240,7 +241,6 @@ func initRpcClient() {
 	}
 
 	for iface, field := range rpcClientVar {
-		_ = field
 		impt := file.GetImport(iface.GoSource.Pkg)
 		host := iface.Comment.Host
 
@@ -250,7 +250,7 @@ func initRpcClient() {
 
 		data.RpcFields = append(data.RpcFields, RpcFieldData{
 			ImportName: impt.Name,
-			FieldName:  "JsinternalClient",
+			FieldName:  field.Name,
 			TypeName:   iface.InterfaceName,
 			Host:       host,
 		})
