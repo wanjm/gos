@@ -12,9 +12,10 @@ import (
 )
 
 type MainProject struct {
-	currentProject Project
-	Packages       map[string]*Package // 项目包含的包集合（key为包全路径）
-	Cfg            *Config
+	currentProject     Project
+	Packages           map[string]*Package // 项目包含的包集合（key为包全路径）
+	SortedPacakgeNames []string
+	Cfg                *Config
 
 	*InitManager
 	InitFuncs4All    []string   // 启动服务器和启动test都是用的方法；
@@ -94,8 +95,24 @@ func (mp *MainProject) genProjectCode() {
 	mp.genPrepare(file)
 	file.Save()
 }
+func (mp *MainProject) SortDataForGen() {
+	var pkgNames []string
+	for _, pkg := range mp.Packages {
+		if len(pkg.Initiator) > 0 || len(pkg.Structs) > 0 {
+			pkgNames = append(pkgNames, pkg.Module)
+			var strcutNames []string
+			for _, class := range pkg.Structs {
+				strcutNames = append(strcutNames, class.StructName)
+			}
+			sort.Strings(strcutNames)
+			pkg.SortedStructNames = strcutNames
+		}
+	}
+	sort.Strings(pkgNames)
+	mp.SortedPacakgeNames = pkgNames
+}
 func (mp *MainProject) genPrepare(file *GenedFile) {
-
+	mp.SortDataForGen()
 	mp.InitInitorator()
 	mp.InitManager.Generate(file)
 	mp.InitManager.GenterateTestCode(file)
@@ -292,9 +309,11 @@ func (sm *ServerManager) Prepare() {
 // 扫描所有的程序，将服务按照group分为多个server；
 func (sm *ServerManager) splitServers() {
 	project := GlobalProject
-	for _, pkg := range project.Packages {
+	for _, pkgModuleName := range project.SortedPacakgeNames {
+		pkg := project.Packages[pkgModuleName]
 		// 结构体会定义group和type，所以先扫描struct
-		for _, router := range pkg.Structs {
+		for _, structName := range pkg.SortedStructNames {
+			router := pkg.Structs[structName]
 			var server *Server
 			var ok bool
 			var groupName = router.Comment.GroupName

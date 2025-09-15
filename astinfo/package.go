@@ -17,7 +17,8 @@ type Package struct {
 	Path   string // 包所在目录的绝对路径
 	Module string // 所属模块全路径
 	// 用于变量注入的检查，用于servlet的生成；
-	Structs map[string]*Struct // 包内结构体集合（key为结构体名称）
+	Structs           map[string]*Struct // 包内结构体集合（key为结构体名称）
+	SortedStructNames []string
 	// Interfaces map[string]*Interface // key是Interface 的Name
 	// 由于采用了两层扫描，所以不再需要Types map了。直接调用get方法获取；
 	parsers   []Parser             // 先扫描文件，生成parsers,然后依次进行parser解析；
