@@ -40,62 +40,7 @@ var rawCommonGenerated bool
 // 定义代码生成模板
 const RawcJsonTemplate = `{{if .HasResponseKey}}
 var responseKey {{.ImportName}}.{{.ResponseKey}}
-
-type JsonString struct {
-	context context.Context
-	data    any
-}
-
-func (r JsonString) Render(w http.ResponseWriter) error {
-	r.WriteContentType(w)
-	jsonBytes, err := json.Marshal(r.data)
-	if err != nil {
-		return err
-	}
-	v := r.context.Value(responseKey)
-	if v != nil {
-		*(v.(*string)) = string(jsonBytes)
-	}
-	_, err = w.Write(jsonBytes)
-	return err
-}
-
-// WriteContentType (JSON) writes JSON ContentType.
-func (r JsonString) WriteContentType(w http.ResponseWriter) {
-	header := w.Header()
-	if val := header["Content-Type"]; len(val) == 0 {
-		header["Content-Type"] = []string{"application/json; charset=utf-8"}
-	}
-}
-
-func cJSON(c *gin.Context, code int,response any) {
-	c.Render(code, JsonString{
-		context: c,
-		data:    response,
-	})
-}
-{{else}}
-func cJSON(c *gin.Context, code int, response any) {
-	c.JSON(code, response)
-}
 {{end}}
-
-func getErrorCode(err error) (int, string) {
-	if err == nil {
-		return 0, ""
-	}
-	var errorCode int
-	var errMessage = err.Error()
-	if basicError,ok:=err.(Coder);ok{
-		errorCode = basicError.GetErrorCode()
-	}else{
-		errorCode = 1
-	}
-	return errorCode, errMessage
-}
-type Coder interface {
-	GetErrorCode() int
-}
 `
 
 func (servlet *RawGen) GenerateCommon(file *astinfo.GenedFile) {
