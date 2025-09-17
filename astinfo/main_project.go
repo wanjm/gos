@@ -164,6 +164,7 @@ func (mp *MainProject) genBasicCode(file *GenedFile) {
 	type Response struct {
 		Code    int         "json:\"code\""
 		Message string      "json:\"message,omitempty\""
+		ExtraInfo any         "json:\"extra,omitempty\"" //用于在失败的情况下也返回给前端一些信息；
 		Object  interface{} "json:\"obj,omitempty\""
 	}
 
@@ -396,6 +397,9 @@ func initServer(){
 }
 type Coder interface {
 	GetErrorCode() int
+}
+type ExtraInfo interface {
+	GetExtraInfo() any
 }
 `
 	tmpl, err := template.New("personInfo").Parse(tmplText)
