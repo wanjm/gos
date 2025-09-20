@@ -122,6 +122,11 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 			sb.WriteString(field.Name + ":")
 			if ok {
 				//此处需要考虑default为字符串等各种情况；
+				if rt, ok := field.Type.(*RawType); ok {
+					if rt.typeName == "string" {
+						v = `"` + v + `"`
+					}
+				}
 				sb.WriteString(v)
 			} else {
 				sb.WriteString(field.GenVariableCode(genFile, wire))
