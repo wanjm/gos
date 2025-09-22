@@ -12,9 +12,10 @@ import (
 )
 
 type MainProject struct {
-	currentProject Project
-	Packages       map[string]*Package // 项目包含的包集合（key为包全路径）
-	Cfg            *Config
+	currentProject     Project
+	Packages           map[string]*Package // 项目包含的包集合（key为包全路径）
+	SortedPacakgeNames []string
+	Cfg                *Config
 
 	*InitManager
 	InitFuncs4All    []string   // 启动服务器和启动test都是用的方法；
@@ -87,15 +88,31 @@ func (mp *MainProject) genProjectCode() {
 	if err != nil && !os.IsExist(err) {
 		log.Fatal(err)
 	}
-	file := createGenedFile("goservlet_project")
+	file := CreateGenedFile("goservlet_project")
 	file.GetImport(SimplePackage("github.com/gin-gonic/gin", "gin"))
 	os.Chdir("gen")
 	mp.genBasicCode(file)
 	mp.genPrepare(file)
-	file.save()
+	file.Save()
+}
+func (mp *MainProject) SortDataForGen() {
+	var pkgNames []string
+	for _, pkg := range mp.Packages {
+		if len(pkg.Initiator) > 0 || len(pkg.Structs) > 0 {
+			pkgNames = append(pkgNames, pkg.Module)
+			var strcutNames []string
+			for _, class := range pkg.Structs {
+				strcutNames = append(strcutNames, class.StructName)
+			}
+			sort.Strings(strcutNames)
+			pkg.SortedStructNames = strcutNames
+		}
+	}
+	sort.Strings(pkgNames)
+	mp.SortedPacakgeNames = pkgNames
 }
 func (mp *MainProject) genPrepare(file *GenedFile) {
-
+	mp.SortDataForGen()
 	mp.InitInitorator()
 	mp.InitManager.Generate(file)
 	mp.InitManager.GenterateTestCode(file)
@@ -147,6 +164,7 @@ func (mp *MainProject) genBasicCode(file *GenedFile) {
 	type Response struct {
 		Code    int         "json:\"code\""
 		Message string      "json:\"message,omitempty\""
+		ExtraInfo any         "json:\"extra,omitempty\"" //用于在失败的情况下也返回给前端一些信息；
 		Object  interface{} "json:\"obj,omitempty\""
 	}
 
@@ -292,9 +310,11 @@ func (sm *ServerManager) Prepare() {
 // 扫描所有的程序，将服务按照group分为多个server；
 func (sm *ServerManager) splitServers() {
 	project := GlobalProject
-	for _, pkg := range project.Packages {
+	for _, pkgModuleName := range project.SortedPacakgeNames {
+		pkg := project.Packages[pkgModuleName]
 		// 结构体会定义group和type，所以先扫描struct
-		for _, router := range pkg.Structs {
+		for _, structName := range pkg.SortedStructNames {
+			router := pkg.Structs[structName]
 			var server *Server
 			var ok bool
 			var groupName = router.Comment.GroupName
@@ -337,9 +357,9 @@ func (sm *ServerManager) Generate(file *GenedFile) {
 	// }
 	for _, server := range sm.servers {
 		//一个server一个文件；
-		file1 := createGenedFile(server.Name)
+		file1 := CreateGenedFile(server.Name)
 		server.Generate(file1)
-		file1.save()
+		file1.Save()
 	}
 	tmplText :=
 		`
@@ -362,6 +382,25 @@ func initServer(){
 			routerInitor(router)
 		}
 	}
+		func getErrorCode(err error) (int, string) {
+	if err == nil {
+		return 0, ""
+	}
+	var errorCode int
+	var errMessage = err.Error()
+	if basicError,ok:=err.(Coder);ok{
+		errorCode = basicError.GetErrorCode()
+	}else{
+		errorCode = 1
+	}
+	return errorCode, errMessage
+}
+type Coder interface {
+	GetErrorCode() int
+}
+type ExtraInfo interface {
+	GetExtraInfo() any
+}
 `
 	tmpl, err := template.New("personInfo").Parse(tmplText)
 	if err != nil {
@@ -443,7 +482,7 @@ func (mp *MainProject) GenerateCode() error {
 	}
 	mp.genProjectCode()
 
-	NewSwagger(mp).GenerateCode(&mp.Cfg.SwaggerCfg)
+	//NewSwagger(mp).GenerateCode(&mp.Cfg.SwaggerCfg)
 	return nil
 }
 func escapeModulePath(s string) string {

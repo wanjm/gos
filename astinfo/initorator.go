@@ -2,6 +2,7 @@ package astinfo
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -137,6 +138,7 @@ func PrepareTest() {
 	for _, v := range im.variableMap {
 		typeValue = append(typeValue, v.Default.returnVariableName)
 	}
+	sort.Strings(typeValue)
 	err = tmpl.Execute(&testCode, struct {
 		NameValue map[string]string
 		TypeValue []string
@@ -166,13 +168,21 @@ func (im *InitManager) collect() ([]*DependNode, VariableMap) {
 	var waittingVariableMap VariableMap = make(map[string]*InitGroup)
 	// 收集initiator到functions中；
 	// 建立候选变量map
-	for _, pkg := range p.Packages {
+	for _, pkgName := range p.SortedPacakgeNames {
+		pkg := p.Packages[pkgName]
 		for _, function := range pkg.Initiator {
 			node := waittingVariableMap.addVGenerator(function)
 			dependNode = append(dependNode, node)
 		}
-		for _, class := range pkg.Structs {
+
+		for _, className := range pkg.SortedStructNames {
+			class := pkg.Structs[className]
 			if class.Comment.AutoGen {
+				exist := waittingVariableMap.getVariable(class, "")
+				// 自动生成代码如果遇到其他有名字的，则放弃；
+				if exist != nil && exist.getReturnName() == "" {
+					continue
+				}
 				node := waittingVariableMap.addVGenerator(class)
 				dependNode = append(dependNode, node)
 			}

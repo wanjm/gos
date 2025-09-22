@@ -11,49 +11,83 @@ import (
 	"github.com/wanjm/gos/astinfo"
 )
 
-type FilterInfo struct {
+type RawFilterInfo struct {
 	FilterName    string
 	FilterRawName string
 	Func          *astinfo.Function
 }
-type ServletGen struct {
-	filters       []*FilterInfo
-	filterMap     map[string]*FilterInfo
+type RawGen struct {
+	filters       []*RawFilterInfo
+	filterMap     map[string]*RawFilterInfo
 	InternalError int
 	DataError     int
 }
 
-func NewServletGen(dataError, internalError int) *ServletGen {
-	servlet := &ServletGen{
+func NewRawGen(dataError, internalError int) *RawGen {
+	servlet := &RawGen{
 		DataError:     dataError,
 		InternalError: internalError,
-		filterMap:     make(map[string]*FilterInfo),
+		filterMap:     make(map[string]*RawFilterInfo),
 	}
 	return servlet
 }
-func (servlet *ServletGen) GetName() string {
-	return "servlet"
+func (servlet *RawGen) GetName() string {
+	return "raw"
 }
 
-func (servlet *ServletGen) GenerateCommon(file *astinfo.GenedFile) {
-	generateCommon()
+var rawCommonGenerated bool
+
+// 定义代码生成模板
+const RawcJsonTemplate = `{{if .HasResponseKey}}
+var responseKey {{.ImportName}}.{{.ResponseKey}}
+{{end}}
+`
+
+func (servlet *RawGen) GenerateCommon(file *astinfo.GenedFile) {
+	if rawCommonGenerated {
+		return
+	}
+	rawCommonGenerated = true
+	var content strings.Builder
+	Project := astinfo.GlobalProject
+
+	// 准备模板数据
+	data := struct {
+		HasResponseKey bool
+		ImportName     string
+		ResponseKey    string
+	}{}
+
+	if Project.Cfg.Generation.ResponseKey != "" {
+		data.HasResponseKey = true
+		oneImport := file.GetImport(astinfo.SimplePackage(Project.Cfg.Generation.ResponseMod, "xx"))
+		data.ImportName = oneImport.Name
+		data.ResponseKey = Project.Cfg.Generation.ResponseKey
+		file.GetImport(astinfo.SimplePackage("context", "context"))
+		file.GetImport(astinfo.SimplePackage("net/http", "http"))
+	}
+
+	// 解析并执行模板
+	tpl, err := template.New("common").Parse(RawcJsonTemplate)
+	if err != nil {
+		// 处理模板解析错误
+		panic(err)
+	}
+	if err := tpl.Execute(&content, data); err != nil {
+		// 处理模板执行错误
+		panic(err)
+	}
+
+	file.AddBuilder(&content)
 }
 
 // 定义过滤器代码生成模板
-const filterTemplate = `func {{.FilterName}}(c *gin.Context) {
-	err := {{.ImportName}}.{{.FunctionName}}(c, &c.Request)
-	errorCode,errMessage:=getErrorCode(err)
-	if errorCode != 0 {
-		cJSON(c, 200, Response{
-			Code:    errorCode,
-			Message: errMessage,
-		})
-		c.Abort()
-	}
+const RawFilterTemplate = `func {{.FilterName}}(c *gin.Context) {
+	res := {{.ImportName}}.{{.FunctionName}}(c, &c.Request)
 }
 `
 
-func (servlet *ServletGen) GenFilterCode(function *astinfo.Function, file *astinfo.GenedFile) string {
+func (servlet *RawGen) GenFilterCode(function *astinfo.Function, file *astinfo.GenedFile) string {
 	file.GetImport(astinfo.SimplePackage("github.com/gin-gonic/gin", "gin"))
 	pkg := function.GoSource.Pkg
 	// 生成过滤器函数名
@@ -72,7 +106,7 @@ func (servlet *ServletGen) GenFilterCode(function *astinfo.Function, file *astin
 
 	// 解析并执行模板
 	var sb strings.Builder
-	tpl, err := template.New("filter").Parse(filterTemplate)
+	tpl, err := template.New("filter").Parse(RawFilterTemplate)
 	if err != nil {
 		panic(err)
 	}
@@ -86,19 +120,19 @@ func (servlet *ServletGen) GenFilterCode(function *astinfo.Function, file *astin
 	if function.Comment.Url == "" || function.Comment.Url == "\"\"" {
 		return filterName
 	} else {
-		filterInfo := &FilterInfo{
+		RawFilterInfo := &RawFilterInfo{
 			FilterName:    filterName,
 			FilterRawName: function.Name,
 			Func:          function,
 		}
-		servlet.filterMap[function.Name] = filterInfo
-		servlet.filters = append(servlet.filters, filterInfo)
+		servlet.filterMap[function.Name] = RawFilterInfo
+		servlet.filters = append(servlet.filters, RawFilterInfo)
 		return ""
 	}
 }
 
 // genRouterCode
-func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.GenedFile) string {
+func (servlet *RawGen) GenRouterCode(method *astinfo.Method, file *astinfo.GenedFile) string {
 	name := ""
 	var sb strings.Builder
 	file.AddBuilder(&sb)
@@ -133,6 +167,10 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 			os.Exit(0)
 		}
 		tm.HasRequest = true
+		if requestParam.Name == "" {
+			//有时开发时写了个空函数，就开始生成代码，此处会报错，但是这个名字也不重要；就先补上；
+			requestParam.Name = "request"
+		}
 		tm.RequestConstruct = requestParam.GenVariableCode(file, false)
 	}
 	if len(method.Results) > 1 {
@@ -155,11 +193,11 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 	for _, filter := range userFilters {
 		filter = strings.Trim(filter, "\t ")
 		if filter != "" {
-			filterInfo := servlet.filterMap[filter]
-			if filterInfo == nil {
+			RawFilterInfo := servlet.filterMap[filter]
+			if RawFilterInfo == nil {
 				fmt.Printf("filter %s not found in file %s for %s \n", filter, method.GoSource.Path, method.Name)
 			} else {
-				tm.FilterName += filterInfo.FilterName + ","
+				tm.FilterName += RawFilterInfo.FilterName + ","
 			}
 		}
 	}
@@ -174,27 +212,21 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		{{.UrlParameterStr}}	
 		// 利用gin的自动绑定功能，将请求内容绑定到request对象上；兼容get,post等情况
 		if err := c.ShouldBind(request); err != nil {
-			cJSON(c, 200, Response{
-				Code:    {{.DataError}},
-				Message: "param error",
-			})
-			return
 		}
 		{{ end }}
 		{{ if .HasResponse }}a,{{end}} err := receiver.{{.MethodName}}(c {{ if .HasRequest }},request{{ end }})
-		{{.ResponseNilCode}}
-		var code = 200
 		errorCode,errMessage:=getErrorCode(err)
-		var extraInfo any
-		if exta, ok := err.(ExtraInfo); ok {
-			extraInfo = exta.GetExtraInfo()
+		if errorCode==0{
+			errorCode=200
 		}
-		cJSON(c, code, Response{
-			{{ if .HasResponse }}Object:  a,{{ end }}
-			Code:    errorCode,
-			ExtraInfo: extraInfo,
-			Message: errMessage,
-		})
+		c.Writer.WriteHeader(errorCode)
+		if errorCode!=200{
+			c.Writer.Write([]byte(errMessage))
+			return
+		}
+		{{ if .HasResponse }}
+		c.Writer.Write([]byte(a))
+		{{ end }}
 	})
 		`
 

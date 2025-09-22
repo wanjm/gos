@@ -7,6 +7,7 @@ import (
 	"text/template"
 
 	"github.com/wanjm/gos/astinfo"
+	"github.com/wanjm/gos/astinfo/callable_gen"
 )
 
 type PrpcGen struct {
@@ -34,7 +35,8 @@ func (prpc *PrpcGen) Generate(class *astinfo.Interface, file *astinfo.GenedFile)
 // 修改genRpcClientCode函数为使用template的形式
 func (prpc *PrpcGen) genRpcClientCode(file *astinfo.GenedFile, structName string, method *astinfo.InterfaceField) {
 	// 定义模板字符串
-	const clientTemplate = `func (receiver *{{.StructName}}) {{.MethodName}}(ctx context.Context, {{.Params}}) ({{.Results}}) {
+	const clientTemplate = `
+	func (receiver *{{.StructName}}) {{.MethodName}}(ctx context.Context, {{.Params}}) ({{.Results}}) {
     var argument = []interface{}{ {{.Args}} }
 
     var res = receiver.client.SendRequest(ctx, {{.Url}}, argument)
@@ -50,7 +52,8 @@ func (prpc *PrpcGen) genRpcClientCode(file *astinfo.GenedFile, structName string
     //无论object是否位指针，都需要取地址
     json.Unmarshal(*res.O[1].(*json.RawMessage), &obj)
     {{end}}    return
-}`
+}
+`
 
 	// 准备模板数据
 	data := struct {
@@ -119,6 +122,7 @@ func (prpc *PrpcGen) GenerateCommon(file *astinfo.GenedFile) {
 	if generated {
 		return
 	}
+	callable_gen.GenBasicError(file)
 	generated = true
 	file.GetImport(astinfo.SimplePackage("bytes", "bytes"))
 	file.GetImport(astinfo.SimplePackage("encoding/json", "json"))
@@ -128,19 +132,6 @@ func (prpc *PrpcGen) GenerateCommon(file *astinfo.GenedFile) {
 	file.GetImport(astinfo.SimplePackage("context", "context"))
 	var content strings.Builder
 	content.WriteString(`
-type Error struct {
-	Code    int    "json:\"code\""
-	Message string "json:\"message\""
-}
-
-func (error *Error) Error() string {
-	return error.Message
-}
-
-type RpcResult struct {
-	C int    "json:\"c\""
-	O [2]any "json:\"o\""
-}
 type rpcLogger interface {
 	LogRequest(ctx context.Context, url, request string)
 	LogResponse(ctx context.Context, url, response string)
@@ -250,7 +241,6 @@ func initRpcClient() {
 	}
 
 	for iface, field := range rpcClientVar {
-		_ = field
 		impt := file.GetImport(iface.GoSource.Pkg)
 		host := iface.Comment.Host
 
@@ -260,7 +250,7 @@ func initRpcClient() {
 
 		data.RpcFields = append(data.RpcFields, RpcFieldData{
 			ImportName: impt.Name,
-			FieldName:  "JsinternalClient",
+			FieldName:  field.Name,
 			TypeName:   iface.InterfaceName,
 			Host:       host,
 		})

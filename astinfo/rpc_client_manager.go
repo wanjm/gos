@@ -48,7 +48,7 @@ func (manager *RpcClientManager) Generate(file *GenedFile) error {
 		if !ok {
 			continue
 		}
-		file := createGenedFile("rpc_client_" + clientType + ".go")
+		file := CreateGenedFile("rpc_client_" + clientType + ".go")
 		var sb strings.Builder
 		gen.GenerateCommon(file)
 		var rpcClientVar = make(map[*Interface]*VarField)
@@ -61,9 +61,9 @@ func (manager *RpcClientManager) Generate(file *GenedFile) error {
 				rpcClientVar[iface] = clientVar[iface]
 			}
 		}
-		GlobalProject.InitFuncs4Server = append(GlobalProject.InitFuncs4Server, gen.InitClientVariable(rpcClientVar, file))
+		GlobalProject.InitFuncs4All = append(GlobalProject.InitFuncs4All, gen.InitClientVariable(rpcClientVar, file))
 		file.AddBuilder(&sb)
-		file.save()
+		file.Save()
 	}
 	// for iface, varName := range clientVar {
 
