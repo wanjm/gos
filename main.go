@@ -38,10 +38,22 @@ func parseArgument() {
 
 func main() {
 	parseArgument()
-	os.Chdir(basic.Argument.SourcePath)
-	cfg := basic.Config{
-		InitMain: basic.Argument.ModName, // 直接赋值模块名称
+	genMysql()
+}
+func genMysql() {
+	if basic.Argument.SqlPath == "" {
+		return
 	}
+	var sqlMap = map[string]*basic.MysqlGenCfg{}
+	for _, cfg := range basic.Cfg.MysqlGenCfgs {
+		// sqlMap[cfg.ModulePath] = cfg
+	}
+
+}
+func genServlet() {
+	os.Chdir(basic.Argument.SourcePath)
+	cfg := &basic.Cfg
+	cfg.InitMain = basic.Argument.ModName
 	cfg.Load()
 	astinfo.RegisterCallableGen(
 		callable_gen.NewServletGen(4, 1),
@@ -50,7 +62,7 @@ func main() {
 		&callable_gen.RawGen{},
 	)
 	astinfo.RegisterClientGen(&rpcgen.PrpcGen{})
-	var project = astinfo.CreateProject(basic.Argument.SourcePath, &cfg)
+	var project = astinfo.CreateProject(basic.Argument.SourcePath, cfg)
 
 	// 移除原来的判断，因为现在InitMain直接存储模块名称
 	// if len(modName) > 0 {

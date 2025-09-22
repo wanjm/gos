@@ -16,10 +16,10 @@ type Generation struct {
 	AutoGen      bool
 }
 type Config struct {
-	InitMain     string // 改为字符串类型，存储模块名称
-	Generation   Generation
-	SwaggerCfg   SwaggerCfg
-	MysqlGenCfgs []MysqlGenCfg
+	InitMain    string // 改为字符串类型，存储模块名称
+	Generation  Generation
+	SwaggerCfg  SwaggerCfg
+	MysqlGenCfg []*DBConfig
 }
 type SwaggerCfg struct {
 	ProjectId     int    // 项目id
@@ -28,12 +28,17 @@ type SwaggerCfg struct {
 	UrlPrefix     string // url前缀, 正式环境和本地的路径不一样
 	Token         string
 }
-
+type DBConfig struct {
+	DSN          string
+	MysqlGenCfgs []*MysqlGenCfg
+}
 type MysqlGenCfg struct {
 	TableNames []string
 	OutPath    string
 	ModulePath string
 }
+
+var Cfg Config
 
 func (config *Config) Load() {
 	buf, err := os.ReadFile("project.public.toml")
