@@ -10,13 +10,15 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+
+	"github.com/wanjm/gos/basic"
 )
 
 type MainProject struct {
 	currentProject     Project
 	Packages           map[string]*Package // 项目包含的包集合（key为包全路径）
 	SortedPacakgeNames []string
-	Cfg                *Config
+	Cfg                *basic.Config
 
 	*InitManager
 	InitFuncs4All    []string   // 启动服务器和启动test都是用的方法；
@@ -545,7 +547,7 @@ func (mp *MainProject) Parse() error {
 
 var GlobalProject *MainProject
 
-func CreateProject(path string, cfg *Config) *MainProject {
+func CreateProject(path string, cfg *basic.Config) *MainProject {
 	GlobalProject = &MainProject{
 		Cfg:      cfg,
 		Packages: make(map[string]*Package),

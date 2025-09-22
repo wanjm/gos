@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/spec"
+	"github.com/wanjm/gos/basic"
 )
 
 type SchemaType interface {
@@ -231,7 +232,7 @@ func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager) {
 //			}
 //		}
 //	}
-func (swagger *Swagger) GenerateCode(cfg *SwaggerCfg) string {
+func (swagger *Swagger) GenerateCode(cfg *basic.SwaggerCfg) string {
 
 	project := swagger.project
 	for name, pkg := range project.Packages {

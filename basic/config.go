@@ -1,4 +1,4 @@
-package astinfo
+package basic
 
 import (
 	"os"
@@ -16,9 +16,10 @@ type Generation struct {
 	AutoGen      bool
 }
 type Config struct {
-	InitMain   string // 改为字符串类型，存储模块名称
-	Generation Generation
-	SwaggerCfg SwaggerCfg
+	InitMain     string // 改为字符串类型，存储模块名称
+	Generation   Generation
+	SwaggerCfg   SwaggerCfg
+	MysqlGenCfgs []MysqlGenCfg
 }
 type SwaggerCfg struct {
 	ProjectId     int    // 项目id
@@ -26,6 +27,12 @@ type SwaggerCfg struct {
 	SchemaFolder  int    // 生成的schema文件夹
 	UrlPrefix     string // url前缀, 正式环境和本地的路径不一样
 	Token         string
+}
+
+type MysqlGenCfg struct {
+	TableNames []string
+	OutPath    string
+	ModulePath string
 }
 
 func (config *Config) Load() {
