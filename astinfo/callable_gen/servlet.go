@@ -41,11 +41,12 @@ func (servlet *ServletGen) GenerateCommon(file *astinfo.GenedFile) {
 
 // 定义过滤器代码生成模板
 const filterTemplate = `func {{.FilterName}}(c *gin.Context) {
-	res := {{.ImportName}}.{{.FunctionName}}(c, &c.Request)
-	if res.Code != 0 {
+	err := {{.ImportName}}.{{.FunctionName}}(c, &c.Request)
+	errorCode,errMessage:=getErrorCode(err)
+	if errorCode != 0 {
 		cJSON(c, 200, Response{
-			Code:    int(res.Code),
-			Message: res.Message,
+			Code:    errorCode,
+			Message: errMessage,
 		})
 		c.Abort()
 	}
