@@ -10,11 +10,13 @@ import (
 	"github.com/wanjm/gos/astinfo/callable_gen"
 	rpcgen "github.com/wanjm/gos/astinfo/rpc_gen"
 	"github.com/wanjm/gos/basic"
+	"github.com/wanjm/gos/db"
 )
 
 func parseArgument() {
 	flag.StringVar(&basic.Argument.SourcePath, "p", ".", "需要生成代码工程的根目录")
 	flag.StringVar(&basic.Argument.ModName, "i", "", "指定模块名称")
+	flag.StringVar(&basic.Argument.SqlDBName, "s", "", "指定数据库名称")
 	h := flag.Bool("h", false, "显示帮助文件")
 	v := flag.Bool("v", false, "显示版本信息") // 添加-v参数
 	flag.Parse()
@@ -38,23 +40,37 @@ func parseArgument() {
 
 func main() {
 	parseArgument()
+	os.Chdir(basic.Argument.SourcePath)
+	cfg := &basic.Cfg
+	cfg.Load()
+	var project = astinfo.CreateProject(basic.Argument.SourcePath, cfg)
+	if err := project.CurrentProject.ParseModule(); err != nil {
+		return
+	}
 	genMysql()
 }
 func genMysql() {
-	if basic.Argument.SqlPath == "" {
+	if basic.Argument.SqlDBName == "" {
 		return
 	}
-	var sqlMap = map[string]*basic.MysqlGenCfg{}
-	for _, cfg := range basic.Cfg.MysqlGenCfgs {
-		// sqlMap[cfg.ModulePath] = cfg
+	var dbMap = make(map[string]*basic.DBConfig)
+	for _, db := range basic.Cfg.MysqlGenCfg {
+		dbMap[db.DBName] = db
+		for _, module := range db.MysqlGenCfgs {
+			module.ModulePath = astinfo.GlobalProject.CurrentProject.Module + "/" + module.OutPath
+		}
 	}
 
+	if basic.Argument.SqlDBName == "all" {
+		for _, dbcfg := range basic.Cfg.MysqlGenCfg {
+			db.GenTableForDb(dbcfg, "all")
+		}
+	}
+	db.GenTableForDb(dbMap[basic.Argument.SqlDBName], basic.Argument.ModName)
 }
-func genServlet() {
-	os.Chdir(basic.Argument.SourcePath)
+func genServlet(project *astinfo.MainProject) {
 	cfg := &basic.Cfg
 	cfg.InitMain = basic.Argument.ModName
-	cfg.Load()
 	astinfo.RegisterCallableGen(
 		callable_gen.NewServletGen(4, 1),
 		&callable_gen.PrpcGen{},
@@ -62,7 +78,6 @@ func genServlet() {
 		&callable_gen.RawGen{},
 	)
 	astinfo.RegisterClientGen(&rpcgen.PrpcGen{})
-	var project = astinfo.CreateProject(basic.Argument.SourcePath, cfg)
 
 	// 移除原来的判断，因为现在InitMain直接存储模块名称
 	// if len(modName) > 0 {

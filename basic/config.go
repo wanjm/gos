@@ -21,21 +21,24 @@ type Config struct {
 	SwaggerCfg  SwaggerCfg
 	MysqlGenCfg []*DBConfig
 }
-type SwaggerCfg struct {
-	ProjectId     int    // 项目id
-	ServletFolder int    // 生成的servlet文件夹
-	SchemaFolder  int    // 生成的schema文件夹
-	UrlPrefix     string // url前缀, 正式环境和本地的路径不一样
-	Token         string
-}
+
 type DBConfig struct {
 	DSN          string
+	DBName       string
 	MysqlGenCfgs []*MysqlGenCfg
 }
 type MysqlGenCfg struct {
 	TableNames []string
 	OutPath    string
 	ModulePath string
+}
+
+type SwaggerCfg struct {
+	ProjectId     int    // 项目id
+	ServletFolder int    // 生成的servlet文件夹
+	SchemaFolder  int    // 生成的schema文件夹
+	UrlPrefix     string // url前缀, 正式环境和本地的路径不一样
+	Token         string
 }
 
 var Cfg Config
