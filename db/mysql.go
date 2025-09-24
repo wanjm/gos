@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/wanjm/gos/basic"
+	"github.com/wanjm/gos/tool"
 	"gorm.io/driver/mysql"
 	"gorm.io/gen"
 	"gorm.io/gorm"
@@ -35,6 +36,7 @@ func GenTableForDb(config1 *basic.DBConfig, module string) {
 }
 
 func GenTables(config1 *basic.MysqlGenCfg, db *gorm.DB, dbVariable string) {
+	dbVariable = tool.Capitalize(dbVariable)
 	config := gen.Config{
 		OutPath:      path.Join(config1.OutPath, "entity"),      // 生成代码的输出路径
 		Mode:         gen.WithoutContext | gen.WithDefaultQuery, // 生成模式
@@ -109,7 +111,7 @@ func (a *{{.TableName}}Dal) Create(ctx context.Context, item *entity.{{.TableNam
 	dbOperation := a.getDBOperation(ctx)
 	err := dbOperation.Create(item)
 	if err != nil {
-		common.Error(ctx, "insert data to {{.RawTableName}} failed", common.Err(err)))
+		common.Error(ctx, "insert data to {{.RawTableName}} failed", common.Err(err))
 	}
 	return err
 }
@@ -124,7 +126,7 @@ func (a *{{.TableName}}Dal) GetAll(ctx context.Context, options []common.Optione
 	)
 	if err != nil {
 		//添加log，打印错误日志；
-		common.Error(ctx, "GetAll DB record from {{.RawTableName}} failed", common.Err(err)))
+		common.Error(ctx, "GetAll DB record from {{.RawTableName}} failed", common.Err(err))
 	}
 	return
 }
@@ -163,7 +165,7 @@ func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, 
 	)
 	if err != nil {
 		//添加log，打印错误日志；
-		common.Error(ctx, "List record of {{.RawTableName}} failed", common.Err(err)))
+		common.Error(ctx, "List record of {{.RawTableName}} failed", common.Err(err))
 	}
 	return
 }
@@ -177,7 +179,7 @@ func (a *{{.TableName}}Dal) Update(ctx context.Context, options []common.Optione
 	})
 	if err != nil {
 		//添加log，打印错误日志；
-		common.Error(ctx, "Update record of {{.RawTableName}} failed", common.Err(err)))
+		common.Error(ctx, "Update record of {{.RawTableName}} failed", common.Err(err))
 	}
 	return
 }
@@ -190,7 +192,7 @@ func (a *{{.TableName}}Dal) Delete(ctx context.Context, options []common.Optione
 	op := a.getDBOperation(ctx)
 	err := op.Delete(options)
 	if err != nil {
-		common.Error(ctx, "Delete record of {{.RawTableName}} failed", common.Err(err)))
+		common.Error(ctx, "Delete record of {{.RawTableName}} failed", common.Err(err))
 	}
 	return err
 }

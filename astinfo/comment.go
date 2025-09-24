@@ -3,6 +3,8 @@ package astinfo
 import (
 	"go/ast"
 	"strings"
+
+	"github.com/wanjm/gos/tool"
 )
 
 const TagPrefix = "@gos"
@@ -30,7 +32,7 @@ func parseComment(commentGroup *ast.CommentGroup, commentor Comment) {
 
 // 解析有效的comments
 func parseValidComment(validComment string, commentor Comment) {
-	commands := Fields(validComment) // 多个参数以;分割
+	commands := tool.Fields(validComment) // 多个参数以;分割
 	for _, command := range commands {
 		command = strings.Trim(command, " \t")
 		if len(command) == 0 {

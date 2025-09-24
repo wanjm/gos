@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	"github.com/wanjm/gos/astinfo"
+	"github.com/wanjm/gos/tool"
 )
 
 type FilterInfo struct {
@@ -147,7 +148,7 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		for _, name := range names {
 			if strings.Contains(name, ":") {
 				//此处最好从名字能获取到Field，然后在调用type的parse方法，返回其对应的值；
-				tm.UrlParameterStr += fmt.Sprintf("request.%s=c.Param(\"%s\")\n", astinfo.Capitalize(name[1:]), name[1:])
+				tm.UrlParameterStr += fmt.Sprintf("request.%s=c.Param(\"%s\")\n", tool.Capitalize(name[1:]), name[1:])
 			}
 		}
 	}

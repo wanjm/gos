@@ -65,8 +65,9 @@ func genMysql() {
 		for _, dbcfg := range basic.Cfg.MysqlGenCfg {
 			db.GenTableForDb(dbcfg, "all")
 		}
+	} else {
+		db.GenTableForDb(dbMap[basic.Argument.SqlDBName], basic.Argument.ModName)
 	}
-	db.GenTableForDb(dbMap[basic.Argument.SqlDBName], basic.Argument.ModName)
 }
 func genServlet(project *astinfo.MainProject) {
 	cfg := &basic.Cfg

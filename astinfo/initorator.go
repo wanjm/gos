@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+
+	"github.com/wanjm/gos/tool"
 )
 
 const (
@@ -249,7 +251,7 @@ func (mp *MainProject) GetVariableName(typer Typer, name string) string {
 }
 
 func (mp *MainProject) GetVariableNode(typer Typer, name string) *DependNode {
-	name = FirstLower(name)
+	name = tool.FirstLower(name)
 	return mp.InitManager.variableMap.getVariable(typer, name)
 }
 
