@@ -16,7 +16,7 @@ import (
 func parseArgument() {
 	flag.StringVar(&basic.Argument.SourcePath, "p", ".", "需要生成代码工程的根目录")
 	flag.StringVar(&basic.Argument.ModName, "i", "", "指定模块名称")
-	flag.StringVar(&basic.Argument.SqlDBName, "s", "", "指定数据库名称")
+	flag.StringVar(&basic.Argument.SqlDBName, "dbname", "", "指定数据库名称")
 	h := flag.Bool("h", false, "显示帮助文件")
 	v := flag.Bool("v", false, "显示版本信息") // 添加-v参数
 	flag.Parse()
@@ -47,12 +47,13 @@ func main() {
 	if err := project.CurrentProject.ParseModule(); err != nil {
 		return
 	}
-	genMysql()
+	if basic.Argument.SqlDBName != "" {
+		genMysql()
+	} else {
+		genServlet(project)
+	}
 }
 func genMysql() {
-	if basic.Argument.SqlDBName == "" {
-		return
-	}
 	var dbMap = make(map[string]*basic.DBConfig)
 	for _, db := range basic.Cfg.MysqlGenCfg {
 		dbMap[db.DBName] = db
