@@ -5,7 +5,9 @@ import (
 	"go/build"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/mod/modfile"
 )
@@ -105,8 +107,9 @@ func (p *Project) ParsePackage(dir string) error {
 	if err != nil {
 		return err
 	}
+	relPath = strings.ReplaceAll(relPath, string(os.PathSeparator), "/")
 	// 用mode+相对路径，得到包全路径
-	pkgPath := filepath.Join(p.Module, relPath)
+	pkgPath := path.Join(p.Module, relPath)
 	pkg := GlobalProject.FindPackage(pkgPath)
 	pkg.Parse()
 	// pkg.Simple = p.Simple

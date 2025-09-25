@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -441,7 +442,7 @@ func (mp *MainProject) FindPackage(module string) *Package {
 		return pkg
 	}
 	if module == mp.currentProject.Module+"/gen" {
-		newPkg := NewPackage(module, true, path.Join(mp.currentProject.Path, "gen"))
+		newPkg := NewPackage(module, true, filepath.Join(mp.currentProject.Path, "gen"))
 		newPkg.finshedParse = true
 		newPkg.Name = "gen"
 		return newPkg
@@ -453,7 +454,8 @@ func (mp *MainProject) FindPackage(module string) *Package {
 			panic(fmt.Sprintf("project module is empty %s\n", p.Path))
 		}
 		if strings.HasPrefix(module, p.Module) {
-			newPkg := NewPackage(module, p.Simple, path.Join(p.Path, module[len(p.Module):]))
+			//filepath.Join会换/\;
+			newPkg := NewPackage(module, p.Simple, filepath.Join(p.Path, module[len(p.Module):]))
 			mp.Packages[module] = newPkg
 			newPkg.SimpleParse()
 			return newPkg
