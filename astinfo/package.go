@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -139,7 +140,8 @@ func NewPackage(module string, simple bool, absPath string) *Package {
 }
 
 func NewSysPackage(module string) *Package {
-	return NewPackage(module, true, path.Join("/opt/google/go/src", module))
+	gopath := runtime.GOROOT()
+	return NewPackage(module, true, path.Join(gopath, "src", module))
 }
 
 func (pkg *Package) GetTyper(name string) Typer {
