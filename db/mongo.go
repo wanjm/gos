@@ -8,7 +8,6 @@ import (
 	"text/template"
 
 	"github.com/wanjm/gos/basic"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -33,7 +32,7 @@ import (
 func GenTableForMongo(config *basic.DBConfig, module string) {
 	var moduleMap map[string]struct{}
 	moduleMap = make(map[string]struct{})
-	db, _ := gorm.Open(mysql.Open(config.DSN), &gorm.Config{})
+	// db, _ := gorm.Open(mysql.Open(config.DSN), &gorm.Config{})
 	if module == "all" {
 		for _, cfg := range config.DbGenCfgs {
 			moduleMap[cfg.ModulePath] = struct{}{}
@@ -46,7 +45,7 @@ func GenTableForMongo(config *basic.DBConfig, module string) {
 	}
 	for _, cfg := range config.DbGenCfgs {
 		if _, ok := moduleMap[cfg.ModulePath]; ok {
-			GenMongoModule(cfg, db, config.DBName)
+			GenMongoModule(cfg, nil, config.DBName)
 		}
 	}
 }

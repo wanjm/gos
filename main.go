@@ -20,7 +20,6 @@ func parseArgument() {
 	flag.StringVar(&basic.Argument.GoMod, "i", "", "本项目的gomod")
 	flag.StringVar(&basic.Argument.SqlDBName, "dbname", "", "指定数据库名称")
 	flag.StringVar(&basic.Argument.MongoDBName, "mongo", "", "指定Mongo数据库名称")
-	flag.BoolVar(&basic.Argument.GenServlet, "s", false, "是否生成servlet代码")
 	h := flag.Bool("h", false, "显示帮助文件")
 	v := flag.Bool("v", false, "显示版本信息") // 添加-v参数
 	flag.Parse()
@@ -51,17 +50,15 @@ func main() {
 	if err := project.CurrentProject.ParseModule(); err != nil {
 		return
 	}
-	if basic.Argument.GenServlet {
-		genServlet(project)
-	}
 	if basic.Argument.SqlDBName != "" {
-		genDbData("mysql", db.GenTableForDb)
+		genDbData("mysql", basic.Argument.SqlDBName, db.GenTableForDb)
 	}
 	if basic.Argument.MongoDBName != "" {
-		genDbData("mongo", db.GenTableForMongo)
+		genDbData("mongo", basic.Argument.MongoDBName, db.GenTableForMongo)
 	}
+	genServlet(project)
 }
-func genDbData(dbTypeName string, genDBFUntion func(config *basic.DBConfig, module string)) {
+func genDbData(dbTypeName string, dbnames string, genDBFUntion func(config *basic.DBConfig, module string)) {
 	var dbMap = make(map[string]*basic.DBConfig)
 	var dbs = []string{}
 	// 仅处理mysql，生成dbMap，和dbname数组
@@ -77,15 +74,15 @@ func genDbData(dbTypeName string, genDBFUntion func(config *basic.DBConfig, modu
 	}
 	// 如果为all，表示所有的db；
 	var targetDbs []string
-	if basic.Argument.SqlDBName == "all" {
+	if dbnames == "all" {
 		targetDbs = dbs
 	} else {
 		// 否则用逗号分隔的db；
-		targetDbs = strings.Split(basic.Argument.SqlDBName, ",")
+		targetDbs = strings.Split(dbnames, ",")
 	}
 	for _, dbName := range targetDbs {
 		if cfg, ok := dbMap[dbName]; ok {
-			genDBFUntion(cfg, dbName)
+			genDBFUntion(cfg, basic.Argument.ModName)
 		} else {
 			fmt.Printf("db %s not found", dbName)
 		}

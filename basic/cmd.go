@@ -7,7 +7,6 @@ type argument struct {
 	SqlDBName   string // 数据库的名字； all表示所有
 	MongoDBName string // mongo数据库的名字； all表示所有
 	MongoPath   string
-	GenServlet  bool
 }
 
 var Argument argument
