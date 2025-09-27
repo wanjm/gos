@@ -16,7 +16,9 @@ import (
 func parseArgument() {
 	flag.StringVar(&basic.Argument.SourcePath, "p", ".", "需要生成代码工程的根目录")
 	flag.StringVar(&basic.Argument.ModName, "modname", "all", "指定模块名称")
-	flag.StringVar(&basic.Argument.SqlDBName, "dbname", "all", "指定数据库名称")
+	flag.StringVar(&basic.Argument.GoMod, "i", "", "本项目的gomod")
+	flag.StringVar(&basic.Argument.SqlDBName, "dbname", "", "指定数据库名称")
+	flag.BoolVar(&basic.Argument.GenServlet, "s", false, "是否生成servlet代码")
 	h := flag.Bool("h", false, "显示帮助文件")
 	v := flag.Bool("v", false, "显示版本信息") // 添加-v参数
 	flag.Parse()
@@ -47,10 +49,11 @@ func main() {
 	if err := project.CurrentProject.ParseModule(); err != nil {
 		return
 	}
+	if basic.Argument.GenServlet {
+		genServlet(project)
+	}
 	if basic.Argument.SqlDBName != "" {
 		genMysql()
-	} else {
-		genServlet(project)
 	}
 }
 func genMysql() {
@@ -72,7 +75,7 @@ func genMysql() {
 }
 func genServlet(project *astinfo.MainProject) {
 	cfg := &basic.Cfg
-	cfg.InitMain = basic.Argument.ModName
+	cfg.InitMain = basic.Argument.GoMod
 	astinfo.RegisterCallableGen(
 		callable_gen.NewServletGen(4, 1),
 		&callable_gen.PrpcGen{},
