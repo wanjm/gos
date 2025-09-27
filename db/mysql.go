@@ -14,23 +14,23 @@ import (
 	"gorm.io/gorm"
 )
 
-func GenTableForDb(config1 *basic.DBConfig, module string) {
-	db, _ := gorm.Open(mysql.Open(config1.DSN), &gorm.Config{})
-	if module == "all" {
-		for _, cfg := range config1.MysqlGenCfgs {
-			GenTables(cfg, db, config1.DBName)
-		}
-		return
-	}
-	modules := strings.Split(module, ",")
+func GenTableForDb(config *basic.DBConfig, module string) {
 	var moduleMap map[string]struct{}
-	moduleMap = make(map[string]struct{}, len(modules))
-	for _, module := range modules {
-		moduleMap[module] = struct{}{}
+	moduleMap = make(map[string]struct{})
+	db, _ := gorm.Open(mysql.Open(config.DSN), &gorm.Config{})
+	if module == "all" {
+		for _, cfg := range config.MysqlGenCfgs {
+			moduleMap[cfg.ModulePath] = struct{}{}
+		}
+	} else {
+		modules := strings.Split(module, ",")
+		for _, module := range modules {
+			moduleMap[module] = struct{}{}
+		}
 	}
-	for _, cfg := range config1.MysqlGenCfgs {
+	for _, cfg := range config.MysqlGenCfgs {
 		if _, ok := moduleMap[cfg.ModulePath]; ok {
-			GenTables(cfg, db, config1.DBName)
+			GenTables(cfg, db, config.DBName)
 		}
 	}
 }
