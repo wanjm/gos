@@ -35,7 +35,7 @@ func GenTableForMongo(config *basic.DBConfig, module string) {
 	moduleMap = make(map[string]struct{})
 	db, _ := gorm.Open(mysql.Open(config.DSN), &gorm.Config{})
 	if module == "all" {
-		for _, cfg := range config.MysqlGenCfgs {
+		for _, cfg := range config.DbGenCfgs {
 			moduleMap[cfg.ModulePath] = struct{}{}
 		}
 	} else {
@@ -44,13 +44,13 @@ func GenTableForMongo(config *basic.DBConfig, module string) {
 			moduleMap[module] = struct{}{}
 		}
 	}
-	for _, cfg := range config.MysqlGenCfgs {
+	for _, cfg := range config.DbGenCfgs {
 		if _, ok := moduleMap[cfg.ModulePath]; ok {
 			GenMongoModule(cfg, db, config.DBName)
 		}
 	}
 }
-func GenMongoModule(mongoGenCfg *basic.MysqlGenCfg, db *gorm.DB, dbName string) {
+func GenMongoModule(mongoGenCfg *basic.DBGenCfg, db *gorm.DB, dbName string) {
 	generator := MongoGenerator{}
 	var sb strings.Builder
 	sb.WriteString(generator.PrepareDal(mongoGenCfg.ModulePath))

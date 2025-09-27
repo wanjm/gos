@@ -65,12 +65,12 @@ func genDbData(dbTypeName string, genDBFUntion func(config *basic.DBConfig, modu
 	var dbMap = make(map[string]*basic.DBConfig)
 	var dbs = []string{}
 	// 仅处理mysql，生成dbMap，和dbname数组
-	for _, db := range basic.Cfg.MysqlGenCfg {
+	for _, db := range basic.Cfg.DBConfig {
 		if strings.ToLower(db.DBType) != dbTypeName {
 			continue
 		}
 		dbMap[db.DBName] = db
-		for _, module := range db.MysqlGenCfgs {
+		for _, module := range db.DbGenCfgs {
 			module.ModulePath = astinfo.GlobalProject.CurrentProject.Module + "/" + module.OutPath
 		}
 		dbs = append(dbs, db.DBName)

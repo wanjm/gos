@@ -16,19 +16,19 @@ type Generation struct {
 	AutoGen      bool
 }
 type Config struct {
-	InitMain    string // 改为字符串类型，存储模块名称
-	Generation  Generation
-	SwaggerCfg  SwaggerCfg
-	MysqlGenCfg []*DBConfig
+	InitMain   string // 改为字符串类型，存储模块名称
+	Generation Generation
+	SwaggerCfg SwaggerCfg
+	DBConfig   []*DBConfig
 }
 
 type DBConfig struct {
-	DSN          string
-	DBName       string
-	DBType       string // 数据库类型，mysql或mongo
-	MysqlGenCfgs []*MysqlGenCfg
+	DSN       string
+	DBName    string
+	DBType    string // 数据库类型，mysql或mongo
+	DbGenCfgs []*DBGenCfg
 }
-type MysqlGenCfg struct {
+type DBGenCfg struct {
 	TableNames []string
 	RecordIds  []string // 记录id的字段名，生成mongo的结构体；不要时可以为空，或者将所有的不要的dbname放在最后，可以不写
 	OutPath    string

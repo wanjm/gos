@@ -19,7 +19,7 @@ func GenTableForDb(config *basic.DBConfig, module string) {
 	moduleMap = make(map[string]struct{})
 	db, _ := gorm.Open(mysql.Open(config.DSN), &gorm.Config{})
 	if module == "all" {
-		for _, cfg := range config.MysqlGenCfgs {
+		for _, cfg := range config.DbGenCfgs {
 			moduleMap[cfg.ModulePath] = struct{}{}
 		}
 	} else {
@@ -28,14 +28,14 @@ func GenTableForDb(config *basic.DBConfig, module string) {
 			moduleMap[module] = struct{}{}
 		}
 	}
-	for _, cfg := range config.MysqlGenCfgs {
+	for _, cfg := range config.DbGenCfgs {
 		if _, ok := moduleMap[cfg.ModulePath]; ok {
 			GenTables(cfg, db, config.DBName)
 		}
 	}
 }
 
-func GenTables(config1 *basic.MysqlGenCfg, db *gorm.DB, dbVariable string) {
+func GenTables(config1 *basic.DBGenCfg, db *gorm.DB, dbVariable string) {
 	dbVariable = tool.Capitalize(dbVariable)
 	config := gen.Config{
 		OutPath:      path.Join(config1.OutPath, "entity"),      // 生成代码的输出路径

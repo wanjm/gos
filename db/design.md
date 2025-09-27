@@ -5,11 +5,12 @@
 ### 配置文件说明
 会自动在OutPath下生成dal目录和entity目录，dal会引用entity目录；package名字会同步使用这个相对目录
 ```
-[[MysqlGenCfg]]
+[[DBConfig]]
 DSN="user:passwd@tcp(dbhost:3306)/dbplaso?charset=utf8mb4&parseTime=True&loc=Local"
 DBName = "variable db name in dal,should be same as that in inititorator"
+DBType = "mysql"
 
-[[MysqlGenCfg.MysqlGenCfgs]]
+[[DBConfig.DbGenCfgs]]
 OutPath = "business/package" # 生成的table所在的相对工程根目录
 TableNames = ["table_name"]
 ```
