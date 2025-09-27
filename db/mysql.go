@@ -65,7 +65,7 @@ func GenTables(config1 *basic.MysqlGenCfg, db *gorm.DB, dbVariable string) {
 		a := g.GenerateModel(tableName)
 		sb.WriteString(genMysqlDal(a.ModelStructName, tableName, dbVariable))
 	}
-	os.WriteFile(path.Join(config1.OutPath, "dal/dal.gen.go"), []byte(sb.String()), 0644)
+	os.WriteFile(path.Join(config1.OutPath, "dal/mysql.gen.go"), []byte(sb.String()), 0644)
 	// 执行生成
 	g.Execute()
 }
