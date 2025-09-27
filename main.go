@@ -18,6 +18,7 @@ func parseArgument() {
 	flag.StringVar(&basic.Argument.ModName, "modname", "all", "指定模块名称")
 	flag.StringVar(&basic.Argument.GoMod, "i", "", "本项目的gomod")
 	flag.StringVar(&basic.Argument.SqlDBName, "dbname", "", "指定数据库名称")
+	flag.StringVar(&basic.Argument.MongoDBName, "mongo", "", "指定Mongo数据库名称")
 	flag.BoolVar(&basic.Argument.GenServlet, "s", false, "是否生成servlet代码")
 	h := flag.Bool("h", false, "显示帮助文件")
 	v := flag.Bool("v", false, "显示版本信息") // 添加-v参数
@@ -55,6 +56,13 @@ func main() {
 	if basic.Argument.SqlDBName != "" {
 		genMysql()
 	}
+	if basic.Argument.MongoDBName != "" {
+		genMongo()
+	}
+}
+func genMongo() {
+
+	// GenMongoModule
 }
 func genMysql() {
 	var dbMap = make(map[string]*basic.DBConfig)
