@@ -13,6 +13,7 @@ type Generation struct {
 	ResponseMod  string // 用于定义Response的结构体所在的包名；
 	RpcLoggerKey string // 用于定义RpcLogger的结构体名字; 用于打印rpc请求的日志
 	RpcLoggerMod string // 用于定义RpcLogger的结构体所在的包名；
+	CommonMod    string // github.com/wanjm/common 的别名
 	AutoGen      bool
 }
 type Config struct {
@@ -59,5 +60,8 @@ func (config *Config) Load() {
 		if err != nil {
 			panic(err)
 		}
+	}
+	if config.Generation.CommonMod == "" {
+		config.Generation.CommonMod = "github.com/wanjm/common"
 	}
 }

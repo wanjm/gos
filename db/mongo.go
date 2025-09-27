@@ -73,13 +73,13 @@ package dal
 import (
 	"context"
     "%s/entity"
-	"gitlab.plaso.cn/module-go/common"
+	"%s"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
-`, businessPath)
+`, businessPath, basic.Cfg.Generation.CommonMod)
 }
 func (gen *MongoGenerator) GenDal(modelName, tableName, dbVariableName string) string {
 	type info struct {

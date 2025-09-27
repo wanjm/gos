@@ -75,11 +75,11 @@ package dal
 
 import (
 	"context"
-	"gitlab.plaso.cn/module-go/common"
 	"%s/entity"
+	"%s"
 	"gorm.io/gorm"
 )
-`, businessPath)
+`, businessPath, basic.Cfg.Generation.CommonMod)
 }
 func genMysqlDal(modelName, tableName, dbVariableName string) string {
 	type info struct {
