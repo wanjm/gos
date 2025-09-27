@@ -68,6 +68,7 @@ func genMongo() {
 func genMysql() {
 	var dbMap = make(map[string]*basic.DBConfig)
 	var dbs = []string{}
+	// 仅处理mysql，生成dbMap，和dbname数组
 	for _, db := range basic.Cfg.MysqlGenCfg {
 		if strings.ToLower(db.DBType) != "mysql" {
 			continue
@@ -78,14 +79,20 @@ func genMysql() {
 		}
 		dbs = append(dbs, db.DBName)
 	}
+	// 如果为all，表示所有的db；
 	var targetDbs []string
 	if basic.Argument.SqlDBName == "all" {
 		targetDbs = dbs
 	} else {
+		// 否则用逗号分隔的db；
 		targetDbs = strings.Split(basic.Argument.SqlDBName, ",")
 	}
 	for _, dbName := range targetDbs {
-		db.GenTableForDb(dbMap[dbName], basic.Argument.ModName)
+		if cfg, ok := dbMap[dbName]; ok {
+			db.GenTableForDb(cfg, basic.Argument.ModName)
+		} else {
+			fmt.Printf("db %s not found", dbName)
+		}
 	}
 }
 func genServlet(project *astinfo.MainProject) {
