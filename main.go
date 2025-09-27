@@ -18,8 +18,7 @@ func parseArgument() {
 	flag.StringVar(&basic.Argument.SourcePath, "p", ".", "需要生成代码工程的根目录")
 	flag.StringVar(&basic.Argument.ModName, "modname", "all", "指定模块名称")
 	flag.StringVar(&basic.Argument.GoMod, "i", "", "本项目的gomod")
-	flag.StringVar(&basic.Argument.SqlDBName, "dbname", "", "指定数据库名称")
-	flag.StringVar(&basic.Argument.MongoDBName, "mongo", "", "指定Mongo数据库名称")
+	flag.StringVar(&basic.Argument.DBName, "dbname", "", "指定数据库名称")
 	h := flag.Bool("h", false, "显示帮助文件")
 	v := flag.Bool("v", false, "显示版本信息") // 添加-v参数
 	flag.Parse()
@@ -50,22 +49,17 @@ func main() {
 	if err := project.CurrentProject.ParseModule(); err != nil {
 		return
 	}
-	if basic.Argument.SqlDBName != "" {
-		genDbData("mysql", basic.Argument.SqlDBName, db.GenTableForDb)
+	if basic.Argument.DBName != "" {
+		genDbData(basic.Argument.DBName)
 	}
-	if basic.Argument.MongoDBName != "" {
-		genDbData("mongo", basic.Argument.MongoDBName, db.GenTableForMongo)
-	}
+
 	genServlet(project)
 }
-func genDbData(dbTypeName string, dbnames string, genDBFUntion func(config *basic.DBConfig, module string)) {
+func genDbData(dbnames string) {
 	var dbMap = make(map[string]*basic.DBConfig)
 	var dbs = []string{}
 	// 仅处理mysql，生成dbMap，和dbname数组
 	for _, db := range basic.Cfg.DBConfig {
-		if strings.ToLower(db.DBType) != dbTypeName {
-			continue
-		}
 		dbMap[db.DBName] = db
 		for _, module := range db.DbGenCfgs {
 			module.ModulePath = astinfo.GlobalProject.CurrentProject.Module + "/" + module.OutPath
@@ -82,7 +76,14 @@ func genDbData(dbTypeName string, dbnames string, genDBFUntion func(config *basi
 	}
 	for _, dbName := range targetDbs {
 		if cfg, ok := dbMap[dbName]; ok {
-			genDBFUntion(cfg, basic.Argument.ModName)
+			switch strings.ToLower(cfg.DBType) {
+			case "mysql":
+				db.GenTableForDb(cfg, basic.Argument.ModName)
+			case "mongo":
+				db.GenTableForMongo(cfg, basic.Argument.ModName)
+			default:
+				fmt.Printf("db %s type %s not supported", dbName, cfg.DBType)
+			}
 		} else {
 			fmt.Printf("db %s not found", dbName)
 		}
