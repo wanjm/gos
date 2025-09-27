@@ -6,6 +6,10 @@ import (
 	"path"
 	"strings"
 	"text/template"
+
+	"github.com/wanjm/gos/basic"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 // func GenMongo() {
@@ -26,12 +30,32 @@ import (
 //			GenMongoModule(config)
 //		}
 //	}
-func GenMongoModule(mongoGenCfg MongoGenCfg) {
+func GenTableForMongo(config *basic.DBConfig, module string) {
+	var moduleMap map[string]struct{}
+	moduleMap = make(map[string]struct{})
+	db, _ := gorm.Open(mysql.Open(config.DSN), &gorm.Config{})
+	if module == "all" {
+		for _, cfg := range config.MysqlGenCfgs {
+			moduleMap[cfg.ModulePath] = struct{}{}
+		}
+	} else {
+		modules := strings.Split(module, ",")
+		for _, module := range modules {
+			moduleMap[module] = struct{}{}
+		}
+	}
+	for _, cfg := range config.MysqlGenCfgs {
+		if _, ok := moduleMap[cfg.ModulePath]; ok {
+			GenMongoModule(cfg, db, config.DBName)
+		}
+	}
+}
+func GenMongoModule(mongoGenCfg *basic.MysqlGenCfg, db *gorm.DB, dbName string) {
 	generator := MongoGenerator{}
 	var sb strings.Builder
 	sb.WriteString(generator.PrepareDal(mongoGenCfg.ModulePath))
 	for _, tableName := range mongoGenCfg.TableNames {
-		fileContent := generator.GenDal(toCamelCase(tableName, true), tableName, "MongoDB")
+		fileContent := generator.GenDal(toCamelCase(tableName, true), tableName, dbName)
 		sb.WriteString(fileContent)
 	}
 	err := os.WriteFile(path.Join(mongoGenCfg.OutPath, "dal/mongo.gen.go"), []byte(sb.String()), 0644)

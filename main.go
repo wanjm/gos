@@ -55,22 +55,18 @@ func main() {
 		genServlet(project)
 	}
 	if basic.Argument.SqlDBName != "" {
-		genMysql()
+		genDbData("mysql", db.GenTableForDb)
 	}
 	if basic.Argument.MongoDBName != "" {
-		genMongo()
+		genDbData("mongo", db.GenTableForMongo)
 	}
 }
-func genMongo() {
-
-	// GenMongoModule
-}
-func genMysql() {
+func genDbData(dbTypeName string, genDBFUntion func(config *basic.DBConfig, module string)) {
 	var dbMap = make(map[string]*basic.DBConfig)
 	var dbs = []string{}
 	// 仅处理mysql，生成dbMap，和dbname数组
 	for _, db := range basic.Cfg.MysqlGenCfg {
-		if strings.ToLower(db.DBType) != "mysql" {
+		if strings.ToLower(db.DBType) != dbTypeName {
 			continue
 		}
 		dbMap[db.DBName] = db
@@ -89,12 +85,13 @@ func genMysql() {
 	}
 	for _, dbName := range targetDbs {
 		if cfg, ok := dbMap[dbName]; ok {
-			db.GenTableForDb(cfg, basic.Argument.ModName)
+			genDBFUntion(cfg, dbName)
 		} else {
 			fmt.Printf("db %s not found", dbName)
 		}
 	}
 }
+
 func genServlet(project *astinfo.MainProject) {
 	cfg := &basic.Cfg
 	cfg.InitMain = basic.Argument.GoMod
