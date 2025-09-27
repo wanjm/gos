@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/wanjm/gos/astinfo"
 	"github.com/wanjm/gos/astinfo/callable_gen"
@@ -66,19 +67,25 @@ func genMongo() {
 }
 func genMysql() {
 	var dbMap = make(map[string]*basic.DBConfig)
+	var dbs = []string{}
 	for _, db := range basic.Cfg.MysqlGenCfg {
+		if strings.ToLower(db.DBType) != "mysql" {
+			continue
+		}
 		dbMap[db.DBName] = db
 		for _, module := range db.MysqlGenCfgs {
 			module.ModulePath = astinfo.GlobalProject.CurrentProject.Module + "/" + module.OutPath
 		}
+		dbs = append(dbs, db.DBName)
 	}
-
+	var targetDbs []string
 	if basic.Argument.SqlDBName == "all" {
-		for _, dbcfg := range basic.Cfg.MysqlGenCfg {
-			db.GenTableForDb(dbcfg, "all")
-		}
+		targetDbs = dbs
 	} else {
-		db.GenTableForDb(dbMap[basic.Argument.SqlDBName], basic.Argument.ModName)
+		targetDbs = strings.Split(basic.Argument.SqlDBName, ",")
+	}
+	for _, dbName := range targetDbs {
+		db.GenTableForDb(dbMap[dbName], basic.Argument.ModName)
 	}
 }
 func genServlet(project *astinfo.MainProject) {
