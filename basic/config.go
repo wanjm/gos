@@ -61,7 +61,14 @@ func (config *Config) Load() {
 			panic(err)
 		}
 	}
-	if config.Generation.CommonMod == "" {
-		config.Generation.CommonMod = "github.com/wanjm/common"
+	generation := &config.Generation
+	if generation.CommonMod == "" {
+		generation.CommonMod = "github.com/wanjm/common"
+	}
+	if generation.TraceKey != "" && generation.TraceKeyMod == "" {
+		generation.TraceKeyMod = "github.com/wanjm/common/trace"
+	}
+	if generation.ResponseKey != "" && generation.ResponseMod == "" {
+		generation.ResponseMod = "github.com/wanjm/common/response"
 	}
 }
