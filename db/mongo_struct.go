@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"text/template"
 	"time"
 	"unicode"
 
@@ -134,27 +135,72 @@ func getDocumentByID(collection *mongo.Collection, id string) (bson.M, error) {
 	return result, err
 }
 
+// FieldInfo holds information about a single struct field for template generation.
+type FieldInfo struct {
+	Name    string
+	Type    string
+	BsonTag string
+	JsonTag string
+}
+
+// StructInfo holds information about a struct for template generation.
+type StructInfo struct {
+	Name   string
+	Fields []FieldInfo
+}
+
+const structTpl = `type {{.Name}} struct {
+{{- range .Fields}}
+	{{.Name}} {{.Type}} ` + "`" + `bson:"{{.BsonTag}},omitempty" json:"{{.JsonTag}}"` + "`" + `
+{{- end}}
+}`
+
 func generateStruct(structName string, doc bson.M) (string, error) {
-	var builder strings.Builder
 	nestedStructs := make(map[string]string)
-	builder.WriteString(fmt.Sprintf("type %s struct {\n", structName))
+
+	// 1. Prepare data for the main struct template
+	fields := make([]FieldInfo, 0, len(doc))
 	keys := make([]string, 0, len(doc))
 	for k := range doc {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+
 	for _, key := range keys {
 		value := doc[key]
-		pascalKey := toPascalCase(key)
+		// getGoTypeFromValue will populate nestedStructs as a side effect through recursive calls
 		goType := getGoTypeFromValue(key, value, nestedStructs)
 		jsonTag := key
 		if key == "_id" {
 			jsonTag = "id,omitempty"
 		}
-		builder.WriteString(fmt.Sprintf("\t%s %s `bson:\"%s,omitempty\" json:\"%s\"`\n", pascalKey, goType, key, jsonTag))
-
+		fields = append(fields, FieldInfo{
+			Name:    toPascalCase(key),
+			Type:    goType,
+			BsonTag: key,
+			JsonTag: jsonTag,
+		})
 	}
-	builder.WriteString("}\n")
+
+	// 2. Execute the template for the main struct
+	t, err := template.New("struct").Parse(structTpl)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse struct template: %w", err)
+	}
+
+	var mainStructBuilder strings.Builder
+	err = t.Execute(&mainStructBuilder, StructInfo{
+		Name:   structName,
+		Fields: fields,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to execute struct template: %w", err)
+	}
+
+	// 3. Append nested structs
+	var finalCodeBuilder strings.Builder
+	finalCodeBuilder.WriteString(mainStructBuilder.String())
+
 	if len(nestedStructs) > 0 {
 		nestedKeys := make([]string, 0, len(nestedStructs))
 		for k := range nestedStructs {
@@ -162,11 +208,12 @@ func generateStruct(structName string, doc bson.M) (string, error) {
 		}
 		sort.Strings(nestedKeys)
 		for _, key := range nestedKeys {
-			builder.WriteString("\n")
-			builder.WriteString(nestedStructs[key])
+			finalCodeBuilder.WriteString("\n\n")
+			finalCodeBuilder.WriteString(nestedStructs[key])
 		}
 	}
-	return builder.String(), nil
+
+	return finalCodeBuilder.String(), nil
 }
 
 func getGoTypeFromValue(key string, value interface{}, nestedStructs map[string]string) string {
