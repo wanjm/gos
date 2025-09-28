@@ -75,7 +75,7 @@ func genTableForMongo(client *mongo.Client, dbName, collectionName, recordID, ou
 	structName := toPascalCase(collectionName)
 	snakeName := toSnakeCase(collectionName)
 	dirPath := filepath.Join(outPath, snakeName)
-	filePath := filepath.Join(dirPath, "table.go") // 文件名固定为 table.go
+	filePath := filepath.Join(dirPath, "table.gen.go") // 文件名固定为 table.go
 
 	// 3. 生成结构体代码字符串
 	structCode, err := generateStruct(structName, doc)
