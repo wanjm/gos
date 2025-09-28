@@ -10,13 +10,15 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+
+	"github.com/wanjm/gos/basic"
 )
 
 type MainProject struct {
-	currentProject     Project
+	CurrentProject     Project
 	Packages           map[string]*Package // 项目包含的包集合（key为包全路径）
 	SortedPacakgeNames []string
-	Cfg                *Config
+	Cfg                *basic.Config
 
 	*InitManager
 	InitFuncs4All    []string   // 启动服务器和启动test都是用的方法；
@@ -37,7 +39,7 @@ func (mp *MainProject) genMain() {
 	var content strings.Builder
 	content.WriteString("package main\n")
 	//	import "gitlab.plaso.cn/message-center/gen"
-	content.WriteString("import (\"flag\"\n\"" + mp.currentProject.Module + "/gen\")\n")
+	content.WriteString("import (\"flag\"\n\"" + mp.CurrentProject.Module + "/gen\")\n")
 	content.WriteString(`
 func main() {
 	parseArgument();
@@ -441,8 +443,8 @@ func (mp *MainProject) FindPackage(module string) *Package {
 	if pkg := mp.GetPackage(module); pkg != nil {
 		return pkg
 	}
-	if module == mp.currentProject.Module+"/gen" {
-		newPkg := NewPackage(module, true, filepath.Join(mp.currentProject.Path, "gen"))
+	if module == mp.CurrentProject.Module+"/gen" {
+		newPkg := NewPackage(module, true, filepath.Join(mp.CurrentProject.Path, "gen"))
 		newPkg.finshedParse = true
 		newPkg.Name = "gen"
 		return newPkg
@@ -499,18 +501,18 @@ func escapeModulePath(s string) string {
 	}
 	return result.String()
 }
+func (mp *MainProject) ParseModule() error {
+	return mp.CurrentProject.ParseModule()
+}
 
 // Parse 解析项目的代码
 func (mp *MainProject) Parse() error {
 	if mp.Cfg.InitMain != "" { // 检查是否非空字符串
 		mp.genGoMod()
 		// 设置项目模块名称
-		mp.currentProject.Module = mp.Cfg.InitMain
+		mp.CurrentProject.Module = mp.Cfg.InitMain
 	}
-	p := &mp.currentProject
-	if err := p.ParseModule(); err != nil {
-		return err
-	}
+	p := &mp.CurrentProject
 	cfg := mp.Cfg
 	traceKeyMod := cfg.Generation.TraceKeyMod
 	if !strings.Contains(traceKeyMod, ".") {
@@ -545,7 +547,7 @@ func (mp *MainProject) Parse() error {
 
 var GlobalProject *MainProject
 
-func CreateProject(path string, cfg *Config) *MainProject {
+func CreateProject(path string, cfg *basic.Config) *MainProject {
 	GlobalProject = &MainProject{
 		Cfg:      cfg,
 		Packages: make(map[string]*Package),
@@ -553,7 +555,7 @@ func CreateProject(path string, cfg *Config) *MainProject {
 		// servers:      make(map[string]*server),
 		// creators: make(map[*Struct]*Initiator),
 	}
-	GlobalProject.currentProject.Path = path
+	GlobalProject.CurrentProject.Path = path
 	// 由于Package中有指向Project的指针，所以RawPackage指向了此处的project，如果返回对象，则出现了两个Project，一个是返回的Project，一个是RawPackage中的Project；
 	// 返回*Project才能保证这是一个Project对象；
 	// project.initRawPackage()

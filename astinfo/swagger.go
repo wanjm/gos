@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/go-openapi/spec"
+	"github.com/wanjm/gos/basic"
+	"github.com/wanjm/gos/tool"
 )
 
 type SchemaType interface {
@@ -231,7 +233,7 @@ func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager) {
 //			}
 //		}
 //	}
-func (swagger *Swagger) GenerateCode(cfg *SwaggerCfg) string {
+func (swagger *Swagger) GenerateCode(cfg *basic.SwaggerCfg) string {
 
 	project := swagger.project
 	for name, pkg := range project.Packages {
@@ -311,7 +313,7 @@ func (swagger *Swagger) addStructFieldsToSchema(class *Struct) map[string]spec.S
 			continue
 		}
 		if len(name) == 0 {
-			name = FirstLower(field.Name)
+			name = tool.FirstLower(field.Name)
 		}
 
 		schema := spec.Schema{

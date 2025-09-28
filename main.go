@@ -5,17 +5,20 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/wanjm/gos/astinfo"
 	"github.com/wanjm/gos/astinfo/callable_gen"
 	rpcgen "github.com/wanjm/gos/astinfo/rpc_gen"
+	"github.com/wanjm/gos/basic"
+	"github.com/wanjm/gos/db"
 )
 
-func main() {
-	var path string
-	flag.StringVar(&path, "p", ".", "需要生成代码工程的根目录")
-	var modName string
-	flag.StringVar(&modName, "i", "", "指定模块名称")
+func parseArgument() {
+	flag.StringVar(&basic.Argument.SourcePath, "p", ".", "需要生成代码工程的根目录")
+	flag.StringVar(&basic.Argument.ModName, "modname", "all", "指定模块名称")
+	flag.StringVar(&basic.Argument.GoMod, "i", "", "本项目的gomod")
+	flag.StringVar(&basic.Argument.DBName, "dbname", "", "指定数据库名称")
 	h := flag.Bool("h", false, "显示帮助文件")
 	v := flag.Bool("v", false, "显示版本信息") // 添加-v参数
 	flag.Parse()
@@ -29,16 +32,67 @@ func main() {
 		flag.Usage()
 		return
 	}
-	path, err := filepath.Abs(path)
+	path, err := filepath.Abs(basic.Argument.SourcePath)
 	if err != nil {
 		fmt.Printf("open %s failed with %s", path, err.Error())
 		return
 	}
-	os.Chdir(path)
-	cfg := astinfo.Config{
-		InitMain: modName, // 直接赋值模块名称
-	}
+	basic.Argument.SourcePath = path
+}
+
+func main() {
+	parseArgument()
+	os.Chdir(basic.Argument.SourcePath)
+	cfg := &basic.Cfg
 	cfg.Load()
+	var project = astinfo.CreateProject(basic.Argument.SourcePath, cfg)
+	if err := project.CurrentProject.ParseModule(); err != nil {
+		return
+	}
+	if basic.Argument.DBName != "" {
+		genDbData(basic.Argument.DBName)
+	}
+
+	genServlet(project)
+}
+func genDbData(dbnames string) {
+	var dbMap = make(map[string]*basic.DBConfig)
+	var dbs = []string{}
+	// 仅处理mysql，生成dbMap，和dbname数组
+	for _, db := range basic.Cfg.DBConfig {
+		dbMap[db.DBName] = db
+		for _, module := range db.DbGenCfgs {
+			module.ModulePath = astinfo.GlobalProject.CurrentProject.Module + "/" + module.OutPath
+		}
+		dbs = append(dbs, db.DBName)
+	}
+	// 如果为all，表示所有的db；
+	var targetDbs []string
+	if dbnames == "all" {
+		targetDbs = dbs
+	} else {
+		// 否则用逗号分隔的db；
+		targetDbs = strings.Split(dbnames, ",")
+	}
+	for _, dbName := range targetDbs {
+		if cfg, ok := dbMap[dbName]; ok {
+			switch strings.ToLower(cfg.DBType) {
+			case "mysql":
+				db.GenTableForDb(cfg, basic.Argument.ModName)
+			case "mongo":
+				db.GenTableForMongo(cfg, basic.Argument.ModName)
+			default:
+				fmt.Printf("db %s type %s not supported", dbName, cfg.DBType)
+			}
+		} else {
+			fmt.Printf("db %s not found", dbName)
+		}
+	}
+}
+
+func genServlet(project *astinfo.MainProject) {
+	cfg := &basic.Cfg
+	cfg.InitMain = basic.Argument.GoMod
 	astinfo.RegisterCallableGen(
 		callable_gen.NewServletGen(4, 1),
 		&callable_gen.PrpcGen{},
@@ -46,14 +100,13 @@ func main() {
 		&callable_gen.RawGen{},
 	)
 	astinfo.RegisterClientGen(&rpcgen.PrpcGen{})
-	var project = astinfo.CreateProject(path, &cfg)
 
 	// 移除原来的判断，因为现在InitMain直接存储模块名称
 	// if len(modName) > 0 {
 	// 	project.CurrentProject().Module = modName
 	// }
 
-	err = project.Parse()
+	err := project.Parse()
 	if err != nil {
 		fmt.Printf("parse project failed with %s", err.Error())
 		return

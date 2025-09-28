@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"go/ast"
 	"strings"
+
+	"github.com/wanjm/gos/tool"
 )
 
 type FieldComment struct {
@@ -67,7 +69,7 @@ func (field *Field) parseTag(fieldType *ast.BasicLit) {
 		// if strings.Contains(tag, "wire") {
 		// 	fmt.Print("hello")
 		// }
-		tagList := Fields(tag)
+		tagList := tool.Fields(tag)
 		for _, tag := range tagList {
 			kv := strings.Split(tag, ":")
 			if len(kv) == 2 {
