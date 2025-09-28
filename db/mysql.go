@@ -35,7 +35,7 @@ func GenTableForDb(config *basic.DBConfig, module string) {
 	}
 }
 
-func GenTables(config1 *basic.DBGenCfg, db *gorm.DB, dbVariable string) {
+func GenTables(config1 *basic.TableGenCfg, db *gorm.DB, dbVariable string) {
 	dbVariable = tool.Capitalize(dbVariable)
 	config := gen.Config{
 		OutPath:      path.Join(config1.OutPath, "entity"),      // 生成代码的输出路径

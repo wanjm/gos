@@ -19,3 +19,7 @@ TableNames = ["table_name"]
 1. 表明；
 2. entity必须已经存在。表明和entity名字符合下划线到驼峰命名规则。
 3. 生成的dal会引用entity目录；package名字会同步使用这个相对目录
+
+## join table 说明
+1. table; column, const;
+2. entity -> schema;

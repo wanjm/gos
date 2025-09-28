@@ -49,7 +49,7 @@ func GenTableForMongo(config *basic.DBConfig, module string) {
 		}
 	}
 }
-func GenMongoModule(mongoGenCfg *basic.DBGenCfg, db *gorm.DB, dbName string) {
+func GenMongoModule(mongoGenCfg *basic.TableGenCfg, db *gorm.DB, dbName string) {
 	generator := MongoGenerator{}
 	var sb strings.Builder
 	sb.WriteString(generator.PrepareDal(mongoGenCfg.ModulePath))
