@@ -152,13 +152,6 @@ func NewPointerType(typer Typer) *PointerType {
 func (p *PointerType) RefName(genFile *GenedFile) string {
 	return "*" + p.Typer.RefName(genFile)
 }
-func (p *PointerType) IDName() string {
-	if p.Typer == nil {
-		return "missingType"
-	} else {
-		return p.Typer.IDName()
-	}
-}
 
 func (p *PointerType) GenConstructCode(genFile *GenedFile, wire bool) string {
 	var code = p.Typer.GenConstructCode(genFile, wire)
