@@ -75,14 +75,29 @@ func genDbData(dbnames string) {
 		targetDbs = strings.Split(dbnames, ",")
 	}
 	for _, dbName := range targetDbs {
-		if cfg, ok := dbMap[dbName]; ok {
-			switch strings.ToLower(cfg.DBType) {
+		if config, ok := dbMap[dbName]; ok {
+			var moduleMap map[string]struct{}
+			moduleMap = make(map[string]struct{})
+			var module = basic.Argument.ModName
+			if module == "all" {
+				for _, cfg := range config.DbGenCfgs {
+					moduleMap[cfg.ModulePath] = struct{}{}
+				}
+			} else {
+				modules := strings.SplitSeq(module, ",")
+				for module := range modules {
+					module = astinfo.GlobalProject.CurrentProject.Module + "/" + module
+					moduleMap[module] = struct{}{}
+				}
+			}
+
+			switch strings.ToLower(config.DBType) {
 			case "mysql":
-				db.GenTableForDb(cfg, basic.Argument.ModName)
+				db.GenTableForDb(config, moduleMap)
 			case "mongo":
-				db.GenTableForMongo(cfg, basic.Argument.ModName)
+				db.GenTableForMongo(config, moduleMap)
 			default:
-				fmt.Printf("db %s type %s not supported", dbName, cfg.DBType)
+				fmt.Printf("db %s type %s not supported", dbName, config.DBType)
 			}
 		} else {
 			fmt.Printf("db %s not found", dbName)

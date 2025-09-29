@@ -29,20 +29,7 @@ import (
 //			GenMongoModule(config)
 //		}
 //	}
-func GenTableForMongo(config *basic.DBConfig, module string) {
-	var moduleMap map[string]struct{}
-	moduleMap = make(map[string]struct{})
-	// db, _ := gorm.Open(mysql.Open(config.DSN), &gorm.Config{})
-	if module == "all" {
-		for _, cfg := range config.DbGenCfgs {
-			moduleMap[cfg.ModulePath] = struct{}{}
-		}
-	} else {
-		modules := strings.Split(module, ",")
-		for _, module := range modules {
-			moduleMap[module] = struct{}{}
-		}
-	}
+func GenTableForMongo(config *basic.DBConfig, moduleMap map[string]struct{}) {
 	for _, cfg := range config.DbGenCfgs {
 		if _, ok := moduleMap[cfg.ModulePath]; ok {
 			GenMongoModule(cfg, nil, config.DBName)

@@ -14,20 +14,8 @@ import (
 	"gorm.io/gorm"
 )
 
-func GenTableForDb(config *basic.DBConfig, module string) {
-	var moduleMap map[string]struct{}
-	moduleMap = make(map[string]struct{})
+func GenTableForDb(config *basic.DBConfig, moduleMap map[string]struct{}) {
 	db, _ := gorm.Open(mysql.Open(config.DSN), &gorm.Config{})
-	if module == "all" {
-		for _, cfg := range config.DbGenCfgs {
-			moduleMap[cfg.ModulePath] = struct{}{}
-		}
-	} else {
-		modules := strings.Split(module, ",")
-		for _, module := range modules {
-			moduleMap[module] = struct{}{}
-		}
-	}
 	for _, cfg := range config.DbGenCfgs {
 		if _, ok := moduleMap[cfg.ModulePath]; ok {
 			GenTables(cfg, db, config.DBName)
