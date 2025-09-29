@@ -14,8 +14,10 @@ const (
 	globalPrefix = "__global_"
 )
 
+// initiator 方法可以产生variable；
+// 结构体也可以产生variable；
 type VariableGenerator interface {
-	RequiredFields() []*Field
+	RequiredFields() []*Field //创建variale需要的其他变量；函数的参数，或者结构体的fields
 	GeneredFields() []*Field
 	GenerateDependcyCode(goGenerated *GenedFile) string
 }
@@ -240,9 +242,9 @@ func (im *InitManager) initParent(node *DependNode, waittingVariableMap Variable
 		parent := waittingVariableMap.getVariable(param.Type, param.Name)
 		if parent != nil {
 			node.Parent = append(node.Parent, parent)
-		} else {
-			fmt.Printf("can't init field: %s not found for type %s\n", param.Name, param.Type.IDName())
+			continue
 		}
+		fmt.Printf("can't init field: %s not found for type %s\n", param.Name, param.Type.IDName())
 	}
 }
 

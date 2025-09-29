@@ -148,7 +148,14 @@ func (pkg *Package) GetTyper(name string) Typer {
 	if !pkg.finshedParse {
 		pkg.Parse()
 	}
-	return pkg.Types[name]
+	var result = pkg.Types[name]
+	if result == nil {
+		//找不到时使用MissingType，减少很多后续报错；
+		result = &MissingType{
+			Name: pkg.Module + "/" + name,
+		}
+	}
+	return result
 }
 
 func SimplePackage(module, name string) *Package {

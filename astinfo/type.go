@@ -53,6 +53,28 @@ func PointerDepth(typer Typer) int {
 	return typer.(*PointerType).Depth
 }
 
+// 找不到时使用MissingType，减少很多后续报错；
+// 暂时没有加其他默认效果；
+type MissingType struct {
+	Name string
+}
+
+func (m *MissingType) RefName(_ *GenedFile) string {
+	return m.Name
+}
+
+func (m *MissingType) IDName() string {
+	return m.Name
+}
+
+func (m *MissingType) GenConstructCode(_ *GenedFile, _ bool) string {
+	return "nil"
+}
+
+func (m *MissingType) Parse() error {
+	return nil
+}
+
 // 解析原生类型，主要是生成swagger要用；
 type BaseType struct {
 	typeName string
@@ -129,6 +151,13 @@ func NewPointerType(typer Typer) *PointerType {
 
 func (p *PointerType) RefName(genFile *GenedFile) string {
 	return "*" + p.Typer.RefName(genFile)
+}
+func (p *PointerType) IDName() string {
+	if p.Typer == nil {
+		return "missingType"
+	} else {
+		return p.Typer.IDName()
+	}
 }
 
 func (p *PointerType) GenConstructCode(genFile *GenedFile, wire bool) string {

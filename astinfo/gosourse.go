@@ -88,7 +88,9 @@ func (g *Gosourse) getType(typeName string, typeMap map[string]*Field) Typer {
 		}
 	}
 	fmt.Printf("failed to find type %s in %s\n", typeName, g.Path)
-	return nil
+	return &MissingType{
+		Name: typeName,
+	}
 }
 
 // 解析函数和方法
