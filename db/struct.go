@@ -11,7 +11,7 @@ import (
 func toCamelCase(s string, useBig bool) string {
 	parts := strings.Split(s, "_")
 	for i, part := range parts {
-		if useBig == false {
+		if !useBig {
 			useBig = true
 			continue // 保持第一个单词小写
 		}

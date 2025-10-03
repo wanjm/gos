@@ -1,6 +1,7 @@
 package tool
 
 import (
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -54,4 +55,24 @@ func Fields(s string) []string {
 	}
 	a.split()
 	return a.result
+}
+func ToPascalCase(s string, firstBig bool) string {
+	if s == "_id" {
+		return "ID"
+	}
+	var result strings.Builder
+	capitalizeNext := firstBig
+	for _, r := range s {
+		if r == '_' || r == '-' {
+			capitalizeNext = true
+		} else if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			if capitalizeNext {
+				result.WriteRune(unicode.ToUpper(r))
+				capitalizeNext = false
+			} else {
+				result.WriteRune(r)
+			}
+		}
+	}
+	return result.String()
 }

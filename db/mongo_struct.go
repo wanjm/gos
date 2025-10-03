@@ -11,9 +11,9 @@ import (
 	"strings"
 	"text/template"
 	"time"
-	"unicode"
 
 	"github.com/wanjm/gos/basic"
+	"github.com/wanjm/gos/tool"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -73,7 +73,7 @@ func genTableForMongo(client *mongo.Client, dbName, collectionName, recordID, ou
 	}
 
 	// 2. 准备文件名和路径
-	structName := toPascalCase(collectionName)
+	structName := tool.ToPascalCase(collectionName, true)
 	snakeName := toSnakeCase(collectionName)
 	dirPath := filepath.Join(outPath, snakeName)
 	filePath := filepath.Join(dirPath, "table.gen.go") // 文件名固定为 table.go
@@ -175,7 +175,7 @@ func generateStruct(structName string, doc bson.M) (string, error) {
 			jsonTag = "id,omitempty"
 		}
 		fields = append(fields, FieldInfo{
-			Name:    toPascalCase(key),
+			Name:    tool.ToPascalCase(key, true),
 			Type:    goType,
 			BsonTag: key,
 			JsonTag: jsonTag,
@@ -236,7 +236,7 @@ func getGoTypeFromValue(key string, value interface{}, nestedStructs map[string]
 	case float64:
 		return "float64"
 	case bson.M:
-		structName := toPascalCase(key)
+		structName := tool.ToPascalCase(key, true)
 		nestedStructCode, _ := generateStruct(structName, v)
 		nestedStructs[structName] = nestedStructCode
 		return structName
@@ -249,27 +249,6 @@ func getGoTypeFromValue(key string, value interface{}, nestedStructs map[string]
 	default:
 		return "interface{}"
 	}
-}
-
-func toPascalCase(s string) string {
-	if s == "_id" {
-		return "ID"
-	}
-	var result strings.Builder
-	capitalizeNext := true
-	for _, r := range s {
-		if r == '_' || r == '-' {
-			capitalizeNext = true
-		} else if unicode.IsLetter(r) || unicode.IsDigit(r) {
-			if capitalizeNext {
-				result.WriteRune(unicode.ToUpper(r))
-				capitalizeNext = false
-			} else {
-				result.WriteRune(r)
-			}
-		}
-	}
-	return result.String()
 }
 
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
