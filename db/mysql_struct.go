@@ -61,6 +61,7 @@ func GenerateStructFromDDL(tableName, ddl string) (string, error) {
 	// Simple parser: extract column lines from DDL
 	lines := strings.Split(ddl, "\n")
 	var fields []string
+	var tableComment string
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "`") {
@@ -70,14 +71,33 @@ func GenerateStructFromDDL(tableName, ddl string) (string, error) {
 			}
 			colName := strings.Trim(parts[0], "`")
 			colType := parts[1]
+			var comment string
+			if commentIndex := strings.Index(line, "COMMENT '"); commentIndex != -1 {
+				commentPart := line[commentIndex+len("COMMENT '"):]
+				if endQuoteIndex := strings.Index(commentPart, "'"); endQuoteIndex != -1 {
+					comment = commentPart[:endQuoteIndex]
+				}
+			}
 			goType := mysqlTypeToGoType(colType)
 			fieldName := tool.ToPascalCase(colName, true)
 			tag := fmt.Sprintf("`json:\"%s\" gorm:\"%s\"`", tool.FirstLower(colName), colName)
-			fields = append(fields, fmt.Sprintf("    %s %s %s", fieldName, goType, tag))
+			fieldLine := fmt.Sprintf("    %s %s %s// %s", fieldName, goType, tag, comment)
+			fields = append(fields, fieldLine)
+		} else if strings.HasPrefix(line, ")") {
+			if commentIndex := strings.Index(line, "COMMENT='"); commentIndex != -1 {
+				commentPart := line[commentIndex+len("COMMENT='"):]
+				if endQuoteIndex := strings.Index(commentPart, "'"); endQuoteIndex != -1 {
+					tableComment = commentPart[:endQuoteIndex]
+				}
+			}
 		}
 	}
 	structName := tool.ToPascalCase(tableName, true)
-	structDef := fmt.Sprintf("type %s struct {\n%s\n}", structName, strings.Join(fields, "\n"))
+	var structComment string
+	if tableComment != "" {
+		structComment = fmt.Sprintf("// %s %s\n", structName, tableComment)
+	}
+	structDef := fmt.Sprintf("%stype %s struct {\n%s\n}", structComment, structName, strings.Join(fields, "\n"))
 	return structDef, nil
 }
 
