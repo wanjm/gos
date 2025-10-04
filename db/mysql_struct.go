@@ -4,6 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
+	"path"
+	"path/filepath"
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -24,21 +27,30 @@ func GenTableFromMySQL(config *basic.DBConfig, tableName string) error {
 	}
 	defer db.Close()
 	log.Println("成功连接到 MySQL!")
-
-	// 2. Get DDL
-	ddl, err := getTableDDL(db, tableName)
-	if err != nil {
-		return fmt.Errorf("获取表 DDL 失败: %w", err)
+	for _, tableCfg := range config.DbGenCfgs {
+		genTable(db, tableCfg)
 	}
-	log.Printf("表 %s 的 DDL: \n%s", tableName, ddl)
+	return nil
+}
+func genTable(db *sql.DB, tableCfg *basic.TableGenCfg) error {
+	for _, tableName := range tableCfg.TableNames {
+		// 2. Get DDL
+		ddl, err := getTableDDL(db, tableName)
+		if err != nil {
+			return fmt.Errorf("获取表 DDL 失败: %w", err)
+		}
+		log.Printf("表 %s 的 DDL: \n%s", tableName, ddl)
 
-	// 3. Parse DDL and generate struct
-	structCode, err := GenerateStructFromDDL(tableName, ddl)
-	if err != nil {
-		return fmt.Errorf("生成结构体代码失败: %w", err)
+		// 3. Parse DDL and generate struct
+		structCode, err := GenerateStructFromDDL(tableName, ddl)
+		if err != nil {
+			return fmt.Errorf("生成结构体代码失败: %w", err)
+		}
+		dirPath := filepath.Join(tableCfg.OutPath, tableName)
+		os.MkdirAll(dirPath, 0755)
+		os.WriteFile(path.Join(dirPath, "table.go"), []byte(structCode), 0644)
+		fmt.Println("生成的结构体定义:\n", structCode)
 	}
-
-	fmt.Println("生成的结构体定义:\n", structCode)
 	return nil
 }
 
