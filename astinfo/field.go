@@ -64,8 +64,7 @@ func (f *FieldBasic) GenVariableCode(goGenerated *GenedFile, wire bool) string {
 
 func (field *Field) parseTag(fieldType *ast.BasicLit) {
 	if fieldType != nil {
-		tag := fieldType.Value
-		tag = strings.Trim(tag, string(tag[0]))
+		tag := tool.ConvertGoTag(fieldType.Value)
 		// if strings.Contains(tag, "wire") {
 		// 	fmt.Print("hello")
 		// }

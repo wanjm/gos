@@ -76,3 +76,21 @@ func ToPascalCase(s string, firstBig bool) string {
 	}
 	return result.String()
 }
+
+func ConvertGoTag(tag string) string {
+	// 处理带转义符的情况，如"json:\"hello\""
+	if strings.HasPrefix(tag, "\"") && strings.HasSuffix(tag, "\"") {
+		// 去除首尾的引号
+		trimmed := tag[1 : len(tag)-1]
+		// 替换转义的引号为普通引号
+		return strings.ReplaceAll(trimmed, "\\\"", "\"")
+	}
+
+	// 处理原始tag情况，如`json:"hello"`
+	if strings.HasPrefix(tag, "`") && strings.HasSuffix(tag, "`") {
+		return tag[1 : len(tag)-1]
+	}
+
+	// 对于其他情况，直接返回原字符串
+	return tag
+}
