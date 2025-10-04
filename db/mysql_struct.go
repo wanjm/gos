@@ -10,8 +10,8 @@ import (
 	"text/template"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/basic"
-	"github.com/wanjm/gos/tool"
 )
 
 func GenTableFromMySQL(config *basic.DBConfig, moduleMap map[string]struct{}) error {
@@ -94,8 +94,8 @@ func GenerateStructFromDDL(tableName, ddl string) (string, error) {
 				}
 			}
 			goType := mysqlTypeToGoType(colType)
-			fieldName := tool.ToPascalCase(colName, true)
-			jsonTag := tool.FirstLower(tool.ToPascalCase(colName, false))
+			fieldName := astbasic.ToPascalCase(colName, true)
+			jsonTag := astbasic.FirstLower(astbasic.ToPascalCase(colName, false))
 			gormTag := colName
 			fields = append(fields, fieldInfo{
 				Name:    fieldName,
@@ -113,7 +113,7 @@ func GenerateStructFromDDL(tableName, ddl string) (string, error) {
 			}
 		}
 	}
-	structName := tool.ToPascalCase(tableName, true)
+	structName := astbasic.ToPascalCase(tableName, true)
 	var structComment string
 	if tableComment != "" {
 		structComment = fmt.Sprintf("// %s %s\n", structName, tableComment)

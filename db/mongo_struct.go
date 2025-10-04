@@ -12,8 +12,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/basic"
-	"github.com/wanjm/gos/tool"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -73,7 +73,7 @@ func genTableForMongo(client *mongo.Client, dbName, collectionName, recordID, ou
 	}
 
 	// 2. 准备文件名和路径
-	structName := tool.ToPascalCase(collectionName, true)
+	structName := astbasic.ToPascalCase(collectionName, true)
 	snakeName := toSnakeCase(collectionName)
 	dirPath := filepath.Join(outPath, snakeName)
 	filePath := filepath.Join(dirPath, "table.gen.go") // 文件名固定为 table.go
@@ -175,7 +175,7 @@ func generateStruct(structName string, doc bson.M) (string, error) {
 			jsonTag = "id,omitempty"
 		}
 		fields = append(fields, FieldInfo{
-			Name:    tool.ToPascalCase(key, true),
+			Name:    astbasic.ToPascalCase(key, true),
 			Type:    goType,
 			BsonTag: key,
 			JsonTag: jsonTag,
@@ -236,7 +236,7 @@ func getGoTypeFromValue(key string, value interface{}, nestedStructs map[string]
 	case float64:
 		return "float64"
 	case bson.M:
-		structName := tool.ToPascalCase(key, true)
+		structName := astbasic.ToPascalCase(key, true)
 		nestedStructCode, _ := generateStruct(structName, v)
 		nestedStructs[structName] = nestedStructCode
 		return structName

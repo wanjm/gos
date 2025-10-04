@@ -7,14 +7,14 @@ import (
 	"path"
 	"strings"
 
+	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/basic"
-	"github.com/wanjm/gos/tool"
 	"gorm.io/gen"
 	"gorm.io/gorm"
 )
 
 func GenTables(config1 *basic.TableGenCfg, db *gorm.DB, dbVariable string) {
-	dbVariable = tool.Capitalize(dbVariable)
+	dbVariable = astbasic.Capitalize(dbVariable)
 	config := gen.Config{
 		OutPath:      path.Join(config1.OutPath, "entity"),      // 生成代码的输出路径
 		Mode:         gen.WithoutContext | gen.WithDefaultQuery, // 生成模式

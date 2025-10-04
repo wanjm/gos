@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/wanjm/gos/tool"
+	"github.com/wanjm/gos/astbasic"
 )
 
 const (
@@ -253,7 +253,7 @@ func (mp *MainProject) GetVariableName(typer Typer, name string) string {
 }
 
 func (mp *MainProject) GetVariableNode(typer Typer, name string) *DependNode {
-	name = tool.FirstLower(name)
+	name = astbasic.FirstLower(name)
 	return mp.InitManager.variableMap.getVariable(typer, name)
 }
 
