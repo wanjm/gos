@@ -93,10 +93,10 @@ func genDbData(dbnames string) {
 
 			switch strings.ToLower(config.DBType) {
 			case "mysql":
-				db.GenTableForDb(config, moduleMap)
+				db.GenTableFromMySQL(config, moduleMap)
 			case "mongo":
 				db.GenTableForMongo(config, moduleMap)
-				db.GenTableFromMongo(config)
+				// db.GenTableFromMongo(config)
 			default:
 				fmt.Printf("db %s type %s not supported", dbName, config.DBType)
 			}

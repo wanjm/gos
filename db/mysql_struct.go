@@ -3,11 +3,11 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/wanjm/gos/basic"
@@ -37,7 +37,6 @@ func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
 		if err != nil {
 			return fmt.Errorf("获取表 DDL 失败: %w", err)
 		}
-		log.Printf("表 %s 的 DDL: \n%s", tableName, ddl)
 
 		// 3. Parse DDL and generate struct
 		structCode, err := GenerateStructFromDDL(tableName, ddl)
@@ -47,7 +46,6 @@ func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
 		dirPath := filepath.Join(tableCfg.OutPath, tableName)
 		os.MkdirAll(dirPath, 0755)
 		os.WriteFile(path.Join(dirPath, "table.go"), []byte(structCode), 0644)
-		fmt.Println("生成的结构体定义:\n", structCode)
 	}
 	return nil
 }
@@ -70,7 +68,14 @@ func getTableDDL(db *sql.DB, tableName string) (string, error) {
 func GenerateStructFromDDL(tableName, ddl string) (string, error) {
 	// Simple parser: extract column lines from DDL
 	lines := strings.Split(ddl, "\n")
-	var fields []string
+	type fieldInfo struct {
+		Name    string
+		Type    string
+		JsonTag string
+		GormTag string
+		Comment string
+	}
+	var fields []fieldInfo
 	var tableComment string
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -90,9 +95,15 @@ func GenerateStructFromDDL(tableName, ddl string) (string, error) {
 			}
 			goType := mysqlTypeToGoType(colType)
 			fieldName := tool.ToPascalCase(colName, true)
-			tag := fmt.Sprintf("`json:\"%s\" gorm:\"%s\"`", tool.FirstLower(colName), colName)
-			fieldLine := fmt.Sprintf("    %s %s %s// %s", fieldName, goType, tag, comment)
-			fields = append(fields, fieldLine)
+			jsonTag := tool.FirstLower(tool.ToPascalCase(colName, false))
+			gormTag := colName
+			fields = append(fields, fieldInfo{
+				Name:    fieldName,
+				Type:    goType,
+				JsonTag: jsonTag,
+				GormTag: gormTag,
+				Comment: comment,
+			})
 		} else if strings.HasPrefix(line, ")") {
 			if commentIndex := strings.Index(line, "COMMENT='"); commentIndex != -1 {
 				commentPart := line[commentIndex+len("COMMENT='"):]
@@ -107,8 +118,32 @@ func GenerateStructFromDDL(tableName, ddl string) (string, error) {
 	if tableComment != "" {
 		structComment = fmt.Sprintf("// %s %s\n", structName, tableComment)
 	}
-	structDef := fmt.Sprintf("%stype %s struct {\n%s\n}", structComment, structName, strings.Join(fields, "\n"))
-	return structDef, nil
+	const structTpl = `
+package {{.TableName}}
+	{{.StructComment}}
+	// @gos table={{.TableName}}
+type {{.StructName}} struct {
+{{range .Fields}}
+	{{.Name}} {{.Type}} "json:\"{{.JsonTag}}\" gorm:\"{{.GormTag}}\"" // {{.Comment}}
+{{end}}
+}
+`
+
+	tpl, err := template.New("struct").Parse(structTpl)
+	if err != nil {
+		return "", err
+	}
+	var sb strings.Builder
+	err = tpl.Execute(&sb, map[string]interface{}{
+		"StructComment": structComment,
+		"StructName":    structName,
+		"Fields":        fields,
+		"TableName":     tableName,
+	})
+	if err != nil {
+		return "", err
+	}
+	return sb.String(), nil
 }
 
 // mysqlTypeToGoType maps MySQL types to Go types (basic mapping)
