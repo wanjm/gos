@@ -14,25 +14,23 @@ import (
 	"github.com/wanjm/gos/tool"
 )
 
-// GenTableFromMySQL connects to MySQL, gets the DDL of a table, and generates a Go struct definition.
-func GenTableFromMySQL(config *basic.DBConfig, tableName string) error {
-	if strings.ToLower(config.DBType) != "mysql" {
-		return fmt.Errorf("当前仅支持 'mysql' 数据库类型, 您提供的是 '%s'", config.DBType)
-	}
-
+func GenTableFromMySQL(config *basic.DBConfig, moduleMap map[string]struct{}) error {
 	// 1. Connect to MySQL
 	db, err := connectToMySQL(config.DSN)
 	if err != nil {
 		return fmt.Errorf("无法连接到 MySQL: %w", err)
 	}
 	defer db.Close()
-	log.Println("成功连接到 MySQL!")
-	for _, tableCfg := range config.DbGenCfgs {
-		genTable(db, tableCfg)
+	for _, cfg := range config.DbGenCfgs {
+		if _, ok := moduleMap[cfg.ModulePath]; ok {
+			genTable(cfg, db)
+		}
 	}
 	return nil
 }
-func genTable(db *sql.DB, tableCfg *basic.TableGenCfg) error {
+
+// GenTableFromMySQL connects to MySQL, gets the DDL of a table, and generates a Go struct definition.
+func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
 	for _, tableName := range tableCfg.TableNames {
 		// 2. Get DDL
 		ddl, err := getTableDDL(db, tableName)

@@ -9,19 +9,9 @@ import (
 
 	"github.com/wanjm/gos/basic"
 	"github.com/wanjm/gos/tool"
-	"gorm.io/driver/mysql"
 	"gorm.io/gen"
 	"gorm.io/gorm"
 )
-
-func GenTableForDb(config *basic.DBConfig, moduleMap map[string]struct{}) {
-	db, _ := gorm.Open(mysql.Open(config.DSN), &gorm.Config{})
-	for _, cfg := range config.DbGenCfgs {
-		if _, ok := moduleMap[cfg.ModulePath]; ok {
-			GenTables(cfg, db, config.DBName)
-		}
-	}
-}
 
 func GenTables(config1 *basic.TableGenCfg, db *gorm.DB, dbVariable string) {
 	dbVariable = tool.Capitalize(dbVariable)
