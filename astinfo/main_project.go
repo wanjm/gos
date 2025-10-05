@@ -89,14 +89,10 @@ func (error *Error) GetErrorCode() int {
 }
 
 func (mp *MainProject) genProjectCode() {
-	mp.genPkg = &astbasic.PkgBasic{}
-	err := os.Mkdir("gen", 0750)
-	if err != nil && !os.IsExist(err) {
-		log.Fatal(err)
-	}
-	file := CreateGenedFile("goservlet_project")
+	genPkg := mp.genPkg.NewPkgBasic("gen", "gen")
+	mp.genPkg = genPkg
+	file := genPkg.NewFile("goservlet_project")
 	file.GetImport(astbasic.SimplePackage("github.com/gin-gonic/gin", "gin"))
-	os.Chdir("gen")
 	mp.genBasicCode(file)
 	mp.genPrepare(file)
 	file.Save()

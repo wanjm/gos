@@ -3,6 +3,7 @@ package astbasic
 import (
 	"fmt"
 	"go/format"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -36,6 +37,10 @@ func CreateGenedFile(fileName string) *GenedFile {
 func (file *GenedFile) Save() {
 	if len(file.contents) == 0 {
 		return
+	}
+	err := os.MkdirAll(file.Pkg.FilePath, 0750)
+	if err != nil && !os.IsExist(err) {
+		log.Fatal(err)
 	}
 	content := strings.Builder{}
 	content.WriteString("package gen\n")
