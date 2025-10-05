@@ -13,10 +13,10 @@ import (
 
 // Package 表示一个Go包的基本信息
 type Package struct {
-	Simple  bool   // 简单解析，及仅解析包名
-	Name    string // 包名称
-	Path    string // 包所在目录的绝对路径
-	ModPath string // 所属模块全路径
+	Simple   bool   // 简单解析，及仅解析包名
+	Name     string // 包名称
+	FilePath string // 包所在目录的绝对路径
+	ModPath  string // 所属模块全路径
 	// 用于变量注入的检查，用于servlet的生成；
 	Structs           map[string]*Struct // 包内结构体集合（key为结构体名称）
 	SortedStructNames []string
@@ -58,7 +58,7 @@ func (pkg *Package) AddParser(parser Parser) {
 // 采用遇到遇到不认识的import就先深度parse的方法；
 func (pkg *Package) SimpleParse() error {
 
-	path := pkg.Path
+	path := pkg.FilePath
 	defer func() {
 		for name, alias := range pkg.WaitTyper {
 			typer := pkg.GetTyper(name)
@@ -67,7 +67,7 @@ func (pkg *Package) SimpleParse() error {
 					*typer1 = typer
 				}
 			} else {
-				fmt.Printf("Error: failed to get %s.%s when parse finish\n", pkg.Path, name)
+				fmt.Printf("Error: failed to get %s.%s when parse finish\n", pkg.FilePath, name)
 			}
 		}
 		// fmt.Printf("finished Parsing package: %s\n", path)
@@ -127,10 +127,10 @@ func (pkg *Package) Parse() error {
 func NewPackage(module string, simple bool, absPath string) *Package {
 	// Extract package name from module path
 	return &Package{
-		ModPath: module,
-		Simple:  simple,
-		Path:    absPath,
-		Structs: make(map[string]*Struct),
+		ModPath:  module,
+		Simple:   simple,
+		FilePath: absPath,
+		Structs:  make(map[string]*Struct),
 		// Interfaces: make(map[string]*Interface),
 		GlobalVar: make(map[string]*VarField),
 		Types:     make(map[string]Typer),
