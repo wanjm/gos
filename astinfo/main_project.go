@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/basic"
 )
 
@@ -92,7 +93,7 @@ func (mp *MainProject) genProjectCode() {
 		log.Fatal(err)
 	}
 	file := CreateGenedFile("goservlet_project")
-	file.GetImport(SimplePackage("github.com/gin-gonic/gin", "gin"))
+	file.GetImport(astbasic.SimplePackage("github.com/gin-gonic/gin", "gin"))
 	os.Chdir("gen")
 	mp.genBasicCode(file)
 	mp.genPrepare(file)
@@ -159,8 +160,8 @@ func prepare() {
 	file.AddBuilder(&content)
 }
 func (mp *MainProject) genBasicCode(file *GenedFile) {
-	file.GetImport(SimplePackage("github.com/gin-contrib/cors", "cors"))
-	file.GetImport(SimplePackage("sync", "sync"))
+	file.GetImport(astbasic.SimplePackage("github.com/gin-contrib/cors", "cors"))
+	file.GetImport(astbasic.SimplePackage("sync", "sync"))
 
 	var content strings.Builder
 	content.WriteString(`
@@ -276,7 +277,7 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 	declare.WriteString(receiver.Name + ":=" + receiver.Generate(file))
 	declare.WriteString("\n")
 	file.AddBuilder(&declare)
-	file.GetImport(SimplePackage("github.com/gin-gonic/gin", "gin"))
+	file.GetImport(astbasic.SimplePackage("github.com/gin-gonic/gin", "gin"))
 	return name
 }
 

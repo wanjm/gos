@@ -70,10 +70,10 @@ type Struct struct {
 
 func (v *Struct) RefName(genFile *GenedFile) string {
 	pkg := v.goSource.Pkg
-	if genFile == nil || genFile.pkg == pkg {
+	if genFile == nil || pkg.IsSame(genFile.pkg) {
 		return v.StructName
 	}
-	impt := genFile.GetImport(pkg)
+	impt := genFile.GetImport(&pkg.PkgBasic)
 	return impt.Name + "." + v.StructName
 }
 
@@ -103,7 +103,7 @@ func needWire(field *Field) bool {
 // 5. 初步考虑可以将wire变量定义为必须注入内容结构体变量；
 // wire为true表示必须绑定结构体等；
 func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
-	result := genFile.GetImport(v.goSource.Pkg)
+	result := genFile.GetImport(&v.goSource.Pkg.PkgBasic)
 	var sb strings.Builder
 	if result.Name != "" {
 		sb.WriteString(result.Name)

@@ -9,14 +9,15 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/wanjm/gos/astbasic"
 )
 
 // Package 表示一个Go包的基本信息
 type Package struct {
-	Simple   bool   // 简单解析，及仅解析包名
-	Name     string // 包名称
+	Simple bool // 简单解析，及仅解析包名
+	astbasic.PkgBasic
 	FilePath string // 包所在目录的绝对路径
-	ModPath  string // 所属模块全路径
 	// 用于变量注入的检查，用于servlet的生成；
 	Structs           map[string]*Struct // 包内结构体集合（key为结构体名称）
 	SortedStructNames []string
@@ -127,7 +128,9 @@ func (pkg *Package) Parse() error {
 func NewPackage(module string, simple bool, absPath string) *Package {
 	// Extract package name from module path
 	return &Package{
-		ModPath:  module,
+		PkgBasic: astbasic.PkgBasic{
+			ModPath: module,
+		},
 		Simple:   simple,
 		FilePath: absPath,
 		Structs:  make(map[string]*Struct),
@@ -156,11 +159,4 @@ func (pkg *Package) GetTyper(name string) Typer {
 		}
 	}
 	return result
-}
-
-func SimplePackage(module, name string) *Package {
-	return &Package{
-		ModPath: module,
-		Name:    name,
-	}
 }

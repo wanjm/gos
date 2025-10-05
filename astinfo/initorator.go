@@ -98,7 +98,7 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 
 // GenterateTestCode 生成测试代码
 func (im *InitManager) GenterateTestCode(goGenerated *GenedFile) {
-	goGenerated.GetImport(SimplePackage("reflect", "reflect"))
+	goGenerated.GetImport(astbasic.SimplePackage("reflect", "reflect"))
 	var testCode strings.Builder
 	textTemplate := `
 var nameValue map[string]interface{}

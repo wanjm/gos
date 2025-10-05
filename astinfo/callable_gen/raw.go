@@ -61,11 +61,11 @@ func (servlet *RawGen) GenerateCommon(file *astinfo.GenedFile) {
 
 	if Project.Cfg.Generation.ResponseKey != "" {
 		data.HasResponseKey = true
-		oneImport := file.GetImport(astinfo.SimplePackage(Project.Cfg.Generation.ResponseMod, "xx"))
+		oneImport := file.GetImport(astbasic.SimplePackage(Project.Cfg.Generation.ResponseMod, "xx"))
 		data.ImportName = oneImport.Name
 		data.ResponseKey = Project.Cfg.Generation.ResponseKey
-		file.GetImport(astinfo.SimplePackage("context", "context"))
-		file.GetImport(astinfo.SimplePackage("net/http", "http"))
+		file.GetImport(astbasic.SimplePackage("context", "context"))
+		file.GetImport(astbasic.SimplePackage("net/http", "http"))
 	}
 
 	// 解析并执行模板
@@ -89,11 +89,11 @@ const RawFilterTemplate = `func {{.FilterName}}(c *gin.Context) {
 `
 
 func (servlet *RawGen) GenFilterCode(function *astinfo.Function, file *astinfo.GenedFile) string {
-	file.GetImport(astinfo.SimplePackage("github.com/gin-gonic/gin", "gin"))
+	file.GetImport(astbasic.SimplePackage("github.com/gin-gonic/gin", "gin"))
 	pkg := function.GoSource.Pkg
 	// 生成过滤器函数名
 	filterName := "filter_" + pkg.Name + "_" + function.Name
-	impt := file.GetImport(pkg)
+	impt := file.GetImport(&pkg.PkgBasic)
 
 	// 准备模板数据
 	data := struct {

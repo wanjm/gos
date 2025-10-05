@@ -13,7 +13,7 @@ import (
 
 // 每个有自动生成代码的package 会有一个GenedFile类；
 type GenedFile struct {
-	pkg *Package
+	pkg *astbasic.PkgBasic
 	// for gen code
 	name                 string                        //文件名,没有go后缀
 	genCodeImport        map[string]*astbasic.PkgBasic //产生code时会引入其他模块的内容，此时每个模块需要一个名字；但是名字还不能重复
@@ -64,7 +64,7 @@ func (file *GenedFile) AddBuilder(builder *strings.Builder) {
 }
 
 // 根据modePath获取Import信息；理论上该函数不需要modeName，但是为了最大限度的代码可读性，还是带上了modeName；
-func (file *GenedFile) GetImport(pkg *Package) (result *astbasic.PkgBasic) {
+func (file *GenedFile) GetImport(pkg *astbasic.PkgBasic) (result *astbasic.PkgBasic) {
 	var modePath, modeName string
 	modePath = pkg.ModPath
 	modeName = pkg.Name

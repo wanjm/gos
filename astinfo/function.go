@@ -153,7 +153,7 @@ func (f *Function) GenerateDependcyCode(goGenerated *GenedFile) string {
 // 2. 在生成变量时，可能需要使用crator来生成；
 func (f *Function) GenerateCallCode(goGenerated *GenedFile) string {
 	var call strings.Builder
-	impt := goGenerated.GetImport(f.GoSource.Pkg)
+	impt := goGenerated.GetImport(&f.GoSource.Pkg.PkgBasic)
 	call.WriteString(impt.Name + "." + f.Name)
 	call.WriteString("(")
 	for i, param := range f.Params {

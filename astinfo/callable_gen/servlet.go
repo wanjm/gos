@@ -55,11 +55,11 @@ const filterTemplate = `func {{.FilterName}}(c *gin.Context) {
 `
 
 func (servlet *ServletGen) GenFilterCode(function *astinfo.Function, file *astinfo.GenedFile) string {
-	file.GetImport(astinfo.SimplePackage("github.com/gin-gonic/gin", "gin"))
+	file.GetImport(astbasic.SimplePackage("github.com/gin-gonic/gin", "gin"))
 	pkg := function.GoSource.Pkg
 	// 生成过滤器函数名
 	filterName := "filter_" + pkg.Name + "_" + function.Name
-	impt := file.GetImport(pkg)
+	impt := file.GetImport(&pkg.PkgBasic)
 
 	// 准备模板数据
 	data := struct {

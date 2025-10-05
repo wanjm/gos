@@ -8,6 +8,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/astinfo"
 )
 
@@ -44,8 +45,8 @@ func (prpc *PrpcGen) GetName() string {
 	return "prpc"
 }
 func (prpc *PrpcGen) GenerateCommon(file *astinfo.GenedFile) {
-	file.GetImport(astinfo.SimplePackage("github.com/rs/xid", "xid"))
-	file.GetImport(astinfo.SimplePackage("context", "context"))
+	file.GetImport(astbasic.SimplePackage("github.com/rs/xid", "xid"))
+	file.GetImport(astbasic.SimplePackage("context", "context"))
 	GenBasicError(file)
 	generateCommon()
 }
@@ -99,7 +100,7 @@ func (prpc *PrpcGen) GenRouterCode(method *astinfo.Method, file *astinfo.GenedFi
 	generationCfg := &astinfo.GlobalProject.Cfg.Generation
 	if generationCfg.TraceKey != "" {
 		// prpc的发送请求是，会向http头添加traceId，需要使用该变量
-		oneImport := file.GetImport(astinfo.SimplePackage(generationCfg.TraceKeyMod, "xx"))
+		oneImport := file.GetImport(astbasic.SimplePackage(generationCfg.TraceKeyMod, "xx"))
 		tm.TraceIdNameInContext = fmt.Sprintf("%s.%s{}", oneImport.Name, generationCfg.TraceKey)
 	} else {
 		tm.TraceIdNameInContext = `"badTraceIdName plase config in Generation TraceKeyMod"`

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/astinfo"
 )
 
@@ -59,7 +60,7 @@ func generateCommon() {
 	}
 	var file *astinfo.GenedFile
 	file = astinfo.CreateGenedFile("build_in_common")
-	file.GetImport(astinfo.SimplePackage("github.com/gin-gonic/gin", "gin"))
+	file.GetImport(astbasic.SimplePackage("github.com/gin-gonic/gin", "gin"))
 	commongened = true
 	var content strings.Builder
 	Project := astinfo.GlobalProject
@@ -73,12 +74,12 @@ func generateCommon() {
 
 	if Project.Cfg.Generation.ResponseKey != "" {
 		data.HasResponseKey = true
-		oneImport := file.GetImport(astinfo.SimplePackage(Project.Cfg.Generation.ResponseMod, "xx"))
+		oneImport := file.GetImport(astbasic.SimplePackage(Project.Cfg.Generation.ResponseMod, "xx"))
 		data.ImportName = oneImport.Name
 		data.ResponseKey = Project.Cfg.Generation.ResponseKey
-		file.GetImport(astinfo.SimplePackage("context", "context"))
-		file.GetImport(astinfo.SimplePackage("encoding/json", "json"))
-		file.GetImport(astinfo.SimplePackage("net/http", "http"))
+		file.GetImport(astbasic.SimplePackage("context", "context"))
+		file.GetImport(astbasic.SimplePackage("encoding/json", "json"))
+		file.GetImport(astbasic.SimplePackage("net/http", "http"))
 	}
 
 	// 解析并执行模板

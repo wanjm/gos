@@ -74,11 +74,11 @@ func (i *Interface) parseBody() error {
 // RefName returns the type name with package prefix if needed
 func (i *Interface) RefName(genFile *GenedFile) string {
 	pkg := i.GoSource.Pkg
-	if genFile == nil || genFile.pkg == pkg {
+	if genFile == nil || pkg.IsSame(genFile.pkg) {
 		return i.InterfaceName
 	}
 
-	impt := genFile.GetImport(pkg)
+	impt := genFile.GetImport(&pkg.PkgBasic)
 	return impt.Name + "." + i.InterfaceName
 }
 
