@@ -17,7 +17,6 @@ import (
 type Package struct {
 	Simple bool // 简单解析，及仅解析包名
 	astbasic.PkgBasic
-	FilePath string // 包所在目录的绝对路径
 	// 用于变量注入的检查，用于servlet的生成；
 	Structs           map[string]*Struct // 包内结构体集合（key为结构体名称）
 	SortedStructNames []string
@@ -129,11 +128,11 @@ func NewPackage(module string, simple bool, absPath string) *Package {
 	// Extract package name from module path
 	return &Package{
 		PkgBasic: astbasic.PkgBasic{
-			ModPath: module,
+			ModPath:  module,
+			FilePath: absPath,
 		},
-		Simple:   simple,
-		FilePath: absPath,
-		Structs:  make(map[string]*Struct),
+		Simple:  simple,
+		Structs: make(map[string]*Struct),
 		// Interfaces: make(map[string]*Interface),
 		GlobalVar: make(map[string]*VarField),
 		Types:     make(map[string]Typer),
