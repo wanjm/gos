@@ -9,8 +9,3 @@ type CodeGenerator interface {
 
 	Generate(goGenerated *GenedFile) error
 }
-
-type Import struct {
-	Name string
-	Path string
-}

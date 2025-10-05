@@ -102,7 +102,7 @@ func (mp *MainProject) SortDataForGen() {
 	var pkgNames []string
 	for _, pkg := range mp.Packages {
 		if len(pkg.Initiator) > 0 || len(pkg.Structs) > 0 {
-			pkgNames = append(pkgNames, pkg.Module)
+			pkgNames = append(pkgNames, pkg.ModPath)
 			var strcutNames []string
 			for _, class := range pkg.Structs {
 				strcutNames = append(strcutNames, class.StructName)

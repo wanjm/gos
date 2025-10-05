@@ -84,7 +84,7 @@ func (i *Interface) RefName(genFile *GenedFile) string {
 
 // IDName returns the full name of the interface with package path
 func (i *Interface) IDName() string {
-	return i.GoSource.Pkg.Module + "." + i.InterfaceName
+	return i.GoSource.Pkg.ModPath + "." + i.InterfaceName
 }
 
 // GenConstructCode generates code to construct an instance of the interface

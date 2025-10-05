@@ -78,7 +78,7 @@ func (v *Struct) RefName(genFile *GenedFile) string {
 }
 
 func (v *Struct) IDName() string {
-	return v.goSource.Pkg.Module + "." + v.StructName
+	return v.goSource.Pkg.ModPath + "." + v.StructName
 }
 
 func needWire(field *Field) bool {

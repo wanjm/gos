@@ -7,23 +7,25 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/wanjm/gos/astbasic"
 )
 
 // 每个有自动生成代码的package 会有一个GenedFile类；
 type GenedFile struct {
 	pkg *Package
 	// for gen code
-	name                 string             //文件名,没有go后缀
-	genCodeImport        map[string]*Import //产生code时会引入其他模块的内容，此时每个模块需要一个名字；但是名字还不能重复
-	genCodeImportNameMap map[string]int     //记录mode的个数；
-	contents             []*strings.Builder //本文件内容的多个片段，参见save函数
+	name                 string                        //文件名,没有go后缀
+	genCodeImport        map[string]*astbasic.PkgBasic //产生code时会引入其他模块的内容，此时每个模块需要一个名字；但是名字还不能重复
+	genCodeImportNameMap map[string]int                //记录mode的个数；
+	contents             []*strings.Builder            //本文件内容的多个片段，参见save函数
 	// Project              *Project           // 所属项目
 }
 
 func CreateGenedFile(fileName string) *GenedFile {
 	return &GenedFile{
 		name:                 fileName,
-		genCodeImport:        make(map[string]*Import),
+		genCodeImport:        make(map[string]*astbasic.PkgBasic),
 		genCodeImportNameMap: make(map[string]int),
 		// Project:              project,
 	}
@@ -62,9 +64,9 @@ func (file *GenedFile) AddBuilder(builder *strings.Builder) {
 }
 
 // 根据modePath获取Import信息；理论上该函数不需要modeName，但是为了最大限度的代码可读性，还是带上了modeName；
-func (file *GenedFile) GetImport(pkg *Package) (result *Import) {
+func (file *GenedFile) GetImport(pkg *Package) (result *astbasic.PkgBasic) {
 	var modePath, modeName string
-	modePath = pkg.Module
+	modePath = pkg.ModPath
 	modeName = pkg.Name
 	if impt, ok := file.genCodeImport[modePath]; ok {
 		return impt
@@ -79,15 +81,15 @@ func (file *GenedFile) GetImport(pkg *Package) (result *Import) {
 	}
 	if _, ok := file.genCodeImportNameMap[modeName]; ok {
 		file.genCodeImportNameMap[modeName] = file.genCodeImportNameMap[modeName] + 1
-		result = &Import{
-			Name: modeName + strconv.Itoa(file.genCodeImportNameMap[modeName]),
-			Path: modePath,
+		result = &astbasic.PkgBasic{
+			Name:    modeName + strconv.Itoa(file.genCodeImportNameMap[modeName]),
+			ModPath: modePath,
 		}
 	} else {
 		file.genCodeImportNameMap[modeName] = 0
-		result = &Import{
-			Name: modeName,
-			Path: modePath,
+		result = &astbasic.PkgBasic{
+			Name:    modeName,
+			ModPath: modePath,
 		}
 	}
 	file.genCodeImport[modePath] = result
@@ -103,7 +105,7 @@ func (file *GenedFile) genImportCode() string {
 	var i = 0
 	for _, v := range file.genCodeImport {
 		// baseName := filepath.Base(v.Path)
-		imports[i] = v.Name + " \"" + v.Path + "\""
+		imports[i] = v.Name + " \"" + v.ModPath + "\""
 		/*
 			// if baseName != v.Name {
 			sb.WriteString(v.Name)

@@ -32,7 +32,7 @@ func (a *Alias) RefName(genFile *GenedFile) string {
 
 // IDName 实现Typer接口的IDName方法
 func (a *Alias) IDName() string {
-	return a.Gosourse.Pkg.Module + "." + a.Name
+	return a.Gosourse.Pkg.ModPath + "." + a.Name
 }
 
 // GenConstructCode 实现Constructor接口的GenConstructCode方法

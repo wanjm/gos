@@ -13,10 +13,10 @@ import (
 
 // Package 表示一个Go包的基本信息
 type Package struct {
-	Simple bool   // 简单解析，及仅解析包名
-	Name   string // 包名称
-	Path   string // 包所在目录的绝对路径
-	Module string // 所属模块全路径
+	Simple  bool   // 简单解析，及仅解析包名
+	Name    string // 包名称
+	Path    string // 包所在目录的绝对路径
+	ModPath string // 所属模块全路径
 	// 用于变量注入的检查，用于servlet的生成；
 	Structs           map[string]*Struct // 包内结构体集合（key为结构体名称）
 	SortedStructNames []string
@@ -44,8 +44,8 @@ func (pkg *Package) GetName() string {
 	// 本模块需要解析的包都是有name的。但是第三方的包可能就没有，需要从Module Name中解析
 	// 等后续有需求了再做；
 	if name == "" {
-		fmt.Printf("failed to get name of pkg %s, use base name in path which is error\n", pkg.Module)
-		name = filepath.Base(pkg.Module)
+		fmt.Printf("failed to get name of pkg %s, use base name in path which is error\n", pkg.ModPath)
+		name = filepath.Base(pkg.ModPath)
 	}
 	return name
 }
@@ -77,7 +77,7 @@ func (pkg *Package) SimpleParse() error {
 	// fmt.Printf("Parsing package: %s\n", path)
 	packageMap, err := parser.ParseDir(pkg.fset, path, nil, parser.AllErrors|parser.ParseComments)
 	if err != nil {
-		fmt.Printf("parse package %s failed %s\n", pkg.Module, err.Error())
+		fmt.Printf("parse package %s failed %s\n", pkg.ModPath, err.Error())
 		return nil
 	}
 	// 一个目录下可能有多
@@ -127,7 +127,7 @@ func (pkg *Package) Parse() error {
 func NewPackage(module string, simple bool, absPath string) *Package {
 	// Extract package name from module path
 	return &Package{
-		Module:  module,
+		ModPath: module,
 		Simple:  simple,
 		Path:    absPath,
 		Structs: make(map[string]*Struct),
@@ -152,7 +152,7 @@ func (pkg *Package) GetTyper(name string) Typer {
 	if result == nil {
 		//找不到时使用MissingType，减少很多后续报错；
 		result = &MissingType{
-			Name: pkg.Module + "/" + name,
+			Name: pkg.ModPath + "/" + name,
 		}
 	}
 	return result
@@ -160,7 +160,7 @@ func (pkg *Package) GetTyper(name string) Typer {
 
 func SimplePackage(module, name string) *Package {
 	return &Package{
-		Module: module,
-		Name:   name,
+		ModPath: module,
+		Name:    name,
 	}
 }
