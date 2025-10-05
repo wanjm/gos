@@ -3,14 +3,12 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"os"
-	"path"
-	"path/filepath"
 	"strings"
 	"text/template"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/wanjm/gos/astbasic"
+	"github.com/wanjm/gos/astinfo"
 	"github.com/wanjm/gos/basic"
 )
 
@@ -31,21 +29,19 @@ func GenTableFromMySQL(config *basic.DBConfig, moduleMap map[string]struct{}) er
 
 // GenTableFromMySQL connects to MySQL, gets the DDL of a table, and generates a Go struct definition.
 func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
+	pkg := astinfo.GlobalProject.CurrentProject.NewPkgBasic("", tableCfg.ModulePath)
 	for _, tableName := range tableCfg.TableNames {
 		// 2. Get DDL
 		ddl, err := getTableDDL(db, tableName)
 		if err != nil {
 			return fmt.Errorf("获取表 DDL 失败: %w", err)
 		}
-
 		// 3. Parse DDL and generate struct
-		structCode, err := GenerateStructFromDDL(tableName, ddl)
+
+		err = GenerateStructFromDDL(tableName, ddl, pkg)
 		if err != nil {
 			return fmt.Errorf("生成结构体代码失败: %w", err)
 		}
-		dirPath := filepath.Join(tableCfg.OutPath, tableName)
-		os.MkdirAll(dirPath, 0755)
-		os.WriteFile(path.Join(dirPath, "table.go"), []byte(structCode), 0644)
 	}
 	return nil
 }
@@ -65,7 +61,9 @@ func getTableDDL(db *sql.DB, tableName string) (string, error) {
 }
 
 // GenerateStructFromDDL parses the DDL and generates a Go struct definition
-func GenerateStructFromDDL(tableName, ddl string) (string, error) {
+func GenerateStructFromDDL(tableName, ddl string, pkg *astbasic.PkgBasic) error {
+	tablepkg := pkg.NewPkgBasic(tableName, "entity/mysql/"+tableName)
+	tableFile := tablepkg.NewFile("table")
 	// Simple parser: extract column lines from DDL
 	lines := strings.Split(ddl, "\n")
 	type fieldInfo struct {
@@ -93,7 +91,7 @@ func GenerateStructFromDDL(tableName, ddl string) (string, error) {
 					comment = commentPart[:endQuoteIndex]
 				}
 			}
-			goType := mysqlTypeToGoType(colType)
+			goType := mysqlTypeToGoType(colType, tableFile)
 			fieldName := astbasic.ToPascalCase(colName, true)
 			jsonTag := astbasic.FirstLower(astbasic.ToPascalCase(colName, false))
 			gormTag := colName
@@ -119,7 +117,6 @@ func GenerateStructFromDDL(tableName, ddl string) (string, error) {
 		structComment = fmt.Sprintf("// %s %s\n", structName, tableComment)
 	}
 	const structTpl = `
-package {{.TableName}}
 	{{.StructComment}}
 	// @gos table={{.TableName}}
 type {{.StructName}} struct {
@@ -131,7 +128,7 @@ type {{.StructName}} struct {
 
 	tpl, err := template.New("struct").Parse(structTpl)
 	if err != nil {
-		return "", err
+		return err
 	}
 	var sb strings.Builder
 	err = tpl.Execute(&sb, map[string]interface{}{
@@ -141,13 +138,15 @@ type {{.StructName}} struct {
 		"TableName":     tableName,
 	})
 	if err != nil {
-		return "", err
+		return err
 	}
-	return sb.String(), nil
+	tableFile.AddBuilder(&sb)
+	tableFile.Save()
+	return nil
 }
 
 // mysqlTypeToGoType maps MySQL types to Go types (basic mapping)
-func mysqlTypeToGoType(mysqlType string) string {
+func mysqlTypeToGoType(mysqlType string, file *astbasic.GenedFile) string {
 	t := strings.ToLower(mysqlType)
 	switch {
 	case strings.HasPrefix(t, "int"):
@@ -165,6 +164,10 @@ func mysqlTypeToGoType(mysqlType string) string {
 	case strings.HasPrefix(t, "varchar"), strings.HasPrefix(t, "char"), strings.HasPrefix(t, "text"):
 		return "string"
 	case strings.HasPrefix(t, "datetime"), strings.HasPrefix(t, "timestamp"), strings.HasPrefix(t, "date"):
+		file.GetImport(&astbasic.PkgBasic{
+			ModPath: "time",
+			Name:    "time",
+		})
 		return "time.Time"
 	case strings.HasPrefix(t, "float"):
 		return "float32"

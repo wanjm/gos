@@ -89,7 +89,7 @@ func (error *Error) GetErrorCode() int {
 }
 
 func (mp *MainProject) genProjectCode() {
-	genPkg := mp.genPkg.NewPkgBasic("gen", "gen")
+	genPkg := mp.CurrentProject.NewPkgBasic("gen", "gen")
 	mp.genPkg = genPkg
 	file := genPkg.NewFile("goservlet_project")
 	file.GetImport(astbasic.SimplePackage("github.com/gin-gonic/gin", "gin"))
