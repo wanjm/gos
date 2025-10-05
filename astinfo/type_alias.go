@@ -23,7 +23,7 @@ func NewAlias(astRoot *ast.TypeSpec, g *Gosourse, equal bool) *Alias {
 
 // RefName 实现Typer接口的RefName方法
 func (a *Alias) RefName(genFile *GenedFile) string {
-	if genFile == nil || a.Gosourse.Pkg.IsSame(genFile.pkg) {
+	if genFile == nil || a.Gosourse.Pkg.IsSame(genFile.Pkg) {
 		return a.Name
 	}
 	impt := genFile.GetImport(&a.Gosourse.Pkg.PkgBasic)

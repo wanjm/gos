@@ -70,7 +70,7 @@ type Struct struct {
 
 func (v *Struct) RefName(genFile *GenedFile) string {
 	pkg := v.goSource.Pkg
-	if genFile == nil || pkg.IsSame(genFile.pkg) {
+	if genFile == nil || pkg.IsSame(genFile.Pkg) {
 		return v.StructName
 	}
 	impt := genFile.GetImport(&pkg.PkgBasic)
