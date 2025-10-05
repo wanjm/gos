@@ -1,9 +1,33 @@
 package astbasic
 
+import (
+	"path"
+	"path/filepath"
+)
+
 type PkgBasic struct {
 	Name     string
 	ModPath  string
 	FilePath string // 包所在目录的绝对路径
+}
+
+func (p *PkgBasic) NewPkgBasic(name, pathValue string) *PkgBasic {
+	var modPath string
+	if !filepath.IsAbs(pathValue) {
+		pathValue = filepath.Join(p.FilePath, pathValue)
+		modPath = path.Join(p.ModPath, pathValue)
+	}
+	return &PkgBasic{
+		Name:     name,
+		FilePath: pathValue,
+		ModPath:  modPath,
+	}
+}
+
+func (p *PkgBasic) NewFile(fileName string) *GenedFile {
+	file := CreateGenedFile(fileName)
+	file.Pkg = p
+	return file
 }
 
 func (p *PkgBasic) IsSame(antother *PkgBasic) bool {

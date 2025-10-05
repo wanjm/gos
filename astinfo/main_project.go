@@ -16,6 +16,7 @@ import (
 )
 
 type MainProject struct {
+	genPkg             *astbasic.PkgBasic // 记录gen包的信息
 	CurrentProject     Project
 	Packages           map[string]*Package // 项目包含的包集合（key为包全路径）
 	SortedPacakgeNames []string
@@ -40,7 +41,7 @@ func (mp *MainProject) genMain() {
 	var content strings.Builder
 	content.WriteString("package main\n")
 	//	import "gitlab.plaso.cn/message-center/gen"
-	content.WriteString("import (\"flag\"\n\"" + mp.CurrentProject.Module + "/gen\")\n")
+	content.WriteString("import (\"flag\"\n\"" + mp.CurrentProject.ModPath + "/gen\")\n")
 	content.WriteString(`
 func main() {
 	parseArgument();
@@ -88,6 +89,7 @@ func (error *Error) GetErrorCode() int {
 }
 
 func (mp *MainProject) genProjectCode() {
+	mp.genPkg = &astbasic.PkgBasic{}
 	err := os.Mkdir("gen", 0750)
 	if err != nil && !os.IsExist(err) {
 		log.Fatal(err)
@@ -444,8 +446,8 @@ func (mp *MainProject) FindPackage(module string) *Package {
 	if pkg := mp.GetPackage(module); pkg != nil {
 		return pkg
 	}
-	if module == mp.CurrentProject.Module+"/gen" {
-		newPkg := NewPackage(module, true, filepath.Join(mp.CurrentProject.Path, "gen"))
+	if module == mp.CurrentProject.ModPath+"/gen" {
+		newPkg := NewPackage(module, true, filepath.Join(mp.CurrentProject.FilePath, "gen"))
 		newPkg.finshedParse = true
 		newPkg.Name = "gen"
 		return newPkg
@@ -453,12 +455,12 @@ func (mp *MainProject) FindPackage(module string) *Package {
 
 	for _, p := range mp.Projects {
 		// 根据module寻找package
-		if p.Module == "" {
-			panic(fmt.Sprintf("project module is empty %s\n", p.Path))
+		if p.ModPath == "" {
+			panic(fmt.Sprintf("project module is empty %s\n", p.FilePath))
 		}
-		if strings.HasPrefix(module, p.Module) {
+		if strings.HasPrefix(module, p.ModPath) {
 			//filepath.Join会换/\;
-			newPkg := NewPackage(module, p.Simple, filepath.Join(p.Path, module[len(p.Module):]))
+			newPkg := NewPackage(module, p.Simple, filepath.Join(p.FilePath, module[len(p.ModPath):]))
 			mp.Packages[module] = newPkg
 			newPkg.SimpleParse()
 			return newPkg
@@ -511,17 +513,17 @@ func (mp *MainProject) Parse() error {
 	if mp.Cfg.InitMain != "" { // 检查是否非空字符串
 		mp.genGoMod()
 		// 设置项目模块名称
-		mp.CurrentProject.Module = mp.Cfg.InitMain
+		mp.CurrentProject.ModPath = mp.Cfg.InitMain
 	}
 	p := &mp.CurrentProject
 	cfg := mp.Cfg
 	traceKeyMod := cfg.Generation.TraceKeyMod
 	if !strings.Contains(traceKeyMod, ".") {
-		cfg.Generation.TraceKeyMod = p.Module + "/" + traceKeyMod
+		cfg.Generation.TraceKeyMod = p.ModPath + "/" + traceKeyMod
 	}
 	responseMod := cfg.Generation.ResponseMod
 	if !strings.Contains(responseMod, ".") {
-		cfg.Generation.ResponseMod = p.Module + "/" + responseMod
+		cfg.Generation.ResponseMod = p.ModPath + "/" + responseMod
 	}
 	mp.Projects = append(mp.Projects, p)
 	goPath := os.Getenv("GOPATH")
@@ -531,17 +533,17 @@ func (mp *MainProject) Parse() error {
 		// }
 
 		p := Project{
-			Path:   path.Join(goPath, "pkg/mod", escapeModulePath(mod.Mod.Path)+"@"+mod.Mod.Version),
-			Simple: true,
+			FilePath: path.Join(goPath, "pkg/mod", escapeModulePath(mod.Mod.Path)+"@"+mod.Mod.Version),
+			Simple:   true,
 		}
 		p.ParseModule()
-		if p.Module == "" {
-			p.Module = mod.Mod.Path
+		if p.ModPath == "" {
+			p.ModPath = mod.Mod.Path
 		}
 		mp.Projects = append(mp.Projects, &p)
 	}
 	sort.Slice(mp.Projects, func(i, j int) bool {
-		return mp.Projects[i].Module > mp.Projects[j].Module
+		return mp.Projects[i].ModPath > mp.Projects[j].ModPath
 	})
 	return p.ParseCode()
 }
@@ -556,7 +558,7 @@ func CreateProject(path string, cfg *basic.Config) *MainProject {
 		// servers:      make(map[string]*server),
 		// creators: make(map[*Struct]*Initiator),
 	}
-	GlobalProject.CurrentProject.Path = path
+	GlobalProject.CurrentProject.FilePath = path
 	// 由于Package中有指向Project的指针，所以RawPackage指向了此处的project，如果返回对象，则出现了两个Project，一个是返回的Project，一个是RawPackage中的Project；
 	// 返回*Project才能保证这是一个Project对象；
 	// project.initRawPackage()

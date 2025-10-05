@@ -62,7 +62,7 @@ func genDbData(dbnames string) {
 	for _, db := range basic.Cfg.DBConfig {
 		dbMap[db.DBName] = db
 		for _, module := range db.DbGenCfgs {
-			module.ModulePath = astinfo.GlobalProject.CurrentProject.Module + "/" + module.OutPath
+			module.ModulePath = astinfo.GlobalProject.CurrentProject.ModPath + "/" + module.OutPath
 		}
 		dbs = append(dbs, db.DBName)
 	}
@@ -86,7 +86,7 @@ func genDbData(dbnames string) {
 			} else {
 				modules := strings.SplitSeq(module, ",")
 				for module := range modules {
-					module = astinfo.GlobalProject.CurrentProject.Module + "/" + module
+					module = astinfo.GlobalProject.CurrentProject.ModPath + "/" + module
 					moduleMap[module] = struct{}{}
 				}
 			}
