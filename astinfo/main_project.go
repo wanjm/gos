@@ -533,8 +533,10 @@ func (mp *MainProject) Parse() error {
 		// }
 
 		p := Project{
-			FilePath: path.Join(goPath, "pkg/mod", escapeModulePath(mod.Mod.Path)+"@"+mod.Mod.Version),
-			Simple:   true,
+			PkgBasic: astbasic.PkgBasic{
+				FilePath: path.Join(goPath, "pkg/mod", escapeModulePath(mod.Mod.Path)+"@"+mod.Mod.Version),
+			},
+			Simple: true,
 		}
 		p.ParseModule()
 		if p.ModPath == "" {

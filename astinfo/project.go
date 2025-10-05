@@ -9,16 +9,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/wanjm/gos/astbasic"
 	"golang.org/x/mod/modfile"
 )
 
 // Project 表示一个Go项目的基本信息
 type Project struct {
-	Simple   bool
-	Name     string // 项目名称
-	ModPath  string // 项目模块名称（从go.mod解析）
-	FilePath string // 项目根目录的绝对路径
-	Require  []*modfile.Require
+	Simple bool
+	astbasic.PkgBasic
+	// Name     string // 项目名称
+	// ModPath  string // 项目模块名称（从go.mod解析）
+	// FilePath string // 项目根目录的绝对路径
+	Require []*modfile.Require
 }
 
 func (p *Project) ParseModule() error {
