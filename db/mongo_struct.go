@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -13,6 +11,7 @@ import (
 	"time"
 
 	"github.com/wanjm/gos/astbasic"
+	"github.com/wanjm/gos/astinfo"
 	"github.com/wanjm/gos/basic"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -35,7 +34,7 @@ func GenTableFromMongo(config *basic.DBConfig) error {
 	}
 	defer client.Disconnect(context.Background())
 	log.Println("成功连接到 MongoDB!")
-
+	database := client.Database(config.DBName)
 	// 2. 遍历所有表的生成配置
 	for _, tableCfg := range config.DbGenCfgs {
 		if len(tableCfg.TableNames) != len(tableCfg.RecordIds) {
@@ -43,6 +42,7 @@ func GenTableFromMongo(config *basic.DBConfig) error {
 			continue
 		}
 
+		pkg := astinfo.GlobalProject.CurrentProject.NewPkgBasic("", tableCfg.ModulePath)
 		// 3. 遍历每个表名并调用生成函数
 		for i, recordID := range tableCfg.RecordIds {
 			if len(recordID) == 0 {
@@ -50,8 +50,13 @@ func GenTableFromMongo(config *basic.DBConfig) error {
 			}
 			tableName := tableCfg.TableNames[i]
 			log.Printf("正在为集合 '%s' (ID: %s) 生成结构体...", tableName, recordID)
-
-			err := genTableForMongo(client, config.DBName, tableName, recordID, tableCfg.OutPath)
+			// 1. 获取文档
+			collection := database.Collection(tableName)
+			doc, err := getDocumentByID(collection, recordID)
+			if err != nil {
+				return fmt.Errorf("获取文档失败: %w", err)
+			}
+			err = genTableForMongo(tableName, doc, pkg)
 			if err != nil {
 				log.Printf("为集合 '%s' 生成结构体失败: %v", tableName, err)
 				// 选择继续处理下一个表而不是直接返回错误
@@ -60,50 +65,6 @@ func GenTableFromMongo(config *basic.DBConfig) error {
 			log.Printf("成功为集合 '%s' 生成文件。", tableName)
 		}
 	}
-	return nil
-}
-
-// genTableForMongo 负责为单个 MongoDB 集合生成结构体文件
-func genTableForMongo(client *mongo.Client, dbName, collectionName, recordID, outPath string) error {
-	// 1. 获取文档
-	collection := client.Database(dbName).Collection(collectionName)
-	doc, err := getDocumentByID(collection, recordID)
-	if err != nil {
-		return fmt.Errorf("获取文档失败: %w", err)
-	}
-
-	// 2. 准备文件名和路径
-	structName := astbasic.ToPascalCase(collectionName, true)
-	snakeName := toSnakeCase(collectionName)
-	dirPath := filepath.Join(outPath, snakeName)
-	filePath := filepath.Join(dirPath, "table.gen.go") // 文件名固定为 table.go
-
-	// 3. 生成结构体代码字符串
-	structCode, err := generateStruct(structName, doc)
-	if err != nil {
-		return fmt.Errorf("生成结构体代码时出错: %w", err)
-	}
-
-	// 4. 组装完整的 Go 文件内容
-	var importBuilder strings.Builder
-	importBuilder.WriteString("import (\n")
-	if strings.Contains(structCode, "time.Time") {
-		importBuilder.WriteString("\t\"time\"\n")
-	}
-	importBuilder.WriteString("\t\"go.mongodb.org/mongo-driver/bson/primitive\"\n")
-	importBuilder.WriteString(")\n")
-	fileContent := fmt.Sprintf("package %s\n\n%s\n%s", snakeName, importBuilder.String(), structCode)
-
-	// 5. 创建目录并写入文件
-	if err := os.MkdirAll(dirPath, 0755); err != nil {
-		return fmt.Errorf("创建目录 '%s' 失败: %w", dirPath, err)
-	}
-
-	if err := os.WriteFile(filePath, []byte(fileContent), 0644); err != nil {
-		return fmt.Errorf("写入文件 '%s' 失败: %w", filePath, err)
-	}
-
-	fmt.Printf("✅ 文件已成功生成: %s\n", filePath)
 	return nil
 }
 
@@ -155,9 +116,14 @@ const structTpl = `type {{.Name}} struct {
 {{- end}}
 }`
 
-func generateStruct(structName string, doc bson.M) (string, error) {
-	nestedStructs := make(map[string]string)
+func genTableForMongo(tableName string, doc bson.M, pkg *astbasic.PkgBasic) error {
+	structName := astbasic.ToPascalCase(tableName, true)
+	tablepkg := pkg.NewPkgBasic(tableName, "entity/mongo/"+tableName)
+	tableFile := tablepkg.NewFile("table")
+	return generateStruct(structName, doc, tableFile)
+}
 
+func generateStruct(structName string, doc bson.M, tableFile *astbasic.GenedFile) error {
 	// 1. Prepare data for the main struct template
 	fields := make([]FieldInfo, 0, len(doc))
 	keys := make([]string, 0, len(doc))
@@ -169,7 +135,7 @@ func generateStruct(structName string, doc bson.M) (string, error) {
 	for _, key := range keys {
 		value := doc[key]
 		// getGoTypeFromValue will populate nestedStructs as a side effect through recursive calls
-		goType := getGoTypeFromValue(key, value, nestedStructs)
+		goType := getGoTypeFromValue(key, value, tableFile)
 		jsonTag := key
 		if key == "_id" {
 			jsonTag = "id,omitempty"
@@ -185,7 +151,7 @@ func generateStruct(structName string, doc bson.M) (string, error) {
 	// 2. Execute the template for the main struct
 	t, err := template.New("struct").Parse(structTpl)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse struct template: %w", err)
+		return fmt.Errorf("failed to parse struct template: %w", err)
 	}
 
 	var mainStructBuilder strings.Builder
@@ -194,29 +160,14 @@ func generateStruct(structName string, doc bson.M) (string, error) {
 		Fields: fields,
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to execute struct template: %w", err)
+		return fmt.Errorf("failed to execute struct template: %w", err)
 	}
-
-	// 3. Append nested structs
-	var finalCodeBuilder strings.Builder
-	finalCodeBuilder.WriteString(mainStructBuilder.String())
-
-	if len(nestedStructs) > 0 {
-		nestedKeys := make([]string, 0, len(nestedStructs))
-		for k := range nestedStructs {
-			nestedKeys = append(nestedKeys, k)
-		}
-		sort.Strings(nestedKeys)
-		for _, key := range nestedKeys {
-			finalCodeBuilder.WriteString("\n\n")
-			finalCodeBuilder.WriteString(nestedStructs[key])
-		}
-	}
-
-	return finalCodeBuilder.String(), nil
+	tableFile.AddBuilder(&mainStructBuilder)
+	tableFile.Save()
+	return nil
 }
 
-func getGoTypeFromValue(key string, value interface{}, nestedStructs map[string]string) string {
+func getGoTypeFromValue(key string, value interface{}, tableFile *astbasic.GenedFile) string {
 	if value == nil {
 		return "interface{}"
 	}
@@ -237,14 +188,13 @@ func getGoTypeFromValue(key string, value interface{}, nestedStructs map[string]
 		return "float64"
 	case bson.M:
 		structName := astbasic.ToPascalCase(key, true)
-		nestedStructCode, _ := generateStruct(structName, v)
-		nestedStructs[structName] = nestedStructCode
+		generateStruct(structName, v, tableFile)
 		return structName
 	case primitive.A:
 		if len(v) == 0 {
 			return "[]interface{}"
 		}
-		elemType := getGoTypeFromValue(key, v[0], nestedStructs)
+		elemType := getGoTypeFromValue(key, v[0], tableFile)
 		return "[]" + elemType
 	default:
 		return "interface{}"

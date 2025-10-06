@@ -41,6 +41,7 @@ func (comment *structComment) dealValuePair(key, value string) {
 	case Group:
 		comment.GroupName = value
 	case Type:
+		comment.AutoGen = true
 		comment.serverType = value
 		if len(comment.GroupName) == 0 {
 			comment.GroupName = comment.serverType
