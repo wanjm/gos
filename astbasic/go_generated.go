@@ -43,7 +43,7 @@ func (file *GenedFile) Save() {
 		log.Fatal(err)
 	}
 	content := strings.Builder{}
-	content.WriteString("package gen\n")
+	content.WriteString("package " + file.Pkg.Name + "\n")
 	content.WriteString(file.genImportCode())
 	for _, content1 := range file.contents {
 		content.WriteString(content1.String())
