@@ -34,16 +34,15 @@ func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
 		// 2. Get DDL
 		ddl, err := getTableDDL(db, tableName)
 		if err != nil {
-			return fmt.Errorf("获取表 DDL 失败: %w", err)
-		}
-		if ddl == "" {
-			return fmt.Errorf("表 %s 不存在或无法获取 DDL", tableName)
+			fmt.Printf("获取表 DDL 失败: %v\n", err)
+			return err
 		}
 		// 3. Parse DDL and generate struct
 
 		err = GenerateStructFromDDL(tableName, ddl, pkg)
 		if err != nil {
-			return fmt.Errorf("生成结构体代码失败: %w", err)
+			fmt.Printf("生成结构体代码失败: %v\n", err)
+			return err
 		}
 	}
 	return nil
