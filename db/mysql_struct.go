@@ -36,6 +36,9 @@ func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
 		if err != nil {
 			return fmt.Errorf("获取表 DDL 失败: %w", err)
 		}
+		if ddl == "" {
+			return fmt.Errorf("表 %s 不存在或无法获取 DDL", tableName)
+		}
 		// 3. Parse DDL and generate struct
 
 		err = GenerateStructFromDDL(tableName, ddl, pkg)
