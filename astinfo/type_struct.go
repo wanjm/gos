@@ -21,9 +21,9 @@ func (comment *structComment) dealValuePair(key, value string) {
 	if value != "" {
 		value = strings.Trim(value, "\"")
 	}
-	comment.AutoGen = true
 	switch key {
 	case Prpc:
+		comment.AutoGen = true
 		comment.serverType = Prpc
 		if len(value) == 0 {
 			comment.GroupName = Prpc
@@ -31,6 +31,7 @@ func (comment *structComment) dealValuePair(key, value string) {
 			comment.GroupName = value
 		}
 	case Servlet:
+		comment.AutoGen = true
 		comment.serverType = Servlet
 		if len(value) == 0 {
 			comment.GroupName = Servlet
