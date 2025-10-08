@@ -181,6 +181,9 @@ func (v *Struct) GenerateDependcyCode(goGenerated *GenedFile) string {
 	a := v.GeneredFields()[0]
 	return a.Type.GenConstructCode(goGenerated, true)
 }
+func (v *Struct) GetInfo() string {
+	return "struct " + v.StructName + " in " + v.goSource.Path
+}
 
 // 不一定每次newStruct时都会有goSrouce，所以此时只能传Pkg；
 // func NewStruct(name string, pkg *Package) *Struct {

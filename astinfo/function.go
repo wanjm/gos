@@ -144,6 +144,10 @@ func (f *Function) GenerateDependcyCode(goGenerated *GenedFile) string {
 	return f.GenerateCallCode(goGenerated)
 }
 
+func (f *Function) GetInfo() string {
+	return "fucntion " + f.Name + " in " + f.GoSource.Path
+}
+
 // generateCallCode 生成调用代码
 // 生成pkg.functionName(var1,var2);
 // 同步生成import语句；、
