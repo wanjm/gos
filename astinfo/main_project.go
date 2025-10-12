@@ -115,6 +115,8 @@ func (mp *MainProject) SortDataForGen() {
 }
 func (mp *MainProject) genPrepare(file *GenedFile) {
 	mp.SortDataForGen()
+	dbManager := DbManager{}
+	dbManager.Gen()
 	mp.InitInitorator()
 	mp.InitManager.Generate(file)
 	mp.InitManager.GenterateTestCode(file)
@@ -261,7 +263,7 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 	var name = strings.Join([]string{
 		"init",
 		class.Comment.GroupName,
-		class.goSource.Pkg.Name,
+		class.GoSource.Pkg.Name,
 		class.StructName,
 		"router",
 	}, "_")

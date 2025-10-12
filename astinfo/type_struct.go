@@ -15,6 +15,8 @@ type structComment struct {
 	serverType string // NONE, RpcStruct, ServletStruct·
 	Url        string // 服务的url, 对所有的方法都有效
 	AutoGen    bool
+	TableName  string
+	DbVarible  string
 }
 
 func (comment *structComment) dealValuePair(key, value string) {
@@ -50,13 +52,17 @@ func (comment *structComment) dealValuePair(key, value string) {
 		comment.Url = value
 	case AutoGen:
 		comment.AutoGen = true
+	case tblName:
+		comment.TableName = value
+	case dbVarible:
+		comment.DbVarible = value
 	}
 }
 
 // Struct 表示一个Go结构体的基本信息
 type Struct struct {
 	StructName string    // 结构体名称
-	goSource   *Gosourse //该变量在解析结构体时赋值，也就是说该变量不为空，则该结构体已经被解析；
+	GoSource   *Gosourse //该变量在解析结构体时赋值，也就是说该变量不为空，则该结构体已经被解析；
 	// Pkg        *Package  //该变量肯定不为空，但是goSource不一定；
 	astRoot *ast.TypeSpec
 	// genDecl       *ast.GenDecl
@@ -71,7 +77,7 @@ type Struct struct {
 }
 
 func (v *Struct) RefName(genFile *GenedFile) string {
-	pkg := v.goSource.Pkg
+	pkg := v.GoSource.Pkg
 	if genFile == nil || pkg.IsSame(genFile.Pkg) {
 		return v.StructName
 	}
@@ -80,7 +86,7 @@ func (v *Struct) RefName(genFile *GenedFile) string {
 }
 
 func (v *Struct) IDName() string {
-	return v.goSource.Pkg.ModPath + "." + v.StructName
+	return v.GoSource.Pkg.ModPath + "." + v.StructName
 }
 
 func needWire(field *Field) bool {
@@ -105,7 +111,7 @@ func needWire(field *Field) bool {
 // 5. 初步考虑可以将wire变量定义为必须注入内容结构体变量；
 // wire为true表示必须绑定结构体等；
 func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
-	result := genFile.GetImport(&v.goSource.Pkg.PkgBasic)
+	result := genFile.GetImport(&v.GoSource.Pkg.PkgBasic)
 	var sb strings.Builder
 	if result.Name != "" {
 		sb.WriteString(result.Name)
@@ -182,7 +188,7 @@ func (v *Struct) GenerateDependcyCode(goGenerated *GenedFile) string {
 	return a.Type.GenConstructCode(goGenerated, true)
 }
 func (v *Struct) GetInfo() string {
-	return "struct " + v.StructName + " in " + v.goSource.Path
+	return "struct " + v.StructName + " in " + v.GoSource.Path
 }
 
 // 不一定每次newStruct时都会有goSrouce，所以此时只能传Pkg；
@@ -200,7 +206,7 @@ func NewStruct(goSource *Gosourse, astRoot *ast.TypeSpec) *Struct {
 	name := astRoot.Name.Name
 	iface := &Struct{
 		StructName: name,
-		goSource:   goSource,
+		GoSource:   goSource,
 		astRoot:    astRoot,
 	}
 	pkg := goSource.Pkg
@@ -221,7 +227,7 @@ func (v *Struct) Parse() error {
 		return err
 	}
 	if v.astRoot.TypeParams != nil {
-		v.TypeParameter = parseFields(v.astRoot.TypeParams.List, v.goSource, nil)
+		v.TypeParameter = parseFields(v.astRoot.TypeParams.List, v.GoSource, nil)
 	}
 	return v.ParseField()
 }
@@ -235,7 +241,7 @@ func (class *Struct) ParseComment() error {
 // parseField
 func (v *Struct) ParseField() error {
 	// v.goSource在解析结构体时，被赋值，解析field也是在解析结构体时，所以v.goSource不为空
-	v.Fields = parseFields(v.astRoot.Type.(*ast.StructType).Fields.List, v.goSource, FieldListToMap(v.TypeParameter))
+	v.Fields = parseFields(v.astRoot.Type.(*ast.StructType).Fields.List, v.GoSource, FieldListToMap(v.TypeParameter))
 	// v.FieldMap = make(map[string]*Field)
 	// for _, field := range v.Fields {
 	// 	v.FieldMap[field.Name] = field

@@ -65,7 +65,7 @@ func getTableDDL(db *sql.DB, tableName string) (string, error) {
 // GenerateStructFromDDL parses the DDL and generates a Go struct definition
 func GenerateStructFromDDL(tableName, ddl string, pkg *astbasic.PkgBasic) error {
 	tablepkg := pkg.NewPkgBasic(tableName, "entity/mysql/"+tableName)
-	tableFile := tablepkg.NewFile("table")
+	tableFile := tablepkg.NewFile("table.gen")
 	// Simple parser: extract column lines from DDL
 	lines := strings.Split(ddl, "\n")
 	type fieldInfo struct {
@@ -120,7 +120,7 @@ func GenerateStructFromDDL(tableName, ddl string, pkg *astbasic.PkgBasic) error 
 	}
 	const structTpl = `
 	{{.StructComment}}
-	// @gos table={{.TableName}}
+	// @gos tblName={{.TableName}} dbVariable=plasoDb
 type {{.StructName}} struct {
 {{range .Fields}}
 	{{.Name}} {{.Type}} "json:\"{{.JsonTag}}\" gorm:\"{{.GormTag}}\"" // {{.Comment}}

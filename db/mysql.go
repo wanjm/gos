@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"html/template"
 	"os"
 	"path"
 	"strings"
@@ -41,7 +40,8 @@ func GenTables(config1 *basic.TableGenCfg, db *gorm.DB, dbVariable string) {
 	sb.WriteString(PrepareDal(config1.ModulePath))
 	for _, tableName := range config1.TableNames {
 		a := g.GenerateModel(tableName)
-		sb.WriteString(genMysqlDal(a.ModelStructName, tableName, dbVariable))
+		_ = a
+		// sb.WriteString(genMysqlDal(a.ModelStructName, tableName, dbVariable))
 	}
 	os.WriteFile(path.Join(config1.OutPath, "dal/mysql.gen.go"), []byte(sb.String()), 0644)
 	// 执行生成
@@ -58,141 +58,4 @@ import (
 	"gorm.io/gorm"
 )
 `, businessPath, basic.Cfg.Generation.CommonMod)
-}
-func genMysqlDal(modelName, tableName, dbVariableName string) string {
-	type info struct {
-		TableName    string
-		RawTableName string
-		DBVariable   string
-	}
-	codeTemplate := `
-// {{.RawTableName}}
-//
-// @gos autogen
-type {{.TableName}}Dal struct {
-	{{.DBVariable}} *gorm.DB
-}
-
-func (a *{{.TableName}}Dal) getDB(ctx context.Context) *gorm.DB {
-	return a.{{.DBVariable}}.WithContext(ctx).Table("{{.RawTableName}}")
-}
-func (c *{{.TableName}}Dal) getDBOperation(context context.Context) common.DbOperation {
-	return common.DbOperation{
-		Db:        c.{{.DBVariable}},
-		TableName: "{{.RawTableName}}",
-		Context:   context,
-	}
-}
-
-// Create 创建
-func (a *{{.TableName}}Dal) Create(ctx context.Context, item *entity.{{.TableName}}) error {
-	dbOperation := a.getDBOperation(ctx)
-	err := dbOperation.Create(item)
-	if err != nil {
-		common.Error(ctx, "insert data to {{.RawTableName}} failed", common.Err(err))
-	}
-	return err
-}
-
-func (a *{{.TableName}}Dal) GetAll(ctx context.Context, options []common.Optioner) (item []*entity.{{.TableName}}, err error) {
-	dbOperation := a.getDBOperation(ctx)
-	err = dbOperation.Query(
-		&common.SqlQueryOptions{
-			QueryFields: options,
-		},
-		&item,
-	)
-	if err != nil {
-		//添加log，打印错误日志；
-		common.Error(ctx, "GetAll DB record from {{.RawTableName}} failed", common.Err(err))
-	}
-	return
-}
-
-func (a *{{.TableName}}Dal) GetOne(ctx context.Context, options []common.Optioner) (item *entity.{{.TableName}}, err error) {
-	res, err := a.GetAll(ctx, options)
-	if err != nil {
-		return
-	}
-	if len(res) > 0 {
-		item = res[0]
-	}
-	return
-}
-
-func (a *{{.TableName}}Dal) GetOneById(ctx context.Context, id int32) (item *entity.{{.TableName}}, err error) {
-	return a.GetOne(ctx, []common.Optioner{common.Eq("id", id)})
-}
-
-func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, pageNo, pageSize int32) (list []*entity.{{.TableName}}, total int64, err error) {
-	dbop := a.getDBOperation(ctx)
-	err = dbop.QueryCV(
-		&common.SqlQueryOptions{
-			QueryFields: option,
-			Offset:      int(pageNo * pageSize),
-			Limit:       int(pageSize),
-			OrderFields: []common.OrderByParam{
-				{
-					Field:     "create_time",
-					Direction: common.DESCStr,
-				},
-			},
-		},
-		&total,
-		&list,
-	)
-	if err != nil {
-		//添加log，打印错误日志；
-		common.Error(ctx, "List record of {{.RawTableName}} failed", common.Err(err))
-	}
-	return
-}
-
-// Update
-func (a *{{.TableName}}Dal) Update(ctx context.Context, options []common.Optioner, updates any) (err error) {
-	op := a.getDBOperation(ctx)
-	err = op.Update(&common.SqlUpdateOptions{
-		QueryFields: options,
-		Updates:     updates,
-	})
-	if err != nil {
-		//添加log，打印错误日志；
-		common.Error(ctx, "Update record of {{.RawTableName}} failed", common.Err(err))
-	}
-	return
-}
-
-func (a *{{.TableName}}Dal) UpdateById(ctx context.Context, id int32, updates any) error {
-	return a.Update(ctx, []common.Optioner{common.Eq("id", id)}, updates)
-}
-
-func (a *{{.TableName}}Dal) Delete(ctx context.Context, options []common.Optioner) error {
-	op := a.getDBOperation(ctx)
-	err := op.Delete(options)
-	if err != nil {
-		common.Error(ctx, "Delete record of {{.RawTableName}} failed", common.Err(err))
-	}
-	return err
-}
-
-func (a *{{.TableName}}Dal) DeleteByIds(ctx context.Context, ids []int32) error {
-	return a.Delete(ctx, []common.Optioner{common.In("id", ids)})
-}
-`
-	var data = info{
-		TableName:    modelName,
-		RawTableName: tableName,
-		DBVariable:   dbVariableName,
-	}
-	tpl, err := template.New("common").Parse(codeTemplate)
-	if err != nil {
-		// 处理模板解析错误
-		panic(err)
-	}
-	var content strings.Builder
-	if err := tpl.Execute(&content, data); err != nil {
-		// 处理模板执行错误
-		panic(err)
-	}
-	return content.String()
 }
