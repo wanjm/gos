@@ -30,6 +30,9 @@ func GenTableFromMySQL(config *basic.DBConfig, moduleMap map[string]struct{}) er
 // GenTableFromMySQL connects to MySQL, gets the DDL of a table, and generates a Go struct definition.
 func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
 	pkg := astinfo.GlobalProject.CurrentProject.NewPkgBasic("", tableCfg.ModulePath)
+	entityPkg := pkg.NewPkgBasic("entity", "entity")
+	file := entityPkg.NewFile("mysql.alias.gen")
+	var sb strings.Builder
 	for _, tableName := range tableCfg.TableNames {
 		// 2. Get DDL
 		ddl, err := getTableDDL(db, tableName)
@@ -38,13 +41,17 @@ func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
 			return err
 		}
 		// 3. Parse DDL and generate struct
-
-		err = GenerateStructFromDDL(tableName, ddl, pkg)
+		tablepkg := entityPkg.NewPkgBasic(tableName, "mysql/"+tableName)
+		file.GetImport(tablepkg)
+		structName, err := GenerateStructFromDDL(tableName, ddl, tablepkg)
 		if err != nil {
 			fmt.Printf("生成结构体代码失败: %v\n", err)
 			return err
 		}
+		sb.WriteString("type " + structName + "= " + tableName + "." + structName + "\n")
 	}
+	file.AddBuilder(&sb)
+	file.Save()
 	return nil
 }
 
@@ -63,8 +70,8 @@ func getTableDDL(db *sql.DB, tableName string) (string, error) {
 }
 
 // GenerateStructFromDDL parses the DDL and generates a Go struct definition
-func GenerateStructFromDDL(tableName, ddl string, pkg *astbasic.PkgBasic) error {
-	tablepkg := pkg.NewPkgBasic(tableName, "entity/mysql/"+tableName)
+// return Struct Name;
+func GenerateStructFromDDL(tableName, ddl string, tablepkg *astbasic.PkgBasic) (string, error) {
 	tableFile := tablepkg.NewFile("table.gen")
 	// Simple parser: extract column lines from DDL
 	lines := strings.Split(ddl, "\n")
@@ -130,7 +137,7 @@ type {{.StructName}} struct {
 
 	tpl, err := template.New("struct").Parse(structTpl)
 	if err != nil {
-		return err
+		return "", err
 	}
 	var sb strings.Builder
 	err = tpl.Execute(&sb, map[string]interface{}{
@@ -140,11 +147,11 @@ type {{.StructName}} struct {
 		"TableName":     tableName,
 	})
 	if err != nil {
-		return err
+		return "", err
 	}
 	tableFile.AddBuilder(&sb)
 	tableFile.Save()
-	return nil
+	return structName, nil
 }
 
 // mysqlTypeToGoType maps MySQL types to Go types (basic mapping)

@@ -49,6 +49,7 @@ func main() {
 	if err := project.CurrentProject.ParseModule(); err != nil {
 		return
 	}
+	// 产生db数据；
 	if basic.Argument.DBName != "" {
 		genDbData(basic.Argument.DBName)
 	}
@@ -105,6 +106,13 @@ func genDbData(dbnames string) {
 }
 
 func genServlet(project *astinfo.MainProject) {
+	// 先解析-> 产生dal -> 产生注入；
+	// 此时有个问题，产生的dal不会被解析，所以注入会报错；
+	err := project.Parse()
+	if err != nil {
+		fmt.Printf("parse project failed with %s", err.Error())
+		return
+	}
 	cfg := &basic.Cfg
 	cfg.InitMain = basic.Argument.GoMod
 	astinfo.RegisterCallableGen(
@@ -120,10 +128,5 @@ func genServlet(project *astinfo.MainProject) {
 	// 	project.CurrentProject().Module = modName
 	// }
 
-	err := project.Parse()
-	if err != nil {
-		fmt.Printf("parse project failed with %s", err.Error())
-		return
-	}
 	project.GenerateCode()
 }
