@@ -14,8 +14,8 @@ type PkgBasic struct {
 func (p *PkgBasic) NewPkgBasic(name, pathValue string) *PkgBasic {
 	var modPath string
 	if !filepath.IsAbs(pathValue) {
-		pathValue = filepath.Join(p.FilePath, pathValue)
 		modPath = path.Join(p.ModPath, pathValue)
+		pathValue = filepath.Join(p.FilePath, pathValue)
 	}
 	return &PkgBasic{
 		Name:     name,
