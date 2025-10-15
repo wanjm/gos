@@ -22,7 +22,7 @@ import (
 // --- 程序主逻辑 ---
 // GenTable4Mongo 是代码生成器的主入口函数
 // 它接受 DBConfig 参数，并根据配置循环生成所有表的结构体
-func GenTableFromMongo(config *basic.DBConfig) error {
+func GenTableFromMongo(config *basic.DBConfig, moduleMap map[string]struct{}) error {
 	if strings.ToLower(config.DBType) != "mongo" {
 		return fmt.Errorf("当前仅支持 'mongo' 数据库类型, 您提供的是 '%s'", config.DBType)
 	}

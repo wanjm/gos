@@ -90,7 +90,7 @@ func (db *DbManager) Gen() {
 		}
 		file := pkg.NewFile("mongo.dal.gen")
 		file.GetImport(astbasic.SimplePackage("context", "context"))
-		file.GetImport(astbasic.SimplePackage("common", "common"))
+		file.GetImport(astbasic.SimplePackage(basic.Cfg.Generation.CommonMod, "common"))
 		file.GetImport(astbasic.SimplePackage("go.mongodb.org/mongo-driver/bson", "bson"))
 		file.GetImport(astbasic.SimplePackage("go.mongodb.org/mongo-driver/bson/primitive", "primitive"))
 		file.GetImport(astbasic.SimplePackage("go.mongodb.org/mongo-driver/mongo", "mongo"))
