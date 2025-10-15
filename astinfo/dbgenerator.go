@@ -112,13 +112,7 @@ type NamePair struct {
 
 func genColumns(class *Struct, tag string) {
 	file := class.GoSource.Pkg.NewFile("column.gen")
-	var columns []*NamePair
-	for _, field := range class.Fields {
-		columns = append(columns, &NamePair{
-			VarName: field.Name,
-			ColName: field.Tags[tag],
-		})
-	}
+	columns := getNamePair(class, tag)
 	tmplText := `
 	const (
 	{{range .}}
@@ -137,6 +131,25 @@ func genColumns(class *Struct, tag string) {
 	}
 	file.AddBuilder(&sb)
 	file.Save()
+}
+
+func getNamePair(class *Struct, tag string) []*NamePair {
+	var columns []*NamePair
+	for _, field := range class.Fields {
+		if field.Name == "" {
+			basicType := GetBasicType(field.Type)
+			if subClass, ok := basicType.(*Struct); ok {
+				subColumns := getNamePair(subClass, tag)
+				columns = append(columns, subColumns...)
+			}
+			continue
+		}
+		columns = append(columns, &NamePair{
+			VarName: "C_" + field.Name,
+			ColName: field.Tags[tag],
+		})
+	}
+	return columns
 }
 
 type info struct {
