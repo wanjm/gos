@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/spec"
+	"github.com/wanjm/gos/astbasic"
 )
 
 // @goservlet prpc=xxx; servlet=xxx; servlet; prpc
@@ -17,6 +18,7 @@ type structComment struct {
 	AutoGen    bool
 	TableName  string
 	DbVarible  string
+	class      *Struct
 }
 
 func (comment *structComment) dealValuePair(key, value string) {
@@ -53,9 +55,15 @@ func (comment *structComment) dealValuePair(key, value string) {
 	case AutoGen:
 		comment.AutoGen = true
 	case tblName:
+		if value == "" {
+			value = astbasic.ToSnakeCase(comment.class.StructName)
+		}
 		comment.TableName = value
+		if comment.DbVarible == "" {
+			comment.DbVarible = "DB"
+		}
 	case dbVarible:
-		comment.DbVarible = value
+		comment.DbVarible = astbasic.Capitalize(value)
 	}
 }
 
@@ -209,6 +217,7 @@ func NewStruct(goSource *Gosourse, astRoot *ast.TypeSpec) *Struct {
 		GoSource:   goSource,
 		astRoot:    astRoot,
 	}
+	iface.Comment.class = iface
 	pkg := goSource.Pkg
 	pkg.Structs[name] = iface
 	pkg.Types[name] = iface

@@ -35,6 +35,7 @@ func (db *DbManager) Gen() {
 	for _, pkg := range pkgs {
 		var mysqlInfo []*info
 		var mongoInfo []*info
+		file := pkg.NewFile("column.gen")
 		for _, class := range pkg.Structs {
 			if class.Comment.TableName != "" {
 				var data = info{
@@ -45,17 +46,18 @@ func (db *DbManager) Gen() {
 				}
 				for _, field := range class.Fields {
 					if field.Tags["gorm"] != "" {
-						genColumns(class, "gorm")
+						genColumns(file, getNamePair(class, "gorm"))
 						mysqlInfo = append(mysqlInfo, &data)
 						break
 					} else if field.Tags["bson"] != "" {
-						genColumns(class, "bson")
+						genColumns(file, getNamePair(class, "bson"))
 						mongoInfo = append(mongoInfo, &data)
 						break
 					}
 				}
 			}
 		}
+		file.Save()
 		if len(mysqlInfo) == 0 && len(mongoInfo) == 0 {
 			continue
 		}
@@ -110,9 +112,10 @@ type NamePair struct {
 	ColName string
 }
 
-func genColumns(class *Struct, tag string) {
-	file := class.GoSource.Pkg.NewFile("column.gen")
-	columns := getNamePair(class, tag)
+// 这样写，是为了解决一个entity目录中有多个表的情况；
+// 但是还需要解决多个表列名重复的问题， 所以最终还是需要一个entity一个目录；
+// 为了兼容多个表的情况，代码需要改为先产生namePair，然后在产生column的情况，这样可以去重；但名字相同，列名不同时，可以报错；
+func genColumns(file *astbasic.GenedFile, columns []*NamePair) {
 	tmplText := `
 	const (
 	{{range .}}
@@ -130,7 +133,6 @@ func genColumns(class *Struct, tag string) {
 		log.Fatalf("执行模板失败: %v", err)
 	}
 	file.AddBuilder(&sb)
-	file.Save()
 }
 
 func getNamePair(class *Struct, tag string) []*NamePair {
@@ -144,9 +146,11 @@ func getNamePair(class *Struct, tag string) []*NamePair {
 			}
 			continue
 		}
+		tag := field.Tags[tag]
+		colname := strings.Split(tag, ",")[0]
 		columns = append(columns, &NamePair{
 			VarName: "C_" + field.Name,
-			ColName: field.Tags[tag],
+			ColName: colname,
 		})
 	}
 	return columns

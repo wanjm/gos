@@ -56,6 +56,8 @@ func Fields(s string) []string {
 	a.split()
 	return a.result
 }
+
+// 转为驼峰命名法
 func ToPascalCase(s string, firstBig bool) string {
 	if s == "_id" {
 		return "ID"
@@ -76,7 +78,20 @@ func ToPascalCase(s string, firstBig bool) string {
 	}
 	return result.String()
 }
-
+func ToSnakeCase(s string) string {
+	var result strings.Builder
+	for i, r := range s {
+		if unicode.IsUpper(r) {
+			if i > 0 {
+				result.WriteByte('_')
+			}
+			result.WriteRune(unicode.ToLower(r))
+		} else {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
+}
 func ConvertGoTag(tag string) string {
 	// 处理带转义符的情况，如"json:\"hello\""
 	if strings.HasPrefix(tag, "\"") && strings.HasSuffix(tag, "\"") {
