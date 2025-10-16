@@ -57,27 +57,6 @@ func Fields(s string) []string {
 	return a.result
 }
 
-// 转为驼峰命名法
-func ToPascalCase(s string, firstBig bool) string {
-	if s == "_id" {
-		return "ID"
-	}
-	var result strings.Builder
-	capitalizeNext := firstBig
-	for _, r := range s {
-		if r == '_' || r == '-' {
-			capitalizeNext = true
-		} else if unicode.IsLetter(r) || unicode.IsDigit(r) {
-			if capitalizeNext {
-				result.WriteRune(unicode.ToUpper(r))
-				capitalizeNext = false
-			} else {
-				result.WriteRune(r)
-			}
-		}
-	}
-	return result.String()
-}
 func ToSnakeCase(s string) string {
 	var result strings.Builder
 	for i, r := range s {

@@ -117,7 +117,7 @@ const structTpl = `type {{.Name}} struct {
 }`
 
 func genTableForMongo(tableName string, doc bson.M, pkg *astbasic.PkgBasic) error {
-	structName := astbasic.ToPascalCase(tableName, true)
+	structName := astbasic.ToCamelCase(tableName, true)
 	tablepkg := pkg.NewPkgBasic(tableName, "entity/mongo/"+tableName)
 	tableFile := tablepkg.NewFile("table")
 	return generateStruct(structName, doc, tableFile)
@@ -141,7 +141,7 @@ func generateStruct(structName string, doc bson.M, tableFile *astbasic.GenedFile
 			jsonTag = "id,omitempty"
 		}
 		fields = append(fields, FieldInfo{
-			Name:    astbasic.ToPascalCase(key, true),
+			Name:    astbasic.ToCamelCase(key, true),
 			Type:    goType,
 			BsonTag: key,
 			JsonTag: jsonTag,
@@ -187,7 +187,7 @@ func getGoTypeFromValue(key string, value interface{}, tableFile *astbasic.Gened
 	case float64:
 		return "float64"
 	case bson.M:
-		structName := astbasic.ToPascalCase(key, true)
+		structName := astbasic.ToCamelCase(key, true)
 		generateStruct(structName, v, tableFile)
 		return structName
 	case primitive.A:

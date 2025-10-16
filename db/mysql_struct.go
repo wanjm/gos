@@ -101,8 +101,8 @@ func GenerateStructFromDDL(tableName, ddl string, tablepkg *astbasic.PkgBasic) (
 				}
 			}
 			goType := mysqlTypeToGoType(colType, tableFile)
-			fieldName := astbasic.ToPascalCase(colName, true)
-			jsonTag := astbasic.FirstLower(astbasic.ToPascalCase(colName, false))
+			fieldName := astbasic.ToCamelCase(colName, true)
+			jsonTag := astbasic.FirstLower(astbasic.ToCamelCase(colName, false))
 			gormTag := colName
 			fields = append(fields, fieldInfo{
 				Name:    fieldName,
@@ -120,7 +120,7 @@ func GenerateStructFromDDL(tableName, ddl string, tablepkg *astbasic.PkgBasic) (
 			}
 		}
 	}
-	structName := astbasic.ToPascalCase(tableName, true)
+	structName := astbasic.ToCamelCase(tableName, true)
 	var structComment string
 	if tableComment != "" {
 		structComment = fmt.Sprintf("// %s %s\n", structName, tableComment)
