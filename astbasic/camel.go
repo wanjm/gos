@@ -26,8 +26,15 @@ func ToCamelCase(s string, isGo bool) string {
 }
 
 var abbrMap = map[string]string{
-	"id":  "ID",
-	"url": "URL",
+	"id":   "ID",
+	"url":  "URL",
+	"ip":   "IP",
+	"uid":  "UID",
+	"uuid": "UUID",
+	"json": "JSON",
+	"html": "HTML",
+	"xml":  "XML",
+	"db":   "DB",
 }
 
 func firstBig(word string, isGo bool) string {
