@@ -6,6 +6,7 @@ import (
 )
 
 // ToCamelCase converts snake_case to lowerCamelCase
+// userId => UserID(go) => userId(json)
 func ToCamelCase(s string, isGo bool) string {
 
 	words := strings.Split(s, "_")
