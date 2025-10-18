@@ -7,6 +7,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/basic"
 	"gorm.io/gorm"
 )
@@ -36,12 +37,13 @@ func GenTableForMongo(config *basic.DBConfig, moduleMap map[string]struct{}) {
 		}
 	}
 }
-func GenMongoModule(mongoGenCfg *basic.TableGenCfg, db *gorm.DB, dbName string) {
+func GenMongoModule(mongoGenCfg *basic.TableGenCfg, db *gorm.DB, dbVariable string) {
+	dbVariable = astbasic.Capitalize(dbVariable)
 	generator := MongoGenerator{}
 	var sb strings.Builder
 	sb.WriteString(generator.PrepareDal(mongoGenCfg.ModulePath))
 	for _, tableName := range mongoGenCfg.TableNames {
-		fileContent := generator.GenDal(toCamelCase(tableName, true), tableName, dbName)
+		fileContent := generator.GenDal(toCamelCase(tableName, true), tableName, dbVariable)
 		sb.WriteString(fileContent)
 	}
 	err := os.WriteFile(path.Join(mongoGenCfg.OutPath, "dal/mongo.gen.go"), []byte(sb.String()), 0644)
