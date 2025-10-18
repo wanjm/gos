@@ -102,7 +102,7 @@ func GenerateStructFromDDL(tableName, ddl string, tablepkg *astbasic.PkgBasic) (
 			}
 			goType := mysqlTypeToGoType(colType, tableFile)
 			fieldName := astbasic.ToCamelCase(colName, true)
-			jsonTag := astbasic.FirstLower(astbasic.ToCamelCase(colName, false))
+			jsonTag := astbasic.ToCamelCase(colName, false)
 			gormTag := colName
 			fields = append(fields, fieldInfo{
 				Name:    fieldName,

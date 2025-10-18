@@ -22,6 +22,10 @@ func ToCamelCase(s string, isGo bool) string {
 	for _, word := range words[1:] {
 		result += firstBig(word, isGo)
 	}
+	if isGo && strings.HasSuffix(result, "Id") {
+		//解决数据中没有使用驼峰，且Id的问题；
+		result = result[:len(result)-2] + "ID"
+	}
 	return result
 }
 
