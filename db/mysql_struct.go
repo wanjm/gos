@@ -159,7 +159,7 @@ func mysqlTypeToGoType(mysqlType string, file *astbasic.GenedFile) string {
 	t := strings.ToLower(mysqlType)
 	switch {
 	case strings.HasPrefix(t, "int"):
-		return "int"
+		return "int32"
 	case strings.HasPrefix(t, "bigint"):
 		return "int64"
 	case strings.HasPrefix(t, "tinyint(1)"):
