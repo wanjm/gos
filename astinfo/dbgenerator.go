@@ -299,10 +299,11 @@ func genMongoDal(data *info, file *astbasic.GenedFile) {
 // @gos autogen
 type {{.TableName}}Dal struct {
 	{{.DBVariable}} *mongo.Database
+	DbName string "default:\"{{.RawTableName}}\""
 }
 
 func (a *{{.TableName}}Dal) getDB() *mongo.Collection {
-	return a.{{.DBVariable}}.Collection("{{.RawTableName}}")
+	return a.{{.DBVariable}}.Collection(a.DbName)
 }
 
 
