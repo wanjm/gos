@@ -193,11 +193,20 @@ func (a *{{.TableName}}Dal) Create(ctx context.Context, item *{{.Pkg.Name}}.{{.T
 	return err
 }
 
-func (a *{{.TableName}}Dal) GetAll(ctx context.Context, options []common.Optioner) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
+func (a *{{.TableName}}Dal) GetAll(ctx context.Context, options []common.Optioner, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
+	return a.GetLimitAll(ctx, options, 0, cols...)
+}
+func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, options []common.Optioner,count int, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
+	var colNames []string
+	if len(cols) > 0 {
+		colNames = cols[0]
+	}
 	dbOperation := a.getDBOperation(ctx)
 	err = dbOperation.Query(
 		&common.SqlQueryOptions{
 			QueryFields: options,
+			Limit:       count,
+			SelectFields: colNames,
 		},
 		&item,
 	)
@@ -208,8 +217,8 @@ func (a *{{.TableName}}Dal) GetAll(ctx context.Context, options []common.Optione
 	return
 }
 
-func (a *{{.TableName}}Dal) GetOne(ctx context.Context, options []common.Optioner) (item *{{.Pkg.Name}}.{{.TableName}}, err error) {
-	res, err := a.GetAll(ctx, options)
+func (a *{{.TableName}}Dal) GetOne(ctx context.Context, options []common.Optioner, cols ...[]string) (item *{{.Pkg.Name}}.{{.TableName}}, err error) {
+	res, err := a.GetAll(ctx, options, cols...)
 	if err != nil {
 		return
 	}
@@ -219,12 +228,16 @@ func (a *{{.TableName}}Dal) GetOne(ctx context.Context, options []common.Optione
 	return
 }
 
-func (a *{{.TableName}}Dal) GetOneById(ctx context.Context, id int32) (item *{{.Pkg.Name}}.{{.TableName}}, err error) {
-	return a.GetOne(ctx, []common.Optioner{common.Eq("id", id)})
+func (a *{{.TableName}}Dal) GetOneById(ctx context.Context, id int32, cols ...[]string) (item *{{.Pkg.Name}}.{{.TableName}}, err error) {
+	return a.GetOne(ctx, []common.Optioner{common.Eq("id", id)}, cols...)
 }
 
-func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, pageNo, pageSize int32) (list []*{{.Pkg.Name}}.{{.TableName}}, total int64, err error) {
-	dbop := a.getDBOperation(ctx)
+func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, pageNo, pageSize int32, cols ...[]string) (list []*{{.Pkg.Name}}.{{.TableName}}, total int64, err error) {
+	var colNames []string
+	if len(cols) > 0 {
+		colNames = cols[0]
+	}	
+    dbop := a.getDBOperation(ctx)
 	err = dbop.QueryCV(
 		&common.SqlQueryOptions{
 			QueryFields: option,
@@ -236,6 +249,7 @@ func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, 
 					Direction: common.DESCStr,
 				},
 			},
+			SelectFields: colNames,
 		},
 		&total,
 		&list,
@@ -324,6 +338,9 @@ func (a *{{.TableName}}Dal) Create(ctx context.Context, item *entity.{{.TableNam
 }
 
 func (a *{{.TableName}}Dal) GetAll(ctx context.Context, opts []common.Optioner, cols ...[]string) (item []*entity.{{.TableName}}, err error) {
+	return a.GetLimitAll(ctx, opts, 0, cols...)
+}
+func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, opts []common.Optioner,count int64, cols ...[]string) (item []*entity.{{.TableName}}, err error) {
 	filter := common.GenMongoOption(opts)
 	db := a.getDB()
 	projection := bson.M{}
@@ -334,7 +351,7 @@ func (a *{{.TableName}}Dal) GetAll(ctx context.Context, opts []common.Optioner, 
 	}
 	// 执行查询
 	var cur *mongo.Cursor
-	cur, err = db.Find(ctx, filter, options.Find().SetProjection(projection))
+	cur, err = db.Find(ctx, filter, options.Find().SetProjection(projection).SetLimit(count))
 
 	if err != nil {
 		common.Error(ctx, "GetAll from mongo {{.RawTableName}} failed", common.Err(err))
