@@ -7,14 +7,17 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"text/template"
 
+	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/basic"
 )
 
 type MainProject struct {
+	genPkg             *astbasic.PkgBasic // 记录gen包的信息
 	CurrentProject     Project
 	Packages           map[string]*Package // 项目包含的包集合（key为包全路径）
 	SortedPacakgeNames []string
@@ -39,7 +42,7 @@ func (mp *MainProject) genMain() {
 	var content strings.Builder
 	content.WriteString("package main\n")
 	//	import "gitlab.plaso.cn/message-center/gen"
-	content.WriteString("import (\"flag\"\n\"" + mp.CurrentProject.Module + "/gen\")\n")
+	content.WriteString("import (\"flag\"\n\"" + mp.CurrentProject.ModPath + "/gen\")\n")
 	content.WriteString(`
 func main() {
 	parseArgument();
@@ -87,13 +90,10 @@ func (error *Error) GetErrorCode() int {
 }
 
 func (mp *MainProject) genProjectCode() {
-	err := os.Mkdir("gen", 0750)
-	if err != nil && !os.IsExist(err) {
-		log.Fatal(err)
-	}
-	file := CreateGenedFile("goservlet_project")
-	file.GetImport(SimplePackage("github.com/gin-gonic/gin", "gin"))
-	os.Chdir("gen")
+	genPkg := mp.CurrentProject.NewPkgBasic("gen", "gen")
+	mp.genPkg = genPkg
+	file := genPkg.NewFile("goservlet_project")
+	file.GetImport(astbasic.SimplePackage("github.com/gin-gonic/gin", "gin"))
 	mp.genBasicCode(file)
 	mp.genPrepare(file)
 	file.Save()
@@ -102,7 +102,7 @@ func (mp *MainProject) SortDataForGen() {
 	var pkgNames []string
 	for _, pkg := range mp.Packages {
 		if len(pkg.Initiator) > 0 || len(pkg.Structs) > 0 {
-			pkgNames = append(pkgNames, pkg.Module)
+			pkgNames = append(pkgNames, pkg.ModPath)
 			var strcutNames []string
 			for _, class := range pkg.Structs {
 				strcutNames = append(strcutNames, class.StructName)
@@ -116,6 +116,8 @@ func (mp *MainProject) SortDataForGen() {
 }
 func (mp *MainProject) genPrepare(file *GenedFile) {
 	mp.SortDataForGen()
+	dbManager := DbManager{}
+	dbManager.Gen()
 	mp.InitInitorator()
 	mp.InitManager.Generate(file)
 	mp.InitManager.GenterateTestCode(file)
@@ -159,8 +161,8 @@ func prepare() {
 	file.AddBuilder(&content)
 }
 func (mp *MainProject) genBasicCode(file *GenedFile) {
-	file.GetImport(SimplePackage("github.com/gin-contrib/cors", "cors"))
-	file.GetImport(SimplePackage("sync", "sync"))
+	file.GetImport(astbasic.SimplePackage("github.com/gin-contrib/cors", "cors"))
+	file.GetImport(astbasic.SimplePackage("sync", "sync"))
 
 	var content strings.Builder
 	content.WriteString(`
@@ -262,7 +264,7 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 	var name = strings.Join([]string{
 		"init",
 		class.Comment.GroupName,
-		class.goSource.Pkg.Name,
+		class.GoSource.Pkg.Name,
 		class.StructName,
 		"router",
 	}, "_")
@@ -276,7 +278,7 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 	declare.WriteString(receiver.Name + ":=" + receiver.Generate(file))
 	declare.WriteString("\n")
 	file.AddBuilder(&declare)
-	file.GetImport(SimplePackage("github.com/gin-gonic/gin", "gin"))
+	file.GetImport(astbasic.SimplePackage("github.com/gin-gonic/gin", "gin"))
 	return name
 }
 
@@ -358,11 +360,13 @@ func (sm *ServerManager) Generate(file *GenedFile) {
 	// if len(sm.servers) == 0 {
 	// 	return
 	// }
-	for _, server := range sm.servers {
+	var groupNames []string
+	for name, server := range sm.servers {
 		//一个server一个文件；
 		file1 := CreateGenedFile(server.Name)
 		server.Generate(file1)
 		file1.Save()
+		groupNames = append(groupNames, name)
 	}
 	tmplText :=
 		`
@@ -416,13 +420,14 @@ type ExtraInfo interface {
 		RouterNames string
 	}
 	var s []*ServerInfo
-	for _, server := range sm.servers {
-		server := &ServerInfo{
+	slices.Sort(groupNames)
+	for _, groupName := range groupNames {
+		server := sm.servers[groupName]
+		s = append(s, &ServerInfo{
 			Name:        server.Name,
 			FilterNames: strings.Join(server.GeneratedFilters, ",\n"),
 			RouterNames: strings.Join(server.GenerateRouters, ",\n"),
-		}
-		s = append(s, server)
+		})
 	}
 
 	err = tmpl.Execute(&sb, s)
@@ -443,8 +448,8 @@ func (mp *MainProject) FindPackage(module string) *Package {
 	if pkg := mp.GetPackage(module); pkg != nil {
 		return pkg
 	}
-	if module == mp.CurrentProject.Module+"/gen" {
-		newPkg := NewPackage(module, true, filepath.Join(mp.CurrentProject.Path, "gen"))
+	if module == mp.CurrentProject.ModPath+"/gen" {
+		newPkg := NewPackage(module, true, filepath.Join(mp.CurrentProject.FilePath, "gen"))
 		newPkg.finshedParse = true
 		newPkg.Name = "gen"
 		return newPkg
@@ -452,12 +457,12 @@ func (mp *MainProject) FindPackage(module string) *Package {
 
 	for _, p := range mp.Projects {
 		// 根据module寻找package
-		if p.Module == "" {
-			panic(fmt.Sprintf("project module is empty %s\n", p.Path))
+		if p.ModPath == "" {
+			panic(fmt.Sprintf("project module is empty %s\n", p.FilePath))
 		}
-		if strings.HasPrefix(module, p.Module) {
+		if strings.HasPrefix(module, p.ModPath) {
 			//filepath.Join会换/\;
-			newPkg := NewPackage(module, p.Simple, filepath.Join(p.Path, module[len(p.Module):]))
+			newPkg := NewPackage(module, p.Simple, filepath.Join(p.FilePath, module[len(p.ModPath):]))
 			mp.Packages[module] = newPkg
 			newPkg.SimpleParse()
 			return newPkg
@@ -510,17 +515,17 @@ func (mp *MainProject) Parse() error {
 	if mp.Cfg.InitMain != "" { // 检查是否非空字符串
 		mp.genGoMod()
 		// 设置项目模块名称
-		mp.CurrentProject.Module = mp.Cfg.InitMain
+		mp.CurrentProject.ModPath = mp.Cfg.InitMain
 	}
 	p := &mp.CurrentProject
 	cfg := mp.Cfg
 	traceKeyMod := cfg.Generation.TraceKeyMod
 	if !strings.Contains(traceKeyMod, ".") {
-		cfg.Generation.TraceKeyMod = p.Module + "/" + traceKeyMod
+		cfg.Generation.TraceKeyMod = p.ModPath + "/" + traceKeyMod
 	}
 	responseMod := cfg.Generation.ResponseMod
 	if !strings.Contains(responseMod, ".") {
-		cfg.Generation.ResponseMod = p.Module + "/" + responseMod
+		cfg.Generation.ResponseMod = p.ModPath + "/" + responseMod
 	}
 	mp.Projects = append(mp.Projects, p)
 	goPath := os.Getenv("GOPATH")
@@ -530,17 +535,19 @@ func (mp *MainProject) Parse() error {
 		// }
 
 		p := Project{
-			Path:   path.Join(goPath, "pkg/mod", escapeModulePath(mod.Mod.Path)+"@"+mod.Mod.Version),
+			PkgBasic: astbasic.PkgBasic{
+				FilePath: path.Join(goPath, "pkg/mod", escapeModulePath(mod.Mod.Path)+"@"+mod.Mod.Version),
+			},
 			Simple: true,
 		}
 		p.ParseModule()
-		if p.Module == "" {
-			p.Module = mod.Mod.Path
+		if p.ModPath == "" {
+			p.ModPath = mod.Mod.Path
 		}
 		mp.Projects = append(mp.Projects, &p)
 	}
 	sort.Slice(mp.Projects, func(i, j int) bool {
-		return mp.Projects[i].Module > mp.Projects[j].Module
+		return mp.Projects[i].ModPath > mp.Projects[j].ModPath
 	})
 	return p.ParseCode()
 }
@@ -555,7 +562,7 @@ func CreateProject(path string, cfg *basic.Config) *MainProject {
 		// servers:      make(map[string]*server),
 		// creators: make(map[*Struct]*Initiator),
 	}
-	GlobalProject.CurrentProject.Path = path
+	GlobalProject.CurrentProject.FilePath = path
 	// 由于Package中有指向Project的指针，所以RawPackage指向了此处的project，如果返回对象，则出现了两个Project，一个是返回的Project，一个是RawPackage中的Project；
 	// 返回*Project才能保证这是一个Project对象；
 	// project.initRawPackage()

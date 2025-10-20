@@ -24,7 +24,7 @@ func parseArgument() {
 	flag.Parse()
 
 	if *v { // 检查是否指定了-v参数
-		fmt.Println("gos version 0.3.5") // 打印版本号
+		fmt.Println("gos version 0.3.6") // 打印版本号
 		return                           // 退出程序
 	}
 
@@ -49,6 +49,7 @@ func main() {
 	if err := project.CurrentProject.ParseModule(); err != nil {
 		return
 	}
+	// 产生db数据；
 	if basic.Argument.DBName != "" {
 		genDbData(basic.Argument.DBName)
 	}
@@ -62,7 +63,7 @@ func genDbData(dbnames string) {
 	for _, db := range basic.Cfg.DBConfig {
 		dbMap[db.DBName] = db
 		for _, module := range db.DbGenCfgs {
-			module.ModulePath = astinfo.GlobalProject.CurrentProject.Module + "/" + module.OutPath
+			module.ModulePath = module.OutPath
 		}
 		dbs = append(dbs, db.DBName)
 	}
@@ -75,14 +76,28 @@ func genDbData(dbnames string) {
 		targetDbs = strings.Split(dbnames, ",")
 	}
 	for _, dbName := range targetDbs {
-		if cfg, ok := dbMap[dbName]; ok {
-			switch strings.ToLower(cfg.DBType) {
+		if config, ok := dbMap[dbName]; ok {
+			var moduleMap = make(map[string]struct{})
+			var module = basic.Argument.ModName
+			if module == "all" {
+				for _, cfg := range config.DbGenCfgs {
+					moduleMap[cfg.ModulePath] = struct{}{}
+				}
+			} else {
+				modules := strings.SplitSeq(module, ",")
+				for module := range modules {
+					moduleMap[module] = struct{}{}
+				}
+			}
+
+			switch strings.ToLower(config.DBType) {
 			case "mysql":
-				db.GenTableForDb(cfg, basic.Argument.ModName)
+				db.GenTableFromMySQL(config, moduleMap)
 			case "mongo":
-				db.GenTableForMongo(cfg, basic.Argument.ModName)
+				db.GenTableFromMongo(config, moduleMap)
+				// db.GenTableFromMongo(config)
 			default:
-				fmt.Printf("db %s type %s not supported", dbName, cfg.DBType)
+				fmt.Printf("db %s type %s not supported", dbName, config.DBType)
 			}
 		} else {
 			fmt.Printf("db %s not found", dbName)
@@ -91,6 +106,13 @@ func genDbData(dbnames string) {
 }
 
 func genServlet(project *astinfo.MainProject) {
+	// 先解析-> 产生dal -> 产生注入；
+	// 此时有个问题，产生的dal不会被解析，所以注入会报错；
+	err := project.Parse()
+	if err != nil {
+		fmt.Printf("parse project failed with %s", err.Error())
+		return
+	}
 	cfg := &basic.Cfg
 	cfg.InitMain = basic.Argument.GoMod
 	astinfo.RegisterCallableGen(
@@ -106,10 +128,5 @@ func genServlet(project *astinfo.MainProject) {
 	// 	project.CurrentProject().Module = modName
 	// }
 
-	err := project.Parse()
-	if err != nil {
-		fmt.Printf("parse project failed with %s", err.Error())
-		return
-	}
 	project.GenerateCode()
 }

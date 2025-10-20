@@ -23,16 +23,16 @@ func NewAlias(astRoot *ast.TypeSpec, g *Gosourse, equal bool) *Alias {
 
 // RefName 实现Typer接口的RefName方法
 func (a *Alias) RefName(genFile *GenedFile) string {
-	if genFile == nil || genFile.pkg == a.Gosourse.Pkg {
+	if genFile == nil || a.Gosourse.Pkg.IsSame(genFile.Pkg) {
 		return a.Name
 	}
-	impt := genFile.GetImport(a.Gosourse.Pkg)
+	impt := genFile.GetImport(&a.Gosourse.Pkg.PkgBasic)
 	return impt.Name + "." + a.Name
 }
 
 // IDName 实现Typer接口的IDName方法
 func (a *Alias) IDName() string {
-	return a.Gosourse.Pkg.Module + "." + a.Name
+	return a.Gosourse.Pkg.ModPath + "." + a.Name
 }
 
 // GenConstructCode 实现Constructor接口的GenConstructCode方法

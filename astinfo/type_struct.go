@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/spec"
+	"github.com/wanjm/gos/astbasic"
 )
 
 // @goservlet prpc=xxx; servlet=xxx; servlet; prpc
@@ -15,15 +16,18 @@ type structComment struct {
 	serverType string // NONE, RpcStruct, ServletStruct·
 	Url        string // 服务的url, 对所有的方法都有效
 	AutoGen    bool
+	TableName  string
+	DbVarible  string
+	class      *Struct
 }
 
 func (comment *structComment) dealValuePair(key, value string) {
 	if value != "" {
 		value = strings.Trim(value, "\"")
 	}
-	comment.AutoGen = true
 	switch key {
 	case Prpc:
+		comment.AutoGen = true
 		comment.serverType = Prpc
 		if len(value) == 0 {
 			comment.GroupName = Prpc
@@ -31,6 +35,7 @@ func (comment *structComment) dealValuePair(key, value string) {
 			comment.GroupName = value
 		}
 	case Servlet:
+		comment.AutoGen = true
 		comment.serverType = Servlet
 		if len(value) == 0 {
 			comment.GroupName = Servlet
@@ -40,6 +45,7 @@ func (comment *structComment) dealValuePair(key, value string) {
 	case Group:
 		comment.GroupName = value
 	case Type:
+		comment.AutoGen = true
 		comment.serverType = value
 		if len(comment.GroupName) == 0 {
 			comment.GroupName = comment.serverType
@@ -48,13 +54,23 @@ func (comment *structComment) dealValuePair(key, value string) {
 		comment.Url = value
 	case AutoGen:
 		comment.AutoGen = true
+	case tblName:
+		if value == "" {
+			value = astbasic.ToSnakeCase(comment.class.StructName)
+		}
+		comment.TableName = value
+		if comment.DbVarible == "" {
+			comment.DbVarible = "DB"
+		}
+	case dbVarible:
+		comment.DbVarible = astbasic.Capitalize(value)
 	}
 }
 
 // Struct 表示一个Go结构体的基本信息
 type Struct struct {
 	StructName string    // 结构体名称
-	goSource   *Gosourse //该变量在解析结构体时赋值，也就是说该变量不为空，则该结构体已经被解析；
+	GoSource   *Gosourse //该变量在解析结构体时赋值，也就是说该变量不为空，则该结构体已经被解析；
 	// Pkg        *Package  //该变量肯定不为空，但是goSource不一定；
 	astRoot *ast.TypeSpec
 	// genDecl       *ast.GenDecl
@@ -69,16 +85,16 @@ type Struct struct {
 }
 
 func (v *Struct) RefName(genFile *GenedFile) string {
-	pkg := v.goSource.Pkg
-	if genFile == nil || genFile.pkg == pkg {
+	pkg := v.GoSource.Pkg
+	if genFile == nil || pkg.IsSame(genFile.Pkg) {
 		return v.StructName
 	}
-	impt := genFile.GetImport(pkg)
+	impt := genFile.GetImport(&pkg.PkgBasic)
 	return impt.Name + "." + v.StructName
 }
 
 func (v *Struct) IDName() string {
-	return v.goSource.Pkg.Module + "." + v.StructName
+	return v.GoSource.Pkg.ModPath + "." + v.StructName
 }
 
 func needWire(field *Field) bool {
@@ -103,7 +119,7 @@ func needWire(field *Field) bool {
 // 5. 初步考虑可以将wire变量定义为必须注入内容结构体变量；
 // wire为true表示必须绑定结构体等；
 func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
-	result := genFile.GetImport(v.goSource.Pkg)
+	result := genFile.GetImport(&v.GoSource.Pkg.PkgBasic)
 	var sb strings.Builder
 	if result.Name != "" {
 		sb.WriteString(result.Name)
@@ -179,6 +195,9 @@ func (v *Struct) GenerateDependcyCode(goGenerated *GenedFile) string {
 	a := v.GeneredFields()[0]
 	return a.Type.GenConstructCode(goGenerated, true)
 }
+func (v *Struct) GetInfo() string {
+	return "struct " + v.StructName + " in " + v.GoSource.Path
+}
 
 // 不一定每次newStruct时都会有goSrouce，所以此时只能传Pkg；
 // func NewStruct(name string, pkg *Package) *Struct {
@@ -195,9 +214,10 @@ func NewStruct(goSource *Gosourse, astRoot *ast.TypeSpec) *Struct {
 	name := astRoot.Name.Name
 	iface := &Struct{
 		StructName: name,
-		goSource:   goSource,
+		GoSource:   goSource,
 		astRoot:    astRoot,
 	}
+	iface.Comment.class = iface
 	pkg := goSource.Pkg
 	pkg.Structs[name] = iface
 	pkg.Types[name] = iface
@@ -216,7 +236,7 @@ func (v *Struct) Parse() error {
 		return err
 	}
 	if v.astRoot.TypeParams != nil {
-		v.TypeParameter = parseFields(v.astRoot.TypeParams.List, v.goSource, nil)
+		v.TypeParameter = parseFields(v.astRoot.TypeParams.List, v.GoSource, nil)
 	}
 	return v.ParseField()
 }
@@ -230,7 +250,7 @@ func (class *Struct) ParseComment() error {
 // parseField
 func (v *Struct) ParseField() error {
 	// v.goSource在解析结构体时，被赋值，解析field也是在解析结构体时，所以v.goSource不为空
-	v.Fields = parseFields(v.astRoot.Type.(*ast.StructType).Fields.List, v.goSource, FieldListToMap(v.TypeParameter))
+	v.Fields = parseFields(v.astRoot.Type.(*ast.StructType).Fields.List, v.GoSource, FieldListToMap(v.TypeParameter))
 	// v.FieldMap = make(map[string]*Field)
 	// for _, field := range v.Fields {
 	// 	v.FieldMap[field.Name] = field

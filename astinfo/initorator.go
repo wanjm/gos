@@ -7,17 +7,20 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/wanjm/gos/tool"
+	"github.com/wanjm/gos/astbasic"
 )
 
 const (
 	globalPrefix = "__global_"
 )
 
+// initiator 方法可以产生variable；
+// 结构体也可以产生variable；
 type VariableGenerator interface {
-	RequiredFields() []*Field
+	RequiredFields() []*Field //创建variale需要的其他变量；函数的参数，或者结构体的fields
 	GeneredFields() []*Field
 	GenerateDependcyCode(goGenerated *GenedFile) string
+	GetInfo() string // 输出自身信息，便于报错；
 }
 
 // 初始化函数依赖关系节点
@@ -96,7 +99,7 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 
 // GenterateTestCode 生成测试代码
 func (im *InitManager) GenterateTestCode(goGenerated *GenedFile) {
-	goGenerated.GetImport(SimplePackage("reflect", "reflect"))
+	goGenerated.GetImport(astbasic.SimplePackage("reflect", "reflect"))
 	var testCode strings.Builder
 	textTemplate := `
 var nameValue map[string]interface{}
@@ -197,8 +200,10 @@ func (im *InitManager) collect() ([]*DependNode, VariableMap) {
 func (im *InitManager) initInitorator() {
 	// 创建variableMap
 	var globalIndex int = 0
+	// waittingVariableMap 是所有返回值的map；
 	functions, waittingVariableMap := im.collect()
-	//将所有节点连接到父节点
+	//将所有节点连接到父节点，
+	// 通过watittingVariableMap关联；关联好了后，方便取出依赖关系都完成的节点，建成依赖树；
 	for _, node := range functions {
 		im.initParent(node, waittingVariableMap)
 	}
@@ -240,9 +245,9 @@ func (im *InitManager) initParent(node *DependNode, waittingVariableMap Variable
 		parent := waittingVariableMap.getVariable(param.Type, param.Name)
 		if parent != nil {
 			node.Parent = append(node.Parent, parent)
-		} else {
-			fmt.Printf("can't init field: %s not found for type %s\n", param.Name, param.Type.IDName())
+			continue
 		}
+		fmt.Printf("can't init field: %s of %s\n", param.Name, node.Generator.GetInfo())
 	}
 }
 
@@ -251,7 +256,7 @@ func (mp *MainProject) GetVariableName(typer Typer, name string) string {
 }
 
 func (mp *MainProject) GetVariableNode(typer Typer, name string) *DependNode {
-	name = tool.FirstLower(name)
+	name = astbasic.FirstLower(name)
 	return mp.InitManager.variableMap.getVariable(typer, name)
 }
 

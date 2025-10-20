@@ -200,3 +200,8 @@ Variable根据自己的来源，确认生成代码；来源请参考[Field](#fie
 2. 注册filter函数
 3. 注册servlet函数
 
+### 数据库
+1. 结构体 entity/mysql/className/table.gen.go;
+2. 列 entity(表结构体定义)定义的同一个目录 column.gen.go; C_开头；
+3. dal 将entity对应的dal生成于entity（目录名）的同级目录；
+4. tblName定一个表名，默认为类名转蛇形；dbVariable定义变量名默认DB；

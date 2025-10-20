@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/go-openapi/spec"
+	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/basic"
-	"github.com/wanjm/gos/tool"
 )
 
 type SchemaType interface {
@@ -313,7 +313,7 @@ func (swagger *Swagger) addStructFieldsToSchema(class *Struct) map[string]spec.S
 			continue
 		}
 		if len(name) == 0 {
-			name = tool.FirstLower(field.Name)
+			name = astbasic.FirstLower(field.Name)
 		}
 
 		schema := spec.Schema{

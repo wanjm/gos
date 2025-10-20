@@ -1,6 +1,7 @@
-package tool
+package astbasic
 
 import (
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -54,4 +55,36 @@ func Fields(s string) []string {
 	}
 	a.split()
 	return a.result
+}
+
+func ToSnakeCase(s string) string {
+	var result strings.Builder
+	for i, r := range s {
+		if unicode.IsUpper(r) {
+			if i > 0 {
+				result.WriteByte('_')
+			}
+			result.WriteRune(unicode.ToLower(r))
+		} else {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
+}
+func ConvertGoTag(tag string) string {
+	// 处理带转义符的情况，如"json:\"hello\""
+	if strings.HasPrefix(tag, "\"") && strings.HasSuffix(tag, "\"") {
+		// 去除首尾的引号
+		trimmed := tag[1 : len(tag)-1]
+		// 替换转义的引号为普通引号
+		return strings.ReplaceAll(trimmed, "\\\"", "\"")
+	}
+
+	// 处理原始tag情况，如`json:"hello"`
+	if strings.HasPrefix(tag, "`") && strings.HasSuffix(tag, "`") {
+		return tag[1 : len(tag)-1]
+	}
+
+	// 对于其他情况，直接返回原字符串
+	return tag
 }

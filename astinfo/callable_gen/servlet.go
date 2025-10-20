@@ -8,8 +8,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/astinfo"
-	"github.com/wanjm/gos/tool"
 )
 
 type FilterInfo struct {
@@ -55,11 +55,11 @@ const filterTemplate = `func {{.FilterName}}(c *gin.Context) {
 `
 
 func (servlet *ServletGen) GenFilterCode(function *astinfo.Function, file *astinfo.GenedFile) string {
-	file.GetImport(astinfo.SimplePackage("github.com/gin-gonic/gin", "gin"))
+	file.GetImport(astbasic.SimplePackage("github.com/gin-gonic/gin", "gin"))
 	pkg := function.GoSource.Pkg
 	// 生成过滤器函数名
 	filterName := "filter_" + pkg.Name + "_" + function.Name
-	impt := file.GetImport(pkg)
+	impt := file.GetImport(&pkg.PkgBasic)
 
 	// 准备模板数据
 	data := struct {
@@ -148,7 +148,7 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		for _, name := range names {
 			if strings.Contains(name, ":") {
 				//此处最好从名字能获取到Field，然后在调用type的parse方法，返回其对应的值；
-				tm.UrlParameterStr += fmt.Sprintf("request.%s=c.Param(\"%s\")\n", tool.Capitalize(name[1:]), name[1:])
+				tm.UrlParameterStr += fmt.Sprintf("request.%s=c.Param(\"%s\")\n", astbasic.Capitalize(name[1:]), name[1:])
 			}
 		}
 	}

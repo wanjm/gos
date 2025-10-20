@@ -6,6 +6,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/astinfo"
 	"github.com/wanjm/gos/astinfo/callable_gen"
 )
@@ -106,10 +107,10 @@ func (prpc *PrpcGen) genRpcClientCode(file *astinfo.GenedFile, structName string
 	}
 
 	// 添加必要的导入
-	file.GetImport(astinfo.SimplePackage("context", "context"))
-	file.GetImport(astinfo.SimplePackage("errors", "errors"))
+	file.GetImport(astbasic.SimplePackage("context", "context"))
+	file.GetImport(astbasic.SimplePackage("errors", "errors"))
 	if data.HasResults {
-		file.GetImport(astinfo.SimplePackage("encoding/json", "json"))
+		file.GetImport(astbasic.SimplePackage("encoding/json", "json"))
 	}
 
 	// 将生成的代码添加到文件
@@ -124,12 +125,12 @@ func (prpc *PrpcGen) GenerateCommon(file *astinfo.GenedFile) {
 	}
 	callable_gen.GenBasicError(file)
 	generated = true
-	file.GetImport(astinfo.SimplePackage("bytes", "bytes"))
-	file.GetImport(astinfo.SimplePackage("encoding/json", "json"))
-	file.GetImport(astinfo.SimplePackage("fmt", "fmt"))
-	file.GetImport(astinfo.SimplePackage("net/http", "http"))
-	file.GetImport(astinfo.SimplePackage("io", "io"))
-	file.GetImport(astinfo.SimplePackage("context", "context"))
+	file.GetImport(astbasic.SimplePackage("bytes", "bytes"))
+	file.GetImport(astbasic.SimplePackage("encoding/json", "json"))
+	file.GetImport(astbasic.SimplePackage("fmt", "fmt"))
+	file.GetImport(astbasic.SimplePackage("net/http", "http"))
+	file.GetImport(astbasic.SimplePackage("io", "io"))
+	file.GetImport(astbasic.SimplePackage("context", "context"))
 	var content strings.Builder
 	content.WriteString(`
 type rpcLogger interface {
@@ -186,10 +187,10 @@ func (client *RpcClient) SendRequest(ctx context.Context, name string, array []a
 }
 `)
 	key := astinfo.GlobalProject.Cfg.Generation.TraceKey
-	module := astinfo.GlobalProject.Cfg.Generation.TraceKeyMod
 	if key != "" {
+		module := astinfo.GlobalProject.Cfg.Generation.TraceKeyMod
 		// prpc的发送请求是，会向http头添加traceId，需要使用该变量
-		oneImport := file.GetImport(astinfo.SimplePackage(module, "xx"))
+		oneImport := file.GetImport(astbasic.SimplePackage(module, "xx"))
 		content.WriteString(fmt.Sprintf("var TraceIdNameInContext = %s.%s{}\n", oneImport.Name, key))
 	} else {
 		content.WriteString("var TraceIdNameInContext = \"badTraceIdName plase config in Generation TraceKeyMod\"\n")
@@ -236,12 +237,12 @@ func initRpcClient() {
 
 	// 处理日志配置
 	if data.HasLogger {
-		data.LoggerImport = file.GetImport(astinfo.SimplePackage(generationCfg.RpcLoggerMod, "xx")).Name
+		data.LoggerImport = file.GetImport(astbasic.SimplePackage(generationCfg.RpcLoggerMod, "xx")).Name
 		data.LoggerKey = generationCfg.RpcLoggerKey
 	}
 
 	for iface, field := range rpcClientVar {
-		impt := file.GetImport(iface.GoSource.Pkg)
+		impt := file.GetImport(&iface.GoSource.Pkg.PkgBasic)
 		host := iface.Comment.Host
 
 		if !strings.HasPrefix(host, `"`) {
