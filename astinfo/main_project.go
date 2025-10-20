@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"text/template"
@@ -359,11 +360,13 @@ func (sm *ServerManager) Generate(file *GenedFile) {
 	// if len(sm.servers) == 0 {
 	// 	return
 	// }
-	for _, server := range sm.servers {
+	var groupNames []string
+	for name, server := range sm.servers {
 		//一个server一个文件；
 		file1 := CreateGenedFile(server.Name)
 		server.Generate(file1)
 		file1.Save()
+		groupNames = append(groupNames, name)
 	}
 	tmplText :=
 		`
@@ -417,13 +420,14 @@ type ExtraInfo interface {
 		RouterNames string
 	}
 	var s []*ServerInfo
-	for _, server := range sm.servers {
-		server := &ServerInfo{
+	slices.Sort(groupNames)
+	for _, groupName := range groupNames {
+		server := sm.servers[groupName]
+		s = append(s, &ServerInfo{
 			Name:        server.Name,
 			FilterNames: strings.Join(server.GeneratedFilters, ",\n"),
 			RouterNames: strings.Join(server.GenerateRouters, ",\n"),
-		}
-		s = append(s, server)
+		})
 	}
 
 	err = tmpl.Execute(&sb, s)
