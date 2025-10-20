@@ -31,7 +31,7 @@ func GenTableFromMySQL(config *basic.DBConfig, moduleMap map[string]struct{}) er
 func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
 	pkg := astinfo.GlobalProject.CurrentProject.NewPkgBasic("", tableCfg.ModulePath)
 	entityPkg := pkg.NewPkgBasic("entity", "entity")
-	file := entityPkg.NewFile("mysql.alias.gen")
+	file := entityPkg.NewFile("mysql.alias")
 	var sb strings.Builder
 	for _, tableName := range tableCfg.TableNames {
 		// 2. Get DDL
@@ -72,7 +72,7 @@ func getTableDDL(db *sql.DB, tableName string) (string, error) {
 // GenerateStructFromDDL parses the DDL and generates a Go struct definition
 // return Struct Name;
 func GenerateStructFromDDL(tableName, ddl string, tablepkg *astbasic.PkgBasic) (string, error) {
-	tableFile := tablepkg.NewFile("table.gen")
+	tableFile := tablepkg.NewFile("table")
 	// Simple parser: extract column lines from DDL
 	lines := strings.Split(ddl, "\n")
 	type fieldInfo struct {

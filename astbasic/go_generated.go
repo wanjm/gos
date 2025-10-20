@@ -56,7 +56,7 @@ func (file *GenedFile) Save() {
 	} else {
 		src = src1
 	}
-	filename := filepath.Join(file.Pkg.FilePath, file.name+".go")
+	filename := filepath.Join(file.Pkg.FilePath, file.name+".gen.go")
 	osfile, err := os.Create(filename)
 	if err != nil {
 		panic(err)
