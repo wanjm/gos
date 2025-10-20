@@ -36,7 +36,7 @@ func (db *DbManager) Gen() {
 	for _, pkg := range pkgs {
 		var mysqlInfo []*info
 		var mongoInfo []*info
-		file := pkg.NewFile("column.gen")
+		file := pkg.NewFile("column")
 		for _, className := range pkg.SortedStructNames {
 			class := pkg.Structs[className]
 			if class.Comment.TableName != "" {
