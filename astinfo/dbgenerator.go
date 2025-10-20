@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"log"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/wanjm/gos/astbasic"
@@ -36,7 +37,8 @@ func (db *DbManager) Gen() {
 		var mysqlInfo []*info
 		var mongoInfo []*info
 		file := pkg.NewFile("column.gen")
-		for _, class := range pkg.Structs {
+		for _, className := range pkg.SortedStructNames {
+			class := pkg.Structs[className]
 			if class.Comment.TableName != "" {
 				var data = info{
 					TableName:    class.StructName,
@@ -80,6 +82,9 @@ func (db *DbManager) Gen() {
 		file.GetImport(astbasic.SimplePackage(basic.Cfg.Generation.CommonMod, "common"))
 		file.GetImport(astbasic.SimplePackage("context", "context"))
 		file.GetImport(astbasic.SimplePackage("gorm.io/gorm", "gorm"))
+		if len(mysqlInfo) > 1 {
+			slices.SortFunc(mysqlInfo, compareInfo)
+		}
 		for _, info := range mysqlInfo {
 			genMysqlDal(info, file)
 		}
@@ -97,7 +102,9 @@ func (db *DbManager) Gen() {
 		file.GetImport(astbasic.SimplePackage("go.mongodb.org/mongo-driver/bson/primitive", "primitive"))
 		file.GetImport(astbasic.SimplePackage("go.mongodb.org/mongo-driver/mongo", "mongo"))
 		file.GetImport(astbasic.SimplePackage("go.mongodb.org/mongo-driver/mongo/options", "options"))
-
+		if len(mongoInfo) > 1 {
+			slices.SortFunc(mongoInfo, compareInfo)
+		}
 		for _, info := range mongoInfo {
 			genMongoDal(info, file)
 		}
@@ -162,6 +169,10 @@ type info struct {
 	RawTableName string
 	DBVariable   string
 	Pkg          *astbasic.PkgBasic
+}
+
+func compareInfo(a, b *info) int {
+	return strings.Compare(a.TableName, b.TableName)
 }
 
 func genMysqlDal(data *info, file *astbasic.GenedFile) {
