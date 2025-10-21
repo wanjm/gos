@@ -229,7 +229,7 @@ func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, options []common.Op
 }
 
 func (a *{{.TableName}}Dal) GetOne(ctx context.Context, options []common.Optioner, cols ...[]string) (item *{{.Pkg.Name}}.{{.TableName}}, err error) {
-	res, err := a.GetAll(ctx, options, cols...)
+	res, err := a.GetLimitAll(ctx, options, 1, cols...)
 	if err != nil {
 		return
 	}
@@ -374,7 +374,7 @@ func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, opts []common.Optio
 }
 
 func (a *{{.TableName}}Dal) GetOne(ctx context.Context, options []common.Optioner, cols ...[]string) (item *{{.Pkg.Name}}.{{.TableName}}, err error) {
-	res, err := a.GetAll(ctx, options, cols...)
+	res, err := a.GetLimitAll(ctx, options, 1, cols...)
 	if err != nil {
 		return
 	}
