@@ -78,7 +78,7 @@ func (db *DbManager) Gen() {
 			Name:     "dal",
 			FilePath: filepath.Join(pkgPath, "dal"),
 		}
-		file := pkg.NewFile("mysql.dal.gen")
+		file := pkg.NewFile("mysql.dal")
 		file.GetImport(astbasic.SimplePackage(basic.Cfg.Generation.CommonMod, "common"))
 		file.GetImport(astbasic.SimplePackage("context", "context"))
 		file.GetImport(astbasic.SimplePackage("gorm.io/gorm", "gorm"))
@@ -95,7 +95,7 @@ func (db *DbManager) Gen() {
 			Name:     "dal",
 			FilePath: filepath.Join(pkgPath, "dal"),
 		}
-		file := pkg.NewFile("mongo.dal.gen")
+		file := pkg.NewFile("mongo.dal")
 		file.GetImport(astbasic.SimplePackage("context", "context"))
 		file.GetImport(astbasic.SimplePackage(basic.Cfg.Generation.CommonMod, "common"))
 		file.GetImport(astbasic.SimplePackage("go.mongodb.org/mongo-driver/bson", "bson"))
