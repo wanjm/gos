@@ -145,20 +145,21 @@ func genColumns(file *astbasic.GenedFile, columns []*NamePair) {
 func getNamePair(class *Struct, tag string) []*NamePair {
 	var columns []*NamePair
 	for _, field := range class.Fields {
-		if field.Name == "" {
-			basicType := GetBasicType(field.Type)
-			if subClass, ok := basicType.(*Struct); ok {
+		basicType := GetBasicType(field.Type)
+		if subClass, ok := basicType.(*Struct); ok {
+			if subClass.GoSource.Pkg == class.GoSource.Pkg {
 				subColumns := getNamePair(subClass, tag)
 				columns = append(columns, subColumns...)
 			}
-			continue
 		}
 		tag := field.Tags[tag]
 		colname := strings.Split(tag, ",")[0]
-		columns = append(columns, &NamePair{
-			VarName: "C_" + field.Name,
-			ColName: colname,
-		})
+		if colname != "" && colname != "-" {
+			columns = append(columns, &NamePair{
+				VarName: "C_" + field.Name,
+				ColName: colname,
+			})
+		}
 	}
 	return columns
 }
