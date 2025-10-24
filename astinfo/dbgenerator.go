@@ -37,6 +37,9 @@ func (db *DbManager) Gen() {
 		var mysqlInfo []*info
 		var mongoInfo []*info
 		file := pkg.NewFile("column")
+		var conflictMap = make(map[string]*NamePair)
+		var allColumns []*NamePair
+
 		for _, className := range pkg.SortedStructNames {
 			class := pkg.Structs[className]
 			if class.Comment.TableName != "" {
@@ -48,17 +51,26 @@ func (db *DbManager) Gen() {
 				}
 				for _, field := range class.Fields {
 					if field.Tags["gorm"] != "" {
-						genColumns(file, getNamePair(class, "gorm"))
+						// Collect NamePairs instead of immediately generating columns
+						allColumns = append(allColumns, getNamePair(class, "gorm")...)
 						mysqlInfo = append(mysqlInfo, &data)
 						break
 					} else if field.Tags["bson"] != "" {
-						genColumns(file, getNamePair(class, "bson"))
+						// Collect NamePairs instead of immediately generating columns
+						allColumns = append(allColumns, getNamePair(class, "bson")...)
 						mongoInfo = append(mongoInfo, &data)
 						break
 					}
 				}
 			}
 		}
+
+		// Deduplicate all collected columns and generate them
+		if len(allColumns) > 0 {
+			deduplicatedColumns := DeduplicateNamePairs(conflictMap, allColumns)
+			genColumns(file, deduplicatedColumns)
+		}
+
 		file.Save()
 		if len(mysqlInfo) == 0 && len(mongoInfo) == 0 {
 			continue
@@ -117,6 +129,32 @@ type tbInfo struct {
 type NamePair struct {
 	VarName string
 	ColName string
+}
+
+// DeduplicateNamePairs takes a map and a slice of NamePair pointers,
+// returns a deduplicated slice of NamePair pointers.
+// Uses VarName as the key for the map to check for duplicates.
+// If a NamePair with the same VarName exists but has different ColName, prints a warning.
+func DeduplicateNamePairs(nameMap map[string]*NamePair, namePairs []*NamePair) []*NamePair {
+	var result []*NamePair
+
+	for _, pair := range namePairs {
+		if existingPair, exists := nameMap[pair.VarName]; exists {
+			// Check if the existing pair has the same ColName
+			if existingPair.ColName != pair.ColName {
+				log.Printf("Warning: NamePair with VarName '%s' already exists with ColName '%s', but new pair has ColName '%s'",
+					pair.VarName, existingPair.ColName, pair.ColName)
+			}
+			// Skip this pair as it already exists
+			continue
+		}
+
+		// Add to map and result
+		nameMap[pair.VarName] = pair
+		result = append(result, pair)
+	}
+
+	return result
 }
 
 // 这样写，是为了解决一个entity目录中有多个表的情况；
