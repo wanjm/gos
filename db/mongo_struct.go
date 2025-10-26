@@ -56,7 +56,7 @@ func GenTableFromMongo(config *basic.DBConfig, moduleMap map[string]struct{}) er
 			if err != nil {
 				return fmt.Errorf("获取文档失败: %w", err)
 			}
-			err = genTableForMongo(tableName, doc, pkg, dbVariable)
+			err = genTableForMongo(tableName, doc, pkg, config.DBName)
 			if err != nil {
 				log.Printf("为集合 '%s' 生成结构体失败: %v", tableName, err)
 				// 选择继续处理下一个表而不是直接返回错误
@@ -126,7 +126,7 @@ func genTableForMongo(tableName string, doc bson.M, pkg *astbasic.PkgBasic, dbVa
 	gosStringBuilder.WriteString("// @gos tblName=")
 	gosStringBuilder.WriteString(tableName)
 	gosStringBuilder.WriteString(" dbVariable=")
-	gosStringBuilder.WriteString(dbVariable)
+	gosStringBuilder.WriteString(dbVariable) //由于生成dal中的DB指针的变量名；
 	gosStringBuilder.WriteString("\n")
 	tableFile.AddBuilder(&gosStringBuilder)
 	return generateStruct(structName, doc, tableFile)

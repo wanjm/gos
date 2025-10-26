@@ -25,7 +25,7 @@ type Config struct {
 
 type DBConfig struct {
 	DSN       string
-	DBName    string
+	DBName    string         //用于生成dal中的db变量名；
 	DBType    string         // 数据库类型，mysql或mongo
 	DbGenCfgs []*TableGenCfg // 数据库中表的记录；
 }
