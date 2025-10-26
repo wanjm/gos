@@ -34,6 +34,7 @@ type TableGenCfg struct {
 	RecordIds  []string // 记录id的字段名，生成mongo的结构体；不要时可以为空，或者将所有的不要的dbname放在最后，可以不写
 	OutPath    string
 	ModulePath string
+	DBName     string //从DBConfig中复制，无需填写
 }
 
 type SwaggerCfg struct {
