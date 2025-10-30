@@ -312,7 +312,7 @@ func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, 
 }
 
 // Update
-func (a *{{.TableName}}Dal) Update(ctx context.Context, options []common.Optioner, updates any) (err error) {
+func (a *{{.TableName}}Dal) Update(ctx context.Context, options []common.Optioner,updates map[string]any) (err error) {
 	op := a.getDBOperation(ctx)
 	err = op.Update(&common.SqlUpdateOptions{
 		QueryFields: options,
@@ -325,7 +325,7 @@ func (a *{{.TableName}}Dal) Update(ctx context.Context, options []common.Optione
 	return
 }
 
-func (a *{{.TableName}}Dal) UpdateById(ctx context.Context, id int32, updates any) error {
+func (a *{{.TableName}}Dal) UpdateById(ctx context.Context, id int32, updates map[string]any) error {
 	return a.Update(ctx, []common.Optioner{common.Eq("id", id)}, updates)
 }
 
@@ -427,11 +427,11 @@ func (a *{{.TableName}}Dal) GetOneById(ctx context.Context, id primitive.ObjectI
 	return a.GetOne(ctx, []common.Optioner{common.Eq("_id", id)}, cols...)
 }
 
-func (a *{{.TableName}}Dal) Set(ctx context.Context, opts []common.Optioner, updates any) (err error) {
+func (a *{{.TableName}}Dal) Set(ctx context.Context, opts []common.Optioner,updates map[string]any) (err error) {
 	return a.Update(ctx, opts, bson.M{"$set": updates})
 }
 
-func (a *{{.TableName}}Dal) Update(ctx context.Context, opts []common.Optioner, updates any) (err error) {
+func (a *{{.TableName}}Dal) Update(ctx context.Context, opts []common.Optioner, updates map[string]any) (err error) {
 	filter := common.GenMongoOption(opts)
 	db := a.getDB()
 	_, err = db.UpdateMany(ctx, filter, updates)
