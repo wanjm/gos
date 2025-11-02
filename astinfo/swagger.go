@@ -7,6 +7,7 @@ import (
 	"io"
 	"maps"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -234,7 +235,6 @@ func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager) {
 //		}
 //	}
 func (swagger *Swagger) GenerateCode(cfg *basic.SwaggerCfg) string {
-
 	project := swagger.project
 	for name, pkg := range project.Packages {
 		_ = name
@@ -245,37 +245,40 @@ func (swagger *Swagger) GenerateCode(cfg *basic.SwaggerCfg) string {
 		fmt.Printf("json.Marshal(s.SwaggerProps) error: %v", err)
 		return ""
 	}
-	if cfg.Token == "" {
+	if cfg.JsonName != "" {
 		//如果不上传，则打印到控制台
-		fmt.Printf("swagger:%s\n", string(swaggerJson))
-		return ""
+		os.WriteFile(cfg.JsonName, swaggerJson, 0644)
 	}
-	cmdMap := map[string]any{
-		"input": string(swaggerJson),
-		"options": map[string]any{
-			"targetEndpointFolderId":        cfg.ServletFolder,
-			"targetSchemaFolderId":          cfg.SchemaFolder,
-			"endpointOverwriteBehavior":     "OVERWRITE_EXISTING",
-			"schemaOverwriteBehavior":       "OVERWRITE_EXISTING",
-			"updateFolderOfChangedEndpoint": false,
-			"prependBasePath":               false,
-		},
+
+	if cfg.Token != "" {
+		cmdMap := map[string]any{
+			"input": string(swaggerJson),
+			"options": map[string]any{
+				"targetEndpointFolderId":        cfg.ServletFolder,
+				"targetSchemaFolderId":          cfg.SchemaFolder,
+				"endpointOverwriteBehavior":     "OVERWRITE_EXISTING",
+				"schemaOverwriteBehavior":       "OVERWRITE_EXISTING",
+				"updateFolderOfChangedEndpoint": false,
+				"prependBasePath":               false,
+			},
+		}
+		data, _ := json.Marshal(cmdMap)
+		url := "http://api.apifox.com/v1/projects/" + strconv.Itoa(cfg.ProjectId) + "/import-openapi?locale=zh-CN"
+		req, _ := http.NewRequest("POST", url, bytes.NewReader(data))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Apifox-Api-Version", "2024-03-28")
+		req.Header.Set("Authorization", "Bearer "+cfg.Token)
+		req.Header.Set("User-Agent", "Apifox/1.0.0 (https://apifox.com)")
+		response, err := http.DefaultClient.Do(req)
+		if err != nil {
+			fmt.Printf("error:%v\n", err)
+		}
+		content, _ := io.ReadAll(response.Body)
+		fmt.Printf("response:%v\n", string(content))
+		return (string(data))
 	}
-	data, _ := json.Marshal(cmdMap)
-	url := "http://api.apifox.com/v1/projects/" + strconv.Itoa(cfg.ProjectId) + "/import-openapi?locale=zh-CN"
-	req, _ := http.NewRequest("POST", url, bytes.NewReader(data))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Apifox-Api-Version", "2024-03-28")
-	req.Header.Set("Authorization", "Bearer "+cfg.Token)
-	req.Header.Set("User-Agent", "Apifox/1.0.0 (https://apifox.com)")
-	response, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Printf("error:%v\n", err)
-	}
-	content, _ := io.ReadAll(response.Body)
-	fmt.Printf("response:%v\n", string(content))
+	return ""
 	// fmt.Printf("swagger:%s\n", cmdMap["input"])
-	return (string(data))
 }
 func (swagger *Swagger) addServletFromPackage(pkg *Package) {
 	// swagger.addServletFromFunctionManager(&pkg.FunctionManager)

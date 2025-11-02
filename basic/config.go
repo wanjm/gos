@@ -43,6 +43,7 @@ type SwaggerCfg struct {
 	SchemaFolder  int    // 生成的schema文件夹
 	UrlPrefix     string // url前缀, 正式环境和本地的路径不一样
 	Token         string
+	JsonName      string
 }
 
 var Cfg Config
