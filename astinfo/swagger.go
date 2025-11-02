@@ -60,7 +60,7 @@ func (r *ArrayType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 func (s *Struct) InitSchema(schema *spec.Schema, swagger *Swagger) {
 	// schema.Ref = spec.Ref{
 	if s.ref == nil {
-		s.ref = swagger.getRefOfStruct(s)
+		swagger.getStructRef(s)
 	}
 	schema.Ref = *s.ref
 }
@@ -174,7 +174,7 @@ func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager) {
 			_ = props
 			if len(servlet.Params) > 1 && servlet.Params[1].Type != nil {
 				t := GetBasicType(servlet.Params[1].Type)
-				ref := swagger.getRefOfStruct(t.(*Struct))
+				ref := swagger.getStructRef(t.(*Struct))
 				parameter = append(parameter, spec.Parameter{
 					ParamProps: spec.ParamProps{
 						Name:     "body",
@@ -289,7 +289,9 @@ func (swagger *Swagger) addServletFromPackage(pkg *Package) {
 	}
 }
 
-func (swagger *Swagger) addStructFieldsToSchema(class *Struct) map[string]spec.Schema {
+// 产生schema定义；
+// 根据field 逐条产生schema
+func (swagger *Swagger) genSchema(class *Struct) map[string]spec.Schema {
 	schemas := make(map[string]spec.Schema)
 	/*
 		"expireType": { //结构体格式
@@ -307,7 +309,7 @@ func (swagger *Swagger) addStructFieldsToSchema(class *Struct) map[string]spec.S
 	*/
 	for _, field := range class.Fields {
 		if field.Name == "" {
-			schemas1 := swagger.addStructFieldsToSchema(field.Type.(*Struct))
+			schemas1 := swagger.genSchema(field.Type.(*Struct))
 			maps.Copy(schemas, schemas1)
 			continue
 		}
@@ -340,13 +342,24 @@ func (swagger *Swagger) addStructFieldsToSchema(class *Struct) map[string]spec.S
 	return schemas
 }
 
-func (swagger *Swagger) getRefOfStruct(class *Struct) *spec.Ref {
-	schemas := swagger.addStructFieldsToSchema(class)
+// 生成struct自己的definition，并保存在最的ref中，方便后续使用；
+// ref中记录definition的字符串；  "#/definitions/Node"
+//
+//	"definitions": {
+//		"stuctName" :{}
+
+// 将definition记录在swagger的Definitions中；
+func (swagger *Swagger) getStructRef(class *Struct) *spec.Ref {
+	if class.ref != nil {
+		return class.ref
+	}
+	ref, _ := spec.NewRef("#/definitions/" + class.StructName)
+	class.ref = &ref
+	schemas := swagger.genSchema(class)
 	result := spec.SchemaProps{
 		Type:       []string{"object"},
 		Properties: schemas,
 	}
-	ref, _ := spec.NewRef("#/definitions/" + class.StructName)
 	swagger.swag.Definitions[class.StructName] = spec.Schema{
 		SchemaProps: result,
 	}
