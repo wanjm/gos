@@ -144,16 +144,16 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 	//获取可能存在的url中的参数
 	methodUrl := strings.Trim(method.Comment.Url, "\"")
 	if strings.Contains(methodUrl, ":") {
-		names := strings.Split(methodUrl, "/")
-		for _, name := range names {
+		names := strings.SplitSeq(methodUrl, "/")
+		for name := range names {
 			if strings.Contains(name, ":") {
 				//此处最好从名字能获取到Field，然后在调用type的parse方法，返回其对应的值；
 				tm.UrlParameterStr += fmt.Sprintf("request.%s=c.Param(\"%s\")\n", astbasic.Capitalize(name[1:]), name[1:])
 			}
 		}
 	}
-	userFilters := strings.Split(method.Comment.Filter, ",")
-	for _, filter := range userFilters {
+	userFilters := strings.SplitSeq(method.Comment.Filter, ",")
+	for filter := range userFilters {
 		filter = strings.Trim(filter, "\t ")
 		if filter != "" {
 			filterInfo := servlet.filterMap[filter]
