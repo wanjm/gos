@@ -427,17 +427,16 @@ func (a *{{.TableName}}Dal) GetOneById(ctx context.Context, id primitive.ObjectI
 	return a.GetOne(ctx, []common.Optioner{common.Eq("_id", id)}, cols...)
 }
 
-func (a *{{.TableName}}Dal) Set(ctx context.Context, opts []common.Optioner,updates map[string]any) (err error) {
+func (a *{{.TableName}}Dal) Set(ctx context.Context, opts []common.Optioner,updates map[string]any) (result *mongo.UpdateResult, err error) {
 	return a.Update(ctx, opts, bson.M{"$set": updates})
 }
 
-func (a *{{.TableName}}Dal) Update(ctx context.Context, opts []common.Optioner, updates map[string]any) (err error) {
+func (a *{{.TableName}}Dal) Update(ctx context.Context, opts []common.Optioner, updates map[string]any) (result *mongo.UpdateResult, err error) {
 	filter := common.GenMongoOption(opts)
 	db := a.getDB()
-	_, err = db.UpdateMany(ctx, filter, updates)
+	result, err = db.UpdateMany(ctx, filter, updates)
 	if err != nil {
 		common.Error(ctx, "update mongo record {{.RawTableName}} failed", common.Err(err))
-		return err
 	}
 	return
 }
