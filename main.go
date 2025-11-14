@@ -45,6 +45,7 @@ func main() {
 	os.Chdir(basic.Argument.SourcePath)
 	cfg := &basic.Cfg
 	cfg.Load()
+	cfg.InitMain = basic.Argument.GoMod
 	var project = astinfo.CreateProject(basic.Argument.SourcePath, cfg)
 	if err := project.CurrentProject.ParseModule(); err != nil {
 		return
@@ -113,8 +114,6 @@ func genServlet(project *astinfo.MainProject) {
 		fmt.Printf("parse project failed with %s", err.Error())
 		return
 	}
-	cfg := &basic.Cfg
-	cfg.InitMain = basic.Argument.GoMod
 	astinfo.RegisterCallableGen(
 		callable_gen.NewServletGen(4, 1),
 		&callable_gen.PrpcGen{},
