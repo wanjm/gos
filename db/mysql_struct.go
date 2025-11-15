@@ -20,6 +20,7 @@ func GenTableFromMySQL(config *basic.DBConfig, moduleMap map[string]struct{}) er
 	}
 	defer db.Close()
 	for _, cfg := range config.DbGenCfgs {
+		cfg.DBName = config.DBName
 		if _, ok := moduleMap[cfg.ModulePath]; ok {
 			genTable(cfg, db)
 		}
@@ -31,8 +32,8 @@ func GenTableFromMySQL(config *basic.DBConfig, moduleMap map[string]struct{}) er
 func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
 	pkg := astinfo.GlobalProject.CurrentProject.NewPkgBasic("", tableCfg.ModulePath)
 	entityPkg := pkg.NewPkgBasic("entity", "entity")
-	file := entityPkg.NewFile("mysql.alias.gen")
-	var sb strings.Builder
+	file := entityPkg.NewFile("mysql.alias")
+	var aliasStringBuilder strings.Builder
 	for _, tableName := range tableCfg.TableNames {
 		// 2. Get DDL
 		ddl, err := getTableDDL(db, tableName)
@@ -43,14 +44,14 @@ func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
 		// 3. Parse DDL and generate struct
 		tablepkg := entityPkg.NewPkgBasic(tableName, "mysql/"+tableName)
 		file.GetImport(tablepkg)
-		structName, err := GenerateStructFromDDL(tableName, ddl, tablepkg)
+		structName, err := GenerateStructFromDDL(tableName, ddl, tablepkg, tableCfg.DBName)
 		if err != nil {
 			fmt.Printf("生成结构体代码失败: %v\n", err)
 			return err
 		}
-		sb.WriteString("type " + structName + "= " + tableName + "." + structName + "\n")
+		aliasStringBuilder.WriteString("type " + structName + "= " + tableName + "." + structName + "\n")
 	}
-	file.AddBuilder(&sb)
+	file.AddBuilder(&aliasStringBuilder)
 	file.Save()
 	return nil
 }
@@ -71,8 +72,8 @@ func getTableDDL(db *sql.DB, tableName string) (string, error) {
 
 // GenerateStructFromDDL parses the DDL and generates a Go struct definition
 // return Struct Name;
-func GenerateStructFromDDL(tableName, ddl string, tablepkg *astbasic.PkgBasic) (string, error) {
-	tableFile := tablepkg.NewFile("table.gen")
+func GenerateStructFromDDL(tableName, ddl string, tablepkg *astbasic.PkgBasic, dbVariable string) (string, error) {
+	tableFile := tablepkg.NewFile("table")
 	// Simple parser: extract column lines from DDL
 	lines := strings.Split(ddl, "\n")
 	type fieldInfo struct {
@@ -127,7 +128,7 @@ func GenerateStructFromDDL(tableName, ddl string, tablepkg *astbasic.PkgBasic) (
 	}
 	const structTpl = `
 	{{.StructComment}}
-	// @gos tblName={{.TableName}} dbVariable=plasoDb
+	// @gos tblName={{.TableName}} dbVariable={{.DbVariable}}
 type {{.StructName}} struct {
 {{range .Fields}}
 	{{.Name}} {{.Type}} "json:\"{{.JsonTag}}\" gorm:\"{{.GormTag}}\"" // {{.Comment}}
@@ -145,6 +146,7 @@ type {{.StructName}} struct {
 		"StructName":    structName,
 		"Fields":        fields,
 		"TableName":     tableName,
+		"DbVariable":    dbVariable,
 	})
 	if err != nil {
 		return "", err
@@ -162,8 +164,8 @@ func mysqlTypeToGoType(mysqlType string, file *astbasic.GenedFile) string {
 		return "int32"
 	case strings.HasPrefix(t, "bigint"):
 		return "int64"
-	case strings.HasPrefix(t, "tinyint(1)"):
-		return "bool"
+	// case strings.HasPrefix(t, "tinyint(1)"):
+	// return "bool"
 	case strings.HasPrefix(t, "tinyint"):
 		return "int8"
 	case strings.HasPrefix(t, "smallint"):

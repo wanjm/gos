@@ -36,7 +36,10 @@ func (db *DbManager) Gen() {
 	for _, pkg := range pkgs {
 		var mysqlInfo []*info
 		var mongoInfo []*info
-		file := pkg.NewFile("column.gen")
+		file := pkg.NewFile("column")
+		var conflictMap = make(map[string]*NamePair)
+		var allColumns []*NamePair
+
 		for _, className := range pkg.SortedStructNames {
 			class := pkg.Structs[className]
 			if class.Comment.TableName != "" {
@@ -48,17 +51,26 @@ func (db *DbManager) Gen() {
 				}
 				for _, field := range class.Fields {
 					if field.Tags["gorm"] != "" {
-						genColumns(file, getNamePair(class, "gorm"))
+						// Collect NamePairs instead of immediately generating columns
+						allColumns = append(allColumns, getNamePair(class, "gorm")...)
 						mysqlInfo = append(mysqlInfo, &data)
 						break
 					} else if field.Tags["bson"] != "" {
-						genColumns(file, getNamePair(class, "bson"))
+						// Collect NamePairs instead of immediately generating columns
+						allColumns = append(allColumns, getNamePair(class, "bson")...)
 						mongoInfo = append(mongoInfo, &data)
 						break
 					}
 				}
 			}
 		}
+
+		// Deduplicate all collected columns and generate them
+		if len(allColumns) > 0 {
+			deduplicatedColumns := DeduplicateNamePairs(conflictMap, allColumns)
+			genColumns(file, deduplicatedColumns)
+		}
+
 		file.Save()
 		if len(mysqlInfo) == 0 && len(mongoInfo) == 0 {
 			continue
@@ -78,7 +90,7 @@ func (db *DbManager) Gen() {
 			Name:     "dal",
 			FilePath: filepath.Join(pkgPath, "dal"),
 		}
-		file := pkg.NewFile("mysql.dal.gen")
+		file := pkg.NewFile("mysql.dal")
 		file.GetImport(astbasic.SimplePackage(basic.Cfg.Generation.CommonMod, "common"))
 		file.GetImport(astbasic.SimplePackage("context", "context"))
 		file.GetImport(astbasic.SimplePackage("gorm.io/gorm", "gorm"))
@@ -95,7 +107,7 @@ func (db *DbManager) Gen() {
 			Name:     "dal",
 			FilePath: filepath.Join(pkgPath, "dal"),
 		}
-		file := pkg.NewFile("mongo.dal.gen")
+		file := pkg.NewFile("mongo.dal")
 		file.GetImport(astbasic.SimplePackage("context", "context"))
 		file.GetImport(astbasic.SimplePackage(basic.Cfg.Generation.CommonMod, "common"))
 		file.GetImport(astbasic.SimplePackage("go.mongodb.org/mongo-driver/bson", "bson"))
@@ -117,6 +129,32 @@ type tbInfo struct {
 type NamePair struct {
 	VarName string
 	ColName string
+}
+
+// DeduplicateNamePairs takes a map and a slice of NamePair pointers,
+// returns a deduplicated slice of NamePair pointers.
+// Uses VarName as the key for the map to check for duplicates.
+// If a NamePair with the same VarName exists but has different ColName, prints a warning.
+func DeduplicateNamePairs(nameMap map[string]*NamePair, namePairs []*NamePair) []*NamePair {
+	var result []*NamePair
+
+	for _, pair := range namePairs {
+		if existingPair, exists := nameMap[pair.VarName]; exists {
+			// Check if the existing pair has the same ColName
+			if existingPair.ColName != pair.ColName {
+				log.Printf("Warning: NamePair with VarName '%s' already exists with ColName '%s', but new pair has ColName '%s'",
+					pair.VarName, existingPair.ColName, pair.ColName)
+			}
+			// Skip this pair as it already exists
+			continue
+		}
+
+		// Add to map and result
+		nameMap[pair.VarName] = pair
+		result = append(result, pair)
+	}
+
+	return result
 }
 
 // 这样写，是为了解决一个entity目录中有多个表的情况；
@@ -145,20 +183,21 @@ func genColumns(file *astbasic.GenedFile, columns []*NamePair) {
 func getNamePair(class *Struct, tag string) []*NamePair {
 	var columns []*NamePair
 	for _, field := range class.Fields {
-		if field.Name == "" {
-			basicType := GetBasicType(field.Type)
-			if subClass, ok := basicType.(*Struct); ok {
+		basicType := GetBasicType(field.Type)
+		if subClass, ok := basicType.(*Struct); ok {
+			if subClass.GoSource.Pkg == class.GoSource.Pkg {
 				subColumns := getNamePair(subClass, tag)
 				columns = append(columns, subColumns...)
 			}
-			continue
 		}
 		tag := field.Tags[tag]
 		colname := strings.Split(tag, ",")[0]
-		columns = append(columns, &NamePair{
-			VarName: "C_" + field.Name,
-			ColName: colname,
-		})
+		if colname != "" && colname != "-" {
+			columns = append(columns, &NamePair{
+				VarName: "C_" + field.Name,
+				ColName: colname,
+			})
+		}
 	}
 	return columns
 }
@@ -229,7 +268,7 @@ func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, options []common.Op
 }
 
 func (a *{{.TableName}}Dal) GetOne(ctx context.Context, options []common.Optioner, cols ...[]string) (item *{{.Pkg.Name}}.{{.TableName}}, err error) {
-	res, err := a.GetAll(ctx, options, cols...)
+	res, err := a.GetLimitAll(ctx, options, 1, cols...)
 	if err != nil {
 		return
 	}
@@ -273,7 +312,7 @@ func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, 
 }
 
 // Update
-func (a *{{.TableName}}Dal) Update(ctx context.Context, options []common.Optioner, updates any) (err error) {
+func (a *{{.TableName}}Dal) Update(ctx context.Context, options []common.Optioner,updates map[string]any) (err error) {
 	op := a.getDBOperation(ctx)
 	err = op.Update(&common.SqlUpdateOptions{
 		QueryFields: options,
@@ -286,7 +325,7 @@ func (a *{{.TableName}}Dal) Update(ctx context.Context, options []common.Optione
 	return
 }
 
-func (a *{{.TableName}}Dal) UpdateById(ctx context.Context, id int32, updates any) error {
+func (a *{{.TableName}}Dal) UpdateById(ctx context.Context, id int32, updates map[string]any) error {
 	return a.Update(ctx, []common.Optioner{common.Eq("id", id)}, updates)
 }
 
@@ -374,7 +413,7 @@ func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, opts []common.Optio
 }
 
 func (a *{{.TableName}}Dal) GetOne(ctx context.Context, options []common.Optioner, cols ...[]string) (item *{{.Pkg.Name}}.{{.TableName}}, err error) {
-	res, err := a.GetAll(ctx, options, cols...)
+	res, err := a.GetLimitAll(ctx, options, 1, cols...)
 	if err != nil {
 		return
 	}
@@ -387,13 +426,17 @@ func (a *{{.TableName}}Dal) GetOne(ctx context.Context, options []common.Optione
 func (a *{{.TableName}}Dal) GetOneById(ctx context.Context, id primitive.ObjectID, cols ...[]string) (item *{{.Pkg.Name}}.{{.TableName}}, err error) {
 	return a.GetOne(ctx, []common.Optioner{common.Eq("_id", id)}, cols...)
 }
-func (a *{{.TableName}}Dal) Update(ctx context.Context, opts []common.Optioner, updates any) (err error) {
+
+func (a *{{.TableName}}Dal) Set(ctx context.Context, opts []common.Optioner,updates map[string]any) (result *mongo.UpdateResult, err error) {
+	return a.Update(ctx, opts, bson.M{"$set": updates})
+}
+
+func (a *{{.TableName}}Dal) Update(ctx context.Context, opts []common.Optioner, updates map[string]any) (result *mongo.UpdateResult, err error) {
 	filter := common.GenMongoOption(opts)
 	db := a.getDB()
-	_, err = db.UpdateMany(ctx, filter, bson.M{"$set": updates})
+	result, err = db.UpdateMany(ctx, filter, updates)
 	if err != nil {
 		common.Error(ctx, "update mongo record {{.RawTableName}} failed", common.Err(err))
-		return err
 	}
 	return
 }

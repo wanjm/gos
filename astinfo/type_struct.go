@@ -97,18 +97,28 @@ func (v *Struct) IDName() string {
 	return v.GoSource.Pkg.ModPath + "." + v.StructName
 }
 
-func needWire(field *Field) bool {
+// 某些field需要wire，但是却没有名字，所以需要处理
+func getWireField(field *Field) *Field {
 	if IsRawType(field.Type) {
-		return false
+		return nil
 	}
-	if field.Name == "" || (field.Name[0] <= 'z' && field.Name[0] >= 'a') {
-		return false
+	var result = *field
+	name := field.Name
+	if name == "" {
+		t := GetBasicType(field.Type)
+		if t != nil {
+			name = t.RefName(nil)
+		}
+		result.Name = name
+	}
+	if name == "" || (name[0] <= 'z' && name[0] >= 'a') {
+		return nil
 	}
 
 	if field.Tags["wire"] == `-` {
-		return false
+		return nil
 	}
-	return true
+	return &result
 }
 
 // 这里有两种情况。如果定义一个统一的wire，需要考虑一下；
@@ -134,20 +144,24 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 	// 2. wire为ture，且不是简单结构体（needWire），则寻找值去绑定；
 	for _, field := range v.Fields {
 		v, ok := field.Tags["default"]
-		if ok || (needWire(field) && wire) {
+		if ok {
+			//此处需要考虑default为字符串等各种情况；
 			sb.WriteString(field.Name + ":")
-			if ok {
-				//此处需要考虑default为字符串等各种情况；
-				if rt, ok := field.Type.(*RawType); ok {
-					if rt.typeName == "string" {
-						v = `"` + v + `"`
-					}
+			if rt, ok := field.Type.(*RawType); ok {
+				if rt.typeName == "string" {
+					v = `"` + v + `"`
 				}
-				sb.WriteString(v)
-			} else {
-				sb.WriteString(field.GenVariableCode(genFile, wire))
 			}
+			sb.WriteString(v)
 			sb.WriteString(",\n")
+		} else {
+			field := getWireField(field)
+			if field != nil && wire {
+				name := field.Name
+				sb.WriteString(name + ":")
+				sb.WriteString(field.GenVariableCode(genFile, wire))
+				sb.WriteString(",\n")
+			}
 		}
 	}
 	sb.WriteString("}")
@@ -160,7 +174,7 @@ func (v *Struct) RequiredFields() []*Field {
 	var requiredFields []*Field
 	for _, field := range v.Fields {
 		// 过滤原始类型
-		if needWire(field) {
+		if field := getWireField(field); field != nil {
 			requiredFields = append(requiredFields, field)
 		}
 	}

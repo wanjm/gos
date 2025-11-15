@@ -48,7 +48,7 @@ func (manager *RpcClientManager) Generate(file *GenedFile) error {
 		if !ok {
 			continue
 		}
-		file := CreateGenedFile("rpc_client_" + clientType + ".go")
+		file := CreateGenedFile("rpc_client_" + clientType)
 		var sb strings.Builder
 		gen.GenerateCommon(file)
 		var rpcClientVar = make(map[*Interface]*VarField)

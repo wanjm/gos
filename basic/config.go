@@ -25,7 +25,7 @@ type Config struct {
 
 type DBConfig struct {
 	DSN       string
-	DBName    string
+	DBName    string         //用于生成dal中的db变量名；
 	DBType    string         // 数据库类型，mysql或mongo
 	DbGenCfgs []*TableGenCfg // 数据库中表的记录；
 }
@@ -34,6 +34,7 @@ type TableGenCfg struct {
 	RecordIds  []string // 记录id的字段名，生成mongo的结构体；不要时可以为空，或者将所有的不要的dbname放在最后，可以不写
 	OutPath    string
 	ModulePath string
+	DBName     string //从DBConfig中复制，无需填写
 }
 
 type SwaggerCfg struct {
@@ -42,6 +43,7 @@ type SwaggerCfg struct {
 	SchemaFolder  int    // 生成的schema文件夹
 	UrlPrefix     string // url前缀, 正式环境和本地的路径不一样
 	Token         string
+	JsonName      string
 }
 
 var Cfg Config

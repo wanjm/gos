@@ -56,7 +56,7 @@ func GenTableFromMongo(config *basic.DBConfig, moduleMap map[string]struct{}) er
 			if err != nil {
 				return fmt.Errorf("获取文档失败: %w", err)
 			}
-			err = genTableForMongo(tableName, doc, pkg)
+			err = genTableForMongo(tableName, doc, pkg, config.DBName)
 			if err != nil {
 				log.Printf("为集合 '%s' 生成结构体失败: %v", tableName, err)
 				// 选择继续处理下一个表而不是直接返回错误
@@ -106,21 +106,29 @@ type FieldInfo struct {
 
 // StructInfo holds information about a struct for template generation.
 type StructInfo struct {
-	Name   string
-	Fields []FieldInfo
+	Name       string
+	DBVariable string
+	Fields     []FieldInfo
 }
 
-const structTpl = `
-type {{.Name}} struct {
+const structTpl = `type {{.Name}} struct {
 {{- range .Fields}}
 	{{.Name}} {{.Type}} ` + "`" + `bson:"{{.BsonTag}},omitempty" json:"{{.JsonTag}}"` + "`" + `
 {{- end}}
-}`
+}
+`
 
-func genTableForMongo(tableName string, doc bson.M, pkg *astbasic.PkgBasic) error {
+func genTableForMongo(tableName string, doc bson.M, pkg *astbasic.PkgBasic, dbVariable string) error {
 	structName := astbasic.ToCamelCase(tableName, true)
 	tablepkg := pkg.NewPkgBasic(tableName, "entity/mongo/"+tableName)
 	tableFile := tablepkg.NewFile("table")
+	var gosStringBuilder strings.Builder
+	gosStringBuilder.WriteString("// @gos tblName=")
+	gosStringBuilder.WriteString(tableName)
+	gosStringBuilder.WriteString(" dbVariable=")
+	gosStringBuilder.WriteString(dbVariable) //由于生成dal中的DB指针的变量名；
+	gosStringBuilder.WriteString("\n")
+	tableFile.AddBuilder(&gosStringBuilder)
 	return generateStruct(structName, doc, tableFile)
 }
 
