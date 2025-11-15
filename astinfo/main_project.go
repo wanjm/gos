@@ -512,11 +512,7 @@ func (mp *MainProject) ParseModule() error {
 
 // Parse 解析项目的代码
 func (mp *MainProject) Parse() error {
-	if mp.Cfg.InitMain != "" { // 检查是否非空字符串
-		mp.genGoMod()
-		// 设置项目模块名称
-		mp.CurrentProject.ModPath = mp.Cfg.InitMain
-	}
+
 	p := &mp.CurrentProject
 	cfg := mp.Cfg
 	traceKeyMod := cfg.Generation.TraceKeyMod
@@ -567,5 +563,10 @@ func CreateProject(path string, cfg *basic.Config) *MainProject {
 	// 返回*Project才能保证这是一个Project对象；
 	// project.initRawPackage()
 	// project.rawPkg = project.getPackage("", true)
+	if cfg.InitMain != "" { // 检查是否非空字符串
+		GlobalProject.genGoMod()
+		// 设置项目模块名称
+		GlobalProject.CurrentProject.ModPath = cfg.InitMain
+	}
 	return GlobalProject
 }
