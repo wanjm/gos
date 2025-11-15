@@ -24,7 +24,7 @@ func parseArgument() {
 	flag.Parse()
 
 	if *v { // 检查是否指定了-v参数
-		fmt.Println("gos version 0.3.8") // 打印版本号
+		fmt.Println("gos version 0.3.9") // 打印版本号
 		return                           // 退出程序
 	}
 
