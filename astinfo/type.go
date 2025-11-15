@@ -29,10 +29,14 @@ func GetConstructor(typer Typer) Constructor {
 }
 
 func GetBasicType(typer Typer) Typer {
-	if t, ok := typer.(*PointerType); ok {
+	switch t := typer.(type) {
+	case *Alias:
 		return GetBasicType(t.Typer)
+	case *PointerType:
+		return GetBasicType(t.Typer)
+	default:
+		return typer
 	}
-	return typer
 }
 
 func IsPointer(typer Typer) bool {
