@@ -4,7 +4,7 @@ import "go/ast"
 
 type Alias struct {
 	Equal    bool
-	Name     string
+	Name     string // type Name = StructName
 	astRoot  *ast.TypeSpec
 	Gosourse *Gosourse
 	Typer

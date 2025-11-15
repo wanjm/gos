@@ -29,6 +29,9 @@ type MethodManager struct {
 }
 
 func (m *MethodManager) AddCallable(callable Callable) {
+	// 当前这个type是servlet，时parseFunction写死的。
+	// 注意此处的servlet，filter，都是针对struct的type的子类型来的。
+	// 所以有 raw::servlet; servlet::servlet;
 	switch callable.GetType() {
 	case Servlet:
 		m.Server = append(m.Server, callable.(*Method))

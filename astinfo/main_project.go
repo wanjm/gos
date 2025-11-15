@@ -222,11 +222,12 @@ var servers map[string]*server
 
 type Server struct {
 	Name             string
-	callGen          CallableGen
+	callGen          CallableGen // 过去默认 一个group只能有一个functionType，但是考虑到位了节省端口号，有可能可以将多个functionType合并，然后再通过url去区分；目前仅降级为filter使用。类已经重新获取generator了。
 	GeneratedFilters []string
 	GenerateRouters  []string
 	filters          []*Function
 	routers          []*Struct
+	manager          *ServerManager
 	// initRouteFuns []string           //initRoute 调用的init函数； 有package生成，生成路由代码时生成，一个package生成一个路由代码
 	// urlFilters    map[string]*Filter //记录url过滤器函数,key是url, url是原始文件中的url，可能包含引号
 	// initFuncs     []string           //initAll 调用的init函数；
@@ -246,7 +247,12 @@ func (sm *Server) Generate(file *GenedFile) {
 	for _, class := range sm.routers {
 		//generate begin;
 		sm.GenerateRouters = append(sm.GenerateRouters, sm.generateBegin(class, file))
-
+		functionTYpe := class.Comment.serverType
+		generator := sm.manager.generator[functionTYpe]
+		if generator == nil {
+			fmt.Printf("failed to found generator %s\n", functionTYpe)
+			continue
+		}
 		// generate servlets;
 		for _, method := range class.MethodManager.Server {
 			generator.GenRouterCode(method, file)
@@ -326,6 +332,10 @@ func (sm *ServerManager) splitServers() {
 			if groupName == "" {
 				continue
 			}
+			// 过去默认一个group中只有一种服务类型；
+			// 但是为了少开端口，现在一个group中可以有多种服务类型；
+			// 此时有几个注意点；
+			// 1. filter最好全部分开，这样每个filter在发现错误时可以正确返回对对应格式的报文；
 			if server, ok = sm.servers[groupName]; !ok {
 				gen := sm.generator[router.Comment.serverType]
 				if gen == nil {
@@ -335,6 +345,7 @@ func (sm *ServerManager) splitServers() {
 				server = &Server{
 					Name:    groupName,
 					callGen: gen,
+					manager: sm,
 				}
 				sm.servers[groupName] = server
 			}
