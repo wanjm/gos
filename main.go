@@ -25,17 +25,17 @@ func parseArgument() {
 
 	if *v { // 检查是否指定了-v参数
 		fmt.Println("gos version 0.3.9") // 打印版本号
-		return                           // 退出程序
+		os.Exit(0)                       // 退出程序
 	}
 
 	if *h {
 		flag.Usage()
-		return
+		os.Exit(0)
 	}
 	path, err := filepath.Abs(basic.Argument.SourcePath)
 	if err != nil {
 		fmt.Printf("open %s failed with %s", path, err.Error())
-		return
+		os.Exit(1)
 	}
 	basic.Argument.SourcePath = path
 }
