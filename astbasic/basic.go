@@ -1,6 +1,7 @@
 package astbasic
 
 import (
+	"bytes"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -19,9 +20,10 @@ func Capitalize(s string) string {
 }
 
 type split struct {
-	index   int
-	content []byte
-	result  []string
+	index     int
+	content   []byte
+	result    []string
+	delimiter []byte
 }
 
 func (s *split) move(stop byte) {
@@ -33,11 +35,10 @@ func (s *split) split() {
 	begin := 0
 	for ; s.index < len(s.content); s.index++ {
 		a := s.content[s.index]
-		switch a {
-		case '"':
+		if a == '"' {
 			s.index++
 			s.move('"')
-		case ' ', '\t', ';':
+		} else if bytes.Contains(s.delimiter, []byte{a}) {
 			if begin < s.index {
 				s.result = append(s.result, string(s.content[begin:s.index]))
 			}
@@ -49,9 +50,13 @@ func (s *split) split() {
 	}
 }
 
-func Fields(s string) []string {
+func Fields(s string, delimiter ...byte) []string {
+	if len(delimiter) == 0 {
+		delimiter = []byte{'\t', ' ', ';'}
+	}
 	a := split{
-		content: []byte(s),
+		content:   []byte(s),
+		delimiter: delimiter,
 	}
 	a.split()
 	return a.result
