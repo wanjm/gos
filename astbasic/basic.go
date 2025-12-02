@@ -1,7 +1,7 @@
 package astbasic
 
 import (
-	"bytes"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -19,47 +19,32 @@ func Capitalize(s string) string {
 	return string(unicode.ToUpper(r)) + s[n:]
 }
 
-type split struct {
-	index     int
-	content   []byte
-	result    []string
-	delimiter []byte
-}
-
-func (s *split) move(stop byte) {
-	for s.index < len(s.content) && s.content[s.index] != stop {
-		s.index++
-	}
-}
-func (s *split) split() {
-	begin := 0
-	for ; s.index < len(s.content); s.index++ {
-		a := s.content[s.index]
-		if a == '"' {
-			s.index++
-			s.move('"')
-		} else if bytes.Contains(s.delimiter, []byte{a}) {
-			if begin < s.index {
-				s.result = append(s.result, string(s.content[begin:s.index]))
-			}
-			begin = s.index + 1
-		}
-	}
-	if begin < s.index {
-		s.result = append(s.result, string(s.content[begin:s.index]))
-	}
-}
-
 func Fields(s string, delimiter ...byte) []string {
 	if len(delimiter) == 0 {
 		delimiter = []byte{'\t', ' ', ';'}
 	}
-	a := split{
-		content:   []byte(s),
-		delimiter: delimiter,
+
+	var result []string
+	start := 0
+	inQuote := false
+
+	for i := 0; i < len(s); i++ {
+		if s[i] == '"' {
+			inQuote = !inQuote
+		} else if !inQuote {
+			isDelim := slices.Contains(delimiter, s[i])
+			if isDelim {
+				if i > start {
+					result = append(result, s[start:i])
+				}
+				start = i + 1
+			}
+		}
 	}
-	a.split()
-	return a.result
+	if start < len(s) {
+		result = append(result, s[start:])
+	}
+	return result
 }
 
 func ToSnakeCase(s string) string {
