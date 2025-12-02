@@ -131,7 +131,7 @@ func GenerateStructFromDDL(tableName, ddl string, tablepkg *astbasic.PkgBasic, d
 	// @gos tblName={{.TableName}} dbVariable={{.DbVariable}}
 type {{.StructName}} struct {
 {{range .Fields}}
-	{{.Name}} {{.Type}} "json:\"{{.JsonTag}}\" gorm:\"{{.GormTag}}\"" // {{.Comment}}
+	{{.Name}} {{.Type}} "json:\"{{.JsonTag}}\" gorm:\"column:{{.GormTag}}\"" // {{.Comment}}
 {{end}}
 }
 `

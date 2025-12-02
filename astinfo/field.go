@@ -70,7 +70,7 @@ func (field *Field) parseTag(fieldType *ast.BasicLit) {
 		// }
 		tagList := astbasic.Fields(tag)
 		for _, tag := range tagList {
-			kv := strings.Split(tag, ":")
+			kv := strings.SplitN(tag, ":", 2)
 			if len(kv) == 2 {
 				field.Tags[kv[0]] = strings.Trim(kv[1], "\"")
 			}

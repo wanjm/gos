@@ -180,6 +180,9 @@ func genColumns(file *astbasic.GenedFile, columns []*NamePair) {
 	file.AddBuilder(&sb)
 }
 
+// 获取指定tag的值，目前用在gorm和bson两个tag；
+// bson:"orgId,omitempty"
+// gorm:"column:id;primary_key;AUTO_INCREMENT"
 func getNamePair(class *Struct, tag string) []*NamePair {
 	var columns []*NamePair
 	for _, field := range class.Fields {
