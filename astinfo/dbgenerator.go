@@ -250,6 +250,9 @@ func (a *{{.TableName}}Dal) GetAll(ctx context.Context, options []common.Optione
 	return a.GetLimitAll(ctx, options, 0, cols...)
 }
 func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, options []common.Optioner,count int, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
+	return a.GetLimitAllWithStart(ctx, options, 0, count, cols...)
+}
+func (a *{{.TableName}}Dal) GetLimitAllWithStart(ctx context.Context, options []common.Optioner,start, count int, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
 	var colNames []string
 	if len(cols) > 0 {
 		colNames = cols[0]
@@ -258,6 +261,7 @@ func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, options []common.Op
 	err = dbOperation.Query(
 		&common.SqlQueryOptions{
 			QueryFields: options,
+			Offset:      start,
 			Limit:       count,
 			SelectFields: colNames,
 		},
@@ -285,7 +289,7 @@ func (a *{{.TableName}}Dal) GetOneById(ctx context.Context, id int32, cols ...[]
 	return a.GetOne(ctx, []common.Optioner{common.Eq("id", id)}, cols...)
 }
 
-func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, pageNo, pageSize int32, cols ...[]string) (list []*{{.Pkg.Name}}.{{.TableName}}, total int64, err error) {
+func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, pageNo, pageSize int, cols ...[]string) (list []*{{.Pkg.Name}}.{{.TableName}}, total int64, err error) {
 	var colNames []string
 	if len(cols) > 0 {
 		colNames = cols[0]
