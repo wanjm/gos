@@ -58,6 +58,20 @@ func run() {
 		ServerName: "servlet", // this is the name of group tag in comments;
 	})
 	wg.Wait()
+	/*
+	下面的方法以来 github.com/wanjm/common 包，需要手动添加依赖；使用了优雅退出机制；
+	common.InitLogger()
+	manager := common.GracefulManager
+	shutdown := gen.Start(gen.Config{
+		Cors:       true,
+		Addr:       ":8080",
+		ServerName: "servlet", // this is the name of group tag in comments;
+	})
+	manager.Go("http server shutdown monitor", func(ctx context.Context) {
+		shutdown(ctx, 5*time.Second)
+	})
+	manager.Wait()
+ 	*/
 }
 	`)
 	os.WriteFile("main.go", []byte(content.String()), 0660)
@@ -163,6 +177,10 @@ func prepare() {
 func (mp *MainProject) genBasicCode(file *GenedFile) {
 	file.GetImport(astbasic.SimplePackage("github.com/gin-contrib/cors", "cors"))
 	file.GetImport(astbasic.SimplePackage("sync", "sync"))
+	file.GetImport(astbasic.SimplePackage("context", "context"))
+	file.GetImport(astbasic.SimplePackage("net/http", "http"))
+	file.GetImport(astbasic.SimplePackage("time", "time"))
+	file.GetImport(astbasic.SimplePackage("fmt", "fmt"))
 
 	var content strings.Builder
 	content.WriteString(`
@@ -188,32 +206,72 @@ type server struct {
 	routerInitors []func(*gin.Engine)
 }
 var servers map[string]*server
-	func Run(config ...Config) *sync.WaitGroup{
-		prepare()
-		var wg sync.WaitGroup
-		for _, c := range config {
-			wg.Add(1)
-			go run(&wg, c)
-		}
-		return &wg
+func Run(config ...Config) *sync.WaitGroup {
+	prepare()
+	var wg sync.WaitGroup
+	for _, c := range config {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			srv := createServer(c)
+			run(srv, c)
+		}()
 	}
-	func run(wg *sync.WaitGroup, config Config){
-		var	router  *gin.Engine = gin.New()
-		router.ContextWithFallback = true
-		if(config.Cors){
-			config := cors.DefaultConfig()
-			config.AllowAllOrigins = true
-			config.AllowHeaders = append(config.AllowHeaders, "*")
-			router.Use(cors.New(config))
-		}
-		register(config.ServerName, router)
-		if config.CertFile != "" {
-			router.RunTLS(config.Addr, config.CertFile, config.KeyFile)
-		} else {
-			router.Run(config.Addr)
-		}
-		wg.Done()
+	return &wg
+}
+
+// Start 返回一个函数，用于在上下文结束时关闭服务器
+func Start(config ...Config) func(ctx context.Context, stopWaitTime time.Duration) {
+	var servers []*http.Server
+	prepare()
+	for _, c := range config {
+		srv := createServer(c)
+		servers = append(servers, srv)
+		go run(srv, c)
 	}
+	return func(ctx context.Context, stopWaitTime time.Duration) {
+		// 这里我们其实是在等待 ctx.Done()，因为 manager.Go 内部调用的 fn 会立即执行
+		// 但我们需要阻塞在这里等待信号
+		<-ctx.Done()
+		// 设定一个超时时间，强制结束未完成的请求（例如 5 秒）
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), stopWaitTime)
+		defer cancel()
+		for _, srv := range servers {
+			if err := srv.Shutdown(shutdownCtx); err != nil {
+				fmt.Printf("Server Shutdown Forced: %v\n", err)
+			}
+		}
+	}
+}
+
+func run(srv *http.Server, config Config) {
+	var err error
+	if config.CertFile != "" {
+		err = srv.ListenAndServeTLS(config.CertFile, config.KeyFile)
+	} else {
+		err = srv.ListenAndServe()
+	}
+	if err != nil {
+		fmt.Printf("listen: %v\n", err)
+	}
+}
+
+func createServer(config Config) *http.Server {
+	var router *gin.Engine = gin.New()
+	router.ContextWithFallback = true
+	if config.Cors {
+		config := cors.DefaultConfig()
+		config.AllowAllOrigins = true
+		config.AllowHeaders = append(config.AllowHeaders, "*")
+		router.Use(cors.New(config))
+	}
+	register(config.ServerName, router)
+	srv := &http.Server{
+		Addr:    config.Addr,
+		Handler: router,
+	}
+	return srv
+}
 		const TraceId = "TraceId"
 	`)
 

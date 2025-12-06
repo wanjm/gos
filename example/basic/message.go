@@ -7,4 +7,14 @@ type Error struct {
 func (error *Error) Error() string {
 	return error.Message
 }
+func New(code int, msg string) error {
+	res := &Error{
+		Code:    code,
+		Message: msg,
+	}
+	return res
+}
+func (error *Error) GetErrorCode() int {
+	return error.Code
+}
 	

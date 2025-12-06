@@ -68,14 +68,29 @@ func (field *Field) parseTag(fieldType *ast.BasicLit) {
 		// if strings.Contains(tag, "wire") {
 		// 	fmt.Print("hello")
 		// }
-		tagList := astbasic.Fields(tag)
+		tagList := astbasic.Fields(tag, '\t', ' ')
 		for _, tag := range tagList {
-			kv := strings.Split(tag, ":")
+			kv := astbasic.Fields(tag, ':')
 			if len(kv) == 2 {
-				field.Tags[kv[0]] = strings.Trim(kv[1], "\"")
+				value := strings.Trim(kv[1], "\"")
+				switch kv[0] {
+				case "gorm":
+					field.Tags["gorm"] = getColumnName(value)
+				default:
+					field.Tags[kv[0]] = strings.Split(value, ",")[0]
+				}
 			}
 		}
 	}
+}
+func getColumnName(value string) string {
+	fields := astbasic.Fields(value, ';')
+	for _, field := range fields {
+		if strings.HasPrefix(field, "column:") {
+			return strings.Split(field, ":")[1]
+		}
+	}
+	return strings.Split(value, ",")[0]
 }
 func (field *FieldBasic) parseComment(fieldType *ast.CommentGroup) {
 	if fieldType == nil || len(fieldType.List) <= 0 {

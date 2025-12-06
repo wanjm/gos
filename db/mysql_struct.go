@@ -131,7 +131,7 @@ func GenerateStructFromDDL(tableName, ddl string, tablepkg *astbasic.PkgBasic, d
 	// @gos tblName={{.TableName}} dbVariable={{.DbVariable}}
 type {{.StructName}} struct {
 {{range .Fields}}
-	{{.Name}} {{.Type}} "json:\"{{.JsonTag}}\" gorm:\"{{.GormTag}}\"" // {{.Comment}}
+	{{.Name}} {{.Type}} "json:\"{{.JsonTag}}\" gorm:\"column:{{.GormTag}}\"" // {{.Comment}}
 {{end}}
 }
 `
@@ -172,7 +172,7 @@ func mysqlTypeToGoType(mysqlType string, file *astbasic.GenedFile) string {
 		return "int16"
 	case strings.HasPrefix(t, "mediumint"):
 		return "int32"
-	case strings.HasPrefix(t, "varchar"), strings.HasPrefix(t, "char"), strings.HasPrefix(t, "text"):
+	case strings.HasPrefix(t, "varchar"), strings.HasPrefix(t, "char"), strings.HasPrefix(t, "text"), strings.HasSuffix(t, "text"):
 		return "string"
 	case strings.HasPrefix(t, "datetime"), strings.HasPrefix(t, "timestamp"), strings.HasPrefix(t, "date"):
 		file.GetImport(&astbasic.PkgBasic{
