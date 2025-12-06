@@ -197,6 +197,8 @@ type Config struct {
 	Cors bool
 	Addr string
 	ServerName string
+	UrlDir     string // 静态文件的url目录, 默认为"/web"
+	StaticDir  string // 静态文件目录, 为空时不开启；
 }
 func getAddr[T any](a T)*T{
 	return &a
@@ -266,6 +268,18 @@ func createServer(config Config) *http.Server {
 		router.Use(cors.New(config))
 	}
 	register(config.ServerName, router)
+	if config.StaticDir != "" {
+		url := config.UrlDir
+		if url != "" {
+			if url[0] != '/' {
+				url = "/" + url
+			}
+		}else{
+			url = "/web"
+		}
+		
+		router.Static(url, config.StaticDir)
+	}
 	srv := &http.Server{
 		Addr:    config.Addr,
 		Handler: router,
