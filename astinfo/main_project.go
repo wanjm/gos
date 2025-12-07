@@ -277,7 +277,9 @@ func createServer(config Config) *http.Server {
 		}else{
 			url = "/web"
 		}
-		
+		router.GET("/", func(c *gin.Context) {
+			c.Redirect(http.StatusFound, url)
+		})	
 		router.Static(url, config.StaticDir)
 	}
 	srv := &http.Server{
