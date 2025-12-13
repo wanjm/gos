@@ -150,7 +150,9 @@ func (mp *MainProject) genPrepare(file *GenedFile) {
 func Prepare() {
 	//from mp.InitFuncs4All
 {{range .InitFuncs4All}}	{{.}}()
-{{end}}}
+{{end}}
+	prepareVariable()
+}
 
 func prepare() {
 	Prepare()
