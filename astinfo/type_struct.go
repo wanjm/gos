@@ -103,23 +103,31 @@ func getWireField(field *Field) *Field {
 	if IsRawType(field.Type) {
 		return nil
 	}
-	var result = *field
+	var name = field.wriedName()
+	if name == "" {
+		return nil
+	}
+	result := *field
+	result.Name = name
+	return &result
+}
+
+func (field *Field) wriedName() string {
 	name := field.Name
 	if name == "" {
 		t := GetBasicType(field.Type)
 		if t != nil {
 			name = t.RefName(nil)
 		}
-		result.Name = name
 	}
 	if name == "" || (name[0] <= 'z' && name[0] >= 'a') {
-		return nil
+		return ""
 	}
 
 	if field.Tags["wire"] == `-` {
-		return nil
+		return ""
 	}
-	return &result
+	return name
 }
 
 // 这里有两种情况。如果定义一个统一的wire，需要考虑一下；
@@ -177,13 +185,20 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 	return sb.String()
 }
 
-// RequiredFields 返回结构体自己的字段，过滤掉原始类型或wire标记为"-"的字段
+// RequiredFields 返回结构体需要检查依赖注入的field；
+// 1. 原始类型不要依赖注入；(天然跳过有依赖注入的原始类型)
+// 2. 有wireName的需要依赖注入;
 func (v *Struct) RequiredFields() []*Field {
 	var requiredFields []*Field
 	for _, field := range v.Fields {
 		// 过滤原始类型
-		if wiredField := getWireField(field); wiredField != nil {
-			requiredFields = append(requiredFields, wiredField)
+		if !IsRawType(field.Type) {
+			continue
+		}
+		if wireName := field.wriedName(); wireName != "" {
+			wireField := *field
+			wireField.Name = wireName
+			requiredFields = append(requiredFields, &wireField)
 		}
 	}
 	return requiredFields
