@@ -99,6 +99,7 @@ func (v *Struct) IDName() string {
 
 // 某些field需要wire，但是却没有名字，所以需要处理
 func getWireField(field *Field) *Field {
+	// 1. 原始类型，不需要wire；（可以通过default直接构造，或者make构造，或者不写，使用系统的默认0值）
 	if IsRawType(field.Type) {
 		return nil
 	}
@@ -155,12 +156,19 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 			sb.WriteString(v)
 			sb.WriteString(",\n")
 		} else {
-			field := getWireField(field)
-			if field != nil && wire {
-				name := field.Name
-				sb.WriteString(name + ":")
-				sb.WriteString(field.GenVariableCode(genFile, wire))
+			switch field.Type.(type) {
+			case *MapType, *ChanType:
+				sb.WriteString(field.Name + ":")
+				sb.WriteString(field.Type.GenConstructCode(genFile, wire))
 				sb.WriteString(",\n")
+			default:
+				wiredField := getWireField(field)
+				if wiredField != nil && wire {
+					name := wiredField.Name
+					sb.WriteString(name + ":")
+					sb.WriteString(wiredField.GenVariableCode(genFile, wire))
+					sb.WriteString(",\n")
+				}
 			}
 		}
 	}
@@ -174,8 +182,8 @@ func (v *Struct) RequiredFields() []*Field {
 	var requiredFields []*Field
 	for _, field := range v.Fields {
 		// 过滤原始类型
-		if field := getWireField(field); field != nil {
-			requiredFields = append(requiredFields, field)
+		if wiredField := getWireField(field); wiredField != nil {
+			requiredFields = append(requiredFields, wiredField)
 		}
 	}
 	return requiredFields

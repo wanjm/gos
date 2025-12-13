@@ -46,8 +46,12 @@ func IsPointer(typer Typer) bool {
 
 // isRawType
 func IsRawType(typer Typer) bool {
-	_, ok := typer.(*RawType)
-	return ok
+	switch typer.(type) {
+	case *RawType, *MapType, *ChanType:
+		return true
+	default:
+		return false
+	}
 }
 
 func PointerDepth(typer Typer) int {
@@ -126,6 +130,19 @@ type MapType struct {
 	BaseType
 	KeyTyper   Typer
 	ValueTyper Typer
+}
+
+func (b *MapType) GenConstructCode(genFile *GenedFile, _ bool) string {
+	return "make(map[" + b.KeyTyper.RefName(genFile) + "]" + b.ValueTyper.RefName(genFile) + ")"
+}
+
+type ChanType struct {
+	BaseType
+	ValueTyper Typer
+}
+
+func (b *ChanType) GenConstructCode(genFile *GenedFile, _ bool) string {
+	return "make(chan " + b.ValueTyper.RefName(genFile) + ")"
 }
 
 type RawType struct {

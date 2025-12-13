@@ -151,6 +151,8 @@ func parseType(fieldType ast.Expr, goSource *Gosourse, typeMap map[string]*Field
 	case *ast.MapType:
 		mapType := MapType{}
 		resultType = &mapType
+		mapType.KeyTyper = parseType(fieldType.Key, goSource, typeMap)
+		mapType.ValueTyper = parseType(fieldType.Value, goSource, typeMap)
 	case *ast.InterfaceType:
 		//匿名interface；
 	case *ast.StructType:
@@ -163,6 +165,8 @@ func parseType(fieldType ast.Expr, goSource *Gosourse, typeMap map[string]*Field
 		// goSource.Pkg.FillType(className, &resultType)
 	case *ast.FuncType:
 	case *ast.ChanType:
+		resultType = &ChanType{}
+		resultType.(*ChanType).ValueTyper = parseType(fieldType.Value, goSource, typeMap)
 	///...号参数在目前的解析情况下不会遇到；
 	case *ast.IndexExpr:
 		//atomic.Pointer[func()]
