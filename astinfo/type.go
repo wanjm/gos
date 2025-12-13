@@ -45,7 +45,7 @@ func IsPointer(typer Typer) bool {
 }
 
 // isRawType
-func IsRawType(typer Typer) bool {
+func IsGolangType(typer Typer) bool {
 	switch typer.(type) {
 	case *RawType, *MapType, *ChanType:
 		return true

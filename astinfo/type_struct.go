@@ -100,7 +100,7 @@ func (v *Struct) IDName() string {
 // 某些field需要wire，但是却没有名字，所以需要处理
 func getWireField(field *Field) *Field {
 	// 1. 原始类型，不需要wire；（可以通过default直接构造，或者make构造，或者不写，使用系统的默认0值）
-	if IsRawType(field.Type) {
+	if IsGolangType(field.Type) {
 		return nil
 	}
 	var name = field.wriedName()
@@ -152,33 +152,25 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 	// 1. 有default，则wire；
 	// 2. wire为ture，且不是简单结构体（needWire），则寻找值去绑定；
 	for _, field := range v.Fields {
-		v, ok := field.Tags["default"]
-		if ok {
+		var name = field.wriedName()
+		if name != "" && wire {
+			sb.WriteString(name + ":")
 			//此处需要考虑default为字符串等各种情况；
-			sb.WriteString(field.Name + ":")
+			// RawType是原始数据类型；不包含map，chan；
 			if rt, ok := field.Type.(*RawType); ok {
-				if rt.typeName == "string" {
-					v = `"` + v + `"`
+				v, ok := field.Tags["default"]
+				if ok {
+					if rt.typeName == "string" {
+						v = `"` + v + `"`
+					}
 				}
+				sb.WriteString(v)
+			} else {
+				sb.WriteString(field.GenVariableCode(genFile, wire))
 			}
-			sb.WriteString(v)
 			sb.WriteString(",\n")
-		} else {
-			switch field.Type.(type) {
-			case *MapType, *ChanType:
-				sb.WriteString(field.Name + ":")
-				sb.WriteString(field.Type.GenConstructCode(genFile, wire))
-				sb.WriteString(",\n")
-			default:
-				wiredField := getWireField(field)
-				if wiredField != nil && wire {
-					name := wiredField.Name
-					sb.WriteString(name + ":")
-					sb.WriteString(wiredField.GenVariableCode(genFile, wire))
-					sb.WriteString(",\n")
-				}
-			}
 		}
+
 	}
 	sb.WriteString("}")
 
@@ -192,7 +184,7 @@ func (v *Struct) RequiredFields() []*Field {
 	var requiredFields []*Field
 	for _, field := range v.Fields {
 		// 过滤原始类型
-		if !IsRawType(field.Type) {
+		if IsGolangType(field.Type) {
 			continue
 		}
 		if wireName := field.wriedName(); wireName != "" {
