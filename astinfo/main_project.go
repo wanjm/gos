@@ -579,7 +579,20 @@ func (mp *MainProject) GenerateCode() error {
 	mp.genProjectCode()
 
 	NewSwagger(mp).GenerateCode(&mp.Cfg.SwaggerCfg)
+	for _, gen := range projectGenerators {
+		gen.GenerateCode(mp)
+	}
 	return nil
+}
+
+type ProjectGenerator interface {
+	GenerateCode(mp *MainProject)
+}
+
+var projectGenerators []ProjectGenerator
+
+func RegisterProjectGenerator(gen ...ProjectGenerator) {
+	projectGenerators = append(projectGenerators, gen...)
 }
 func escapeModulePath(s string) string {
 	var result strings.Builder
