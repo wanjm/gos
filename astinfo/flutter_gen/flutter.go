@@ -102,7 +102,7 @@ func (f *FlutterGen) genService(outDir string, s *astinfo.Struct) {
 			// If result is object, mapType returns the name.
 			// We want RespData<T?>
 		}
-		sb.WriteString(fmt.Sprintf("  Future<RespData<%s?>> %s(", respType, m.Name))
+		sb.WriteString(fmt.Sprintf("  Future<RespData<%s?>> %s(", respType, astbasic.FirstLower(m.Name)))
 
 		// Params. Usually (Context, Request). Context is skipped.
 		// Assuming 2nd param is Request.
@@ -132,7 +132,8 @@ func (f *FlutterGen) genService(outDir string, s *astinfo.Struct) {
 		}
 
 		sb.WriteString("  @override\n")
-		sb.WriteString(fmt.Sprintf("  Future<RespData<%s?>> %s(", respType, m.Name))
+		methodName := astbasic.FirstLower(m.Name)
+		sb.WriteString(fmt.Sprintf("  Future<RespData<%s?>> %s(", respType, methodName))
 
 		hasReq := false
 		reqName := "data"
@@ -212,14 +213,7 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 	// Fields
 	for _, field := range s.Fields {
 		dartType := f.mapType(field.Type)
-		name := astbasic.FirstLower(field.Name)
-		if jsonTag, ok := field.Tags["json"]; ok && jsonTag != "" {
-			// Handle json tag: `json:"name"`
-			parts := strings.Split(jsonTag, ",")
-			if parts[0] != "" {
-				name = parts[0]
-			}
-		}
+		name := field.GetJsonName()
 
 		// Default value handling?
 		// "final String name;"
@@ -229,13 +223,7 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 	// Constructor
 	sb.WriteString(fmt.Sprintf("\n  %s({", s.StructName))
 	for _, field := range s.Fields {
-		name := astbasic.FirstLower(field.Name)
-		if jsonTag, ok := field.Tags["json"]; ok && jsonTag != "" {
-			parts := strings.Split(jsonTag, ",")
-			if parts[0] != "" {
-				name = parts[0]
-			}
-		}
+		name := field.GetJsonName()
 		sb.WriteString(fmt.Sprintf("required this.%s, ", name))
 	}
 	sb.WriteString("});\n\n")
@@ -245,15 +233,8 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 	sb.WriteString("  Map<String, dynamic> toJson() {\n")
 	sb.WriteString("    return {\n")
 	for _, field := range s.Fields {
-		name := astbasic.FirstLower(field.Name)
-		jsonName := name
-		if jsonTag, ok := field.Tags["json"]; ok && jsonTag != "" {
-			parts := strings.Split(jsonTag, ",")
-			if parts[0] != "" {
-				jsonName = parts[0]
-			}
-		}
-		sb.WriteString(fmt.Sprintf("      \"%s\": %s,\n", jsonName, name))
+		name := field.GetJsonName()
+		sb.WriteString(fmt.Sprintf("      \"%s\": %s,\n", name, name))
 	}
 	sb.WriteString("    };\n")
 	sb.WriteString("  }\n\n")
@@ -262,15 +243,7 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 	sb.WriteString(fmt.Sprintf("  factory %s.fromJson(Map<String, dynamic> json) {\n", s.StructName))
 	sb.WriteString(fmt.Sprintf("    return %s(\n", s.StructName))
 	for _, field := range s.Fields {
-		name := astbasic.FirstLower(field.Name)
-		jsonName := name
-		if jsonTag, ok := field.Tags["json"]; ok && jsonTag != "" {
-			parts := strings.Split(jsonTag, ",")
-			if parts[0] != "" {
-				jsonName = parts[0]
-			}
-		}
-
+		name := field.GetJsonName()
 		// Handle null safety and defaults
 		// "name: json['name'] ?? ''"
 		dartType := f.mapType(field.Type)
@@ -281,12 +254,12 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 			// json['list'] != null ? (json['list'] as List).map(...).toList() : []
 			innerType := dartType[5 : len(dartType)-1]
 			if isBasicType(innerType) {
-				sb.WriteString(fmt.Sprintf("      %s: json['%s'] != null ? (json['%s'] as List).map((e) => e as %s).toList() : [],\n", name, jsonName, jsonName, innerType))
+				sb.WriteString(fmt.Sprintf("      %s: json['%s'] != null ? (json['%s'] as List).map((e) => e as %s).toList() : [],\n", name, name, name, innerType))
 			} else {
-				sb.WriteString(fmt.Sprintf("      %s: json['%s'] != null ? (json['%s'] as List).map((e) => %s.fromJson(e)).toList() : [],\n", name, jsonName, jsonName, innerType))
+				sb.WriteString(fmt.Sprintf("      %s: json['%s'] != null ? (json['%s'] as List).map((e) => %s.fromJson(e)).toList() : [],\n", name, name, name, innerType))
 			}
 		} else if isBasicType(dartType) {
-			sb.WriteString(fmt.Sprintf("      %s: json['%s'] ?? %s,\n", name, jsonName, defaultValue))
+			sb.WriteString(fmt.Sprintf("      %s: json['%s'] ?? %s,\n", name, name, defaultValue))
 		} else {
 			// Nested object
 			// obj: json['obj'] != null ? Obj.fromJson(json['obj']) : Obj.empty() or ???
@@ -299,7 +272,7 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 
 			// For now, let's assume we can handle null if we change type to nullable or provide defaults.
 			// Simplified:
-			sb.WriteString(fmt.Sprintf("      %s: json['%s'] != null ? %s.fromJson(json['%s']) : %s,\n", name, jsonName, dartType, jsonName, defaultValue))
+			sb.WriteString(fmt.Sprintf("      %s: json['%s'] != null ? %s.fromJson(json['%s']) : %s,\n", name, name, dartType, name, defaultValue))
 		}
 	}
 	sb.WriteString("    );\n")
