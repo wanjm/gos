@@ -451,10 +451,10 @@ func (a *{{.TableName}}Dal) GetOneById(ctx context.Context, id primitive.ObjectI
 }
 
 func (a *{{.TableName}}Dal) Set(ctx context.Context, opts []common.Optioner,updates map[string]any) (result *mongo.UpdateResult, err error) {
-	return a.Update(ctx, opts, bson.M{"$set": updates})
+	return a.Update(ctx, opts, common.MongoMap{"$set": updates})
 }
-
-func (a *{{.TableName}}Dal) Update(ctx context.Context, opts []common.Optioner, updates map[string]any) (result *mongo.UpdateResult, err error) {
+// update 支持bit位等操作。如果仅仅简单更新，且需要更简单，需要Set方法；
+func (a *{{.TableName}}Dal) Update(ctx context.Context, opts []common.Optioner, updates common.MongoMap) (result *mongo.UpdateResult, err error) {
 	filter := common.GenMongoOption(opts)
 	db := a.getDB()
 	result, err = db.UpdateMany(ctx, filter, updates)
