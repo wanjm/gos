@@ -40,13 +40,16 @@ func (r *RawType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 
 func (r *ArrayType) InitSchema(schema *spec.Schema, swagger *Swagger) {
 	schema.Type = []string{"array"}
+	basicType := GetBasicType(r.Typer)
+	if raw, ok := basicType.(*RawType); ok {
+		if raw.typeName == "byte" {
+			schema.Type = []string{"string"}
+			return
+		}
+	}
 	schema.Items = &spec.SchemaOrArray{
 		Schema: &spec.Schema{},
 	}
-	// if r.class == nil {
-	// 	r.class = r.pkg.getStruct(r.typeName, false)
-	// }
-	basicType := GetBasicType(r.Typer)
 	basicType.(SchemaType).InitSchema(schema.Items.Schema, swagger)
 }
 

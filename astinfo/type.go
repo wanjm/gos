@@ -105,7 +105,7 @@ func (b *BaseType) Parse() error {
 
 func (b *BaseType) GenConstructCode(genFile *GenedFile, _ bool) string {
 	switch b.typeName {
-	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64":
+	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "byte":
 		return "0"
 	case "float32", "float64":
 		return "0.0"
