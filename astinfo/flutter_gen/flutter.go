@@ -94,7 +94,7 @@ func (f *FlutterGen) genService(outDir string, s *astinfo.Struct) {
 	}
 
 	// Abstract class
-	sb.WriteString(fmt.Sprintf("abstract class %sNetwork {\n", serviceName))
+	sb.WriteString(fmt.Sprintf("abstract class %sService {\n", serviceName))
 	for _, m := range s.MethodManager.Server {
 		respType := "void"
 		if len(m.Results) > 0 {
@@ -115,8 +115,8 @@ func (f *FlutterGen) genService(outDir string, s *astinfo.Struct) {
 	sb.WriteString("}\n\n")
 
 	// Generate Implementation
-	sb.WriteString(fmt.Sprintf("class %sNetworkImpl extends BaseMethod implements %sNetwork {\n", serviceName, serviceName))
-	sb.WriteString(fmt.Sprintf("  %sNetworkImpl({required HttpClient client}) : super(client: client);\n", serviceName))
+	sb.WriteString(fmt.Sprintf("class %sServiceImpl extends BaseMethod implements %sService {\n", serviceName, serviceName))
+	sb.WriteString(fmt.Sprintf("  %sServiceImpl({required HttpClient client}) : super(client: client);\n", serviceName))
 
 	for _, m := range s.MethodManager.Server {
 		url := m.Comment.Url
@@ -181,7 +181,7 @@ func (f *FlutterGen) genService(outDir string, s *astinfo.Struct) {
 	sb.WriteString("}\n")
 
 	// Variable definition
-	sb.WriteString(fmt.Sprintf("\n// var %sNetwork = %sNetworkImpl(client: client);\n", astbasic.FirstLower(serviceName), serviceName))
+	sb.WriteString(fmt.Sprintf("\nvar %sService = %sServiceImpl(client: client);\n", astbasic.FirstLower(serviceName), serviceName))
 
 	fileName := strings.ToLower(s.StructName) + "_gen.dart"
 	os.WriteFile(filepath.Join(outDir, fileName), []byte(sb.String()), 0644)
