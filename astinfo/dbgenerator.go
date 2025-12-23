@@ -49,10 +49,24 @@ func (db *DbManager) Gen() {
 					DBVariable:   class.Comment.DbVarible,
 					Pkg:          &pkg.PkgBasic,
 				}
+				hasCreateTime := false
+				for _, field := range class.Fields {
+					if field.Tags["gorm"] == "create_time" {
+						hasCreateTime = true
+						break
+					}
+				}
 				for _, field := range class.Fields {
 					if field.Tags["gorm"] != "" {
 						// Collect NamePairs instead of immediately generating columns
 						allColumns = append(allColumns, getNamePair(class, "gorm")...)
+						if hasCreateTime {
+							data.OrderField = "create_time"
+							data.OrderDirection = "common.DESCStr"
+						} else {
+							data.OrderField = "id"
+							data.OrderDirection = "common.ASCStr"
+						}
 						mysqlInfo = append(mysqlInfo, &data)
 						break
 					} else if field.Tags["bson"] != "" {
@@ -206,10 +220,12 @@ func getNamePair(class *Struct, tag string) []*NamePair {
 }
 
 type info struct {
-	TableName    string
-	RawTableName string
-	DBVariable   string
-	Pkg          *astbasic.PkgBasic
+	TableName      string
+	RawTableName   string
+	DBVariable     string
+	Pkg            *astbasic.PkgBasic
+	OrderField     string
+	OrderDirection string
 }
 
 func compareInfo(a, b *info) int {
@@ -302,8 +318,8 @@ func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, 
 			Limit:       int(pageSize),
 			OrderFields: []common.OrderByParam{
 				{
-					Field:     "create_time",
-					Direction: common.DESCStr,
+					Field:     "{{.OrderField}}",
+					Direction: {{.OrderDirection}},
 				},
 			},
 			SelectFields: colNames,
