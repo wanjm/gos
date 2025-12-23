@@ -225,6 +225,7 @@ func (field *Field) genNilCode(nt Typer, file *GenedFile) string {
 
 // GetJsonName returns the JSON field name from the json tag if present,
 // otherwise returns the field name with first letter lowercased.
+// 如果是嵌套，且没有name，json tag返回空，由外面自动平铺
 func (field *Field) GetJsonName() string {
 	var name string
 	if jsonTag, ok := field.Tags["json"]; ok && jsonTag != "" {
@@ -234,7 +235,9 @@ func (field *Field) GetJsonName() string {
 		}
 	}
 	if name == "" {
-		name = astbasic.FirstLower(field.Name)
+		if field.Name != "" {
+			name = astbasic.FirstLower(field.Name)
+		}
 	}
 	return name
 }

@@ -213,9 +213,11 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 
 	// Fields
 	for _, field := range s.Fields {
-		dartType := f.mapType(field.Type)
 		name := field.GetJsonName()
-
+		if name == "" {
+			continue
+		}
+		dartType := f.mapType(field.Type)
 		// Default value handling?
 		// "final String name;"
 		sb.WriteString(fmt.Sprintf("  final %s %s;\n", dartType, name))
