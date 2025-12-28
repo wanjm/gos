@@ -72,6 +72,7 @@ func (db *DbManager) Gen() {
 					} else if field.Tags["bson"] != "" {
 						// Collect NamePairs instead of immediately generating columns
 						allColumns = append(allColumns, getNamePair(class, "bson")...)
+						data.IDName = getIdName(class)
 						mongoInfo = append(mongoInfo, &data)
 						break
 					}
@@ -194,6 +195,20 @@ func genColumns(file *astbasic.GenedFile, columns []*NamePair) {
 	file.AddBuilder(&sb)
 }
 
+// getIdName 获取id的变量名，如果id不是系统默认类型，则返回空字符串；
+func getIdName(class *Struct) string {
+	for _, field := range class.Fields {
+		if field.Tags["bson"] == "_id" {
+			// 简单检查是否是ObjectID类型；
+			if field.Type.RefName(nil) == "ObjectID" {
+				return field.Name
+			}
+			return ""
+		}
+	}
+	return ""
+}
+
 // 获取指定tag的值，目前用在gorm和bson两个tag；
 // bson:"orgId,omitempty"
 // gorm:"column:id;primary_key;AUTO_INCREMENT"
@@ -226,6 +241,7 @@ type info struct {
 	Pkg            *astbasic.PkgBasic
 	OrderField     string
 	OrderDirection string
+	IDName         string // mongo中如果_id不是系统默认类型，则插入语句要少生成代码, 否则使用正确的类型；
 }
 
 func compareInfo(a, b *info) int {
@@ -402,11 +418,15 @@ func (a *{{.TableName}}Dal) Create(ctx context.Context, item *{{.Pkg.Name}}.{{.T
 		common.Error(ctx, "insert record to mongo {{.RawTableName}} failed", common.Err(err))
 		return err
 	}
+	{{if not (eq .IDName "")}}
 	if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
-		item.ID = oid
+		item.{{.IDName}} = oid
 	} else {
 		common.Error(ctx, "insert record to mongo {{.TableName}} failed as inserted_id is not objectid")
 	}
+	{{else}}
+		_ = result
+	{{end}}
 	return nil
 }
 
