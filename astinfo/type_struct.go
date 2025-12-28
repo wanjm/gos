@@ -97,6 +97,25 @@ func (v *Struct) IDName() string {
 	return v.GoSource.Pkg.ModPath + "." + v.StructName
 }
 
+func (v *Struct) FlatFields() []*Field {
+	var fields []*Field
+	for _, field := range v.Fields {
+		jsonName := field.GetJsonName()
+		if jsonName == "-" {
+			continue
+		}
+		// If it's an anonymous field and doesn't have a JSON tag, it should be flattened.
+		if field.Name == "" {
+			if st, ok := GetBasicType(field.Type).(*Struct); ok {
+				fields = append(fields, st.FlatFields()...)
+			}
+		} else {
+			fields = append(fields, field)
+		}
+	}
+	return fields
+}
+
 // 某些field需要wire，但是却没有名字，所以需要处理
 func getWireField(field *Field) *Field {
 	// 1. 原始类型，不需要wire；（可以通过default直接构造，或者make构造，或者不写，使用系统的默认0值）

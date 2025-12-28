@@ -5,14 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"maps"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/go-openapi/spec"
-	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/basic"
 )
 
@@ -296,32 +294,10 @@ func (swagger *Swagger) addServletFromPackage(pkg *Package) {
 // 根据field 逐条产生schema
 func (swagger *Swagger) genSchema(class *Struct) map[string]spec.Schema {
 	schemas := make(map[string]spec.Schema)
-	/*
-		"expireType": { //结构体格式
-			"$ref": "#/definitions/schema.ExpireType"
-		},
-		"expireValue": { //原始类型格式
-			"type": "integer"
-		},
-		"gradeIds": {  //数组格式
-			"type": "array",
-			"items": {
-				"type": "integer"
-			}
-		},
-	*/
-	for _, field := range class.Fields {
-		if field.Name == "" {
-			schemas1 := swagger.genSchema(field.Type.(*Struct))
-			maps.Copy(schemas, schemas1)
+	for _, field := range class.FlatFields() {
+		name := field.GetJsonName()
+		if name == "-" || name == "" {
 			continue
-		}
-		var name = field.Tags["json"]
-		if name == "-" {
-			continue
-		}
-		if len(name) == 0 {
-			name = astbasic.FirstLower(field.Name)
 		}
 
 		schema := spec.Schema{
@@ -332,13 +308,7 @@ func (swagger *Swagger) genSchema(class *Struct) map[string]spec.Schema {
 		if st, ok := field.Type.(SchemaType); ok {
 			st.InitSchema(&schema, swagger)
 		} else {
-			// struct.field可能是一个结构体，且从来没有被初始化为struct过；
-			// class1 := field.findStruct(true)
-			// if class1 != nil {
-			// 	class1.InitSchema(&schema, swagger)
-			// } else {
 			fmt.Printf("ERROR: field %s::%s %T is not a SchemaType\n", field.Type.IDName(), field.Name, field.Type)
-			// }
 		}
 		schemas[name] = schema
 	}

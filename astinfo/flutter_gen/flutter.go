@@ -212,9 +212,11 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 	sb.WriteString(fmt.Sprintf("class %s extends JSONParameter {\n", s.StructName))
 
 	// Fields
-	for _, field := range s.Fields {
+	flatFields := s.FlatFields()
+	for _, field := range flatFields {
 		name := field.GetJsonName()
-		if name == "" {
+		if name == "" || name == "-" {
+			fmt.Printf("WARNING: field %s::%s %T is not a JSONParameter\n", field.Type.IDName(), field.Name, field.Type)
 			continue
 		}
 		dartType := f.mapType(field.Type)
@@ -225,8 +227,11 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 
 	// Constructor
 	sb.WriteString(fmt.Sprintf("\n  %s({", s.StructName))
-	for _, field := range s.Fields {
+	for _, field := range flatFields {
 		name := field.GetJsonName()
+		if name == "" || name == "-" {
+			continue
+		}
 		sb.WriteString(fmt.Sprintf("required this.%s, ", name))
 	}
 	sb.WriteString("});\n\n")
@@ -235,8 +240,11 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 	sb.WriteString("  @override\n")
 	sb.WriteString("  Map<String, dynamic> toJson() {\n")
 	sb.WriteString("    return {\n")
-	for _, field := range s.Fields {
+	for _, field := range flatFields {
 		name := field.GetJsonName()
+		if name == "" || name == "-" {
+			continue
+		}
 		sb.WriteString(fmt.Sprintf("      \"%s\": %s,\n", name, name))
 	}
 	sb.WriteString("    };\n")
@@ -245,8 +253,11 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 	// fromJson
 	sb.WriteString(fmt.Sprintf("  factory %s.fromJson(Map<String, dynamic> json) {\n", s.StructName))
 	sb.WriteString(fmt.Sprintf("    return %s(\n", s.StructName))
-	for _, field := range s.Fields {
+	for _, field := range flatFields {
 		name := field.GetJsonName()
+		if name == "" || name == "-" {
+			continue
+		}
 		// Handle null safety and defaults
 		// "name: json['name'] ?? ''"
 		dartType := f.mapType(field.Type)
