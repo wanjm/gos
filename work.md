@@ -10,26 +10,27 @@
 
 # work
 1. 错误日志分级，用参数控制；
-19. 生成代码不进入gen目录；
-7. servlet class添加group配置；
-20. genfile带上pkg属性；
-17. autogen支持变量名；
-22. 支持从字符串解析为具体的类型；（主要用于url参数的解析）
-21. 参数解析支持query和form；
-2. 跳过gen目录的解析；
-3. test环境变量的注入；
-4. servlet添加filter参数，参数可以配置；
-5. 返回值使用error；
-6. 添加http的第三个参数；
-9.  解决解析中报的各个错误；
-10. 添加prpc的实现；
-11. go_servlet的parse能力，自动跳过文件版本不匹配或则会ignore的文件，还有其他build标记；
-12. 打印依赖关系树
-13. package中不需要保存Structs，仅有servlet类型的struct需要保存；可以用service，servlet来保存，其他都用typer保存；
-14. field中的匿名结构体和匿名interface还没有解析；
-15. var的多行解析需求；
-16. 注解有无双引号的支持；
-18. 自动生成对象的checknil方法；
+2. 添加了生成宏代码的能力，便于dev的校验和正式环境的简化；
+3.  生成代码不进入gen目录；
+4. servlet class添加group配置；
+5.  genfile带上pkg属性；
+6.  autogen支持变量名；
+7.  支持从字符串解析为具体的类型；（主要用于url参数的解析）
+8.  参数解析支持query和form；
+9. 跳过gen目录的解析；
+10. test环境变量的注入；
+11. servlet添加filter参数，参数可以配置；
+12. 返回值使用error；
+13. 添加http的第三个参数；
+14. 解决解析中报的各个错误；
+15. 添加prpc的实现；
+16. go_servlet的parse能力，自动跳过文件版本不匹配或则会ignore的文件，还有其他build标记；
+17. 打印依赖关系树
+18. package中不需要保存Structs，仅有servlet类型的struct需要保存；可以用service，servlet来保存，其他都用typer保存；
+19. field中的匿名结构体和匿名interface还没有解析；
+20. var的多行解析需求；
+21. 注解有无双引号的支持；
+22. 自动生成对象的checknil方法；
 23. 完成数据库对象的生成/函数的生成
 24. 完成FromEntity的定义；(包含list)
 25. 完成mongo的代码生成；

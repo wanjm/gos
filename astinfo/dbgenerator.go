@@ -445,13 +445,16 @@ func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, opts []common.Optio
 	// 执行查询
 	var cur *mongo.Cursor
 	cur, err = db.Find(ctx, filter, options.Find().SetProjection(projection).SetLimit(count))
-
 	if err != nil {
-		common.Error(ctx, "GetAll from mongo {{.RawTableName}} failed", common.Err(err))
+		common.Error(ctx, "GetAll from mongo {{.RawTableName}} failed when call find", common.Err(err))
 		return nil, err
 	}
 	defer cur.Close(ctx)
 	err = cur.All(ctx, &item)
+	if err != nil {
+		common.Error(ctx, "GetAll from mongo {{.RawTableName}} failed when call all/decode", common.Err(err))
+		return nil, err
+	}
 	return
 }
 
