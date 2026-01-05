@@ -39,6 +39,20 @@ func GetBasicType(typer Typer) Typer {
 	}
 }
 
+// 返回根基本类型； array也会处理掉；
+func GetRootBasicType(typer Typer) Typer {
+	switch t := typer.(type) {
+	case *Alias:
+		return GetRootBasicType(t.Typer)
+	case *PointerType:
+		return GetRootBasicType(t.Typer)
+	case *ArrayType:
+		return GetRootBasicType(t.Typer)
+	default:
+		return typer
+	}
+}
+
 func IsPointer(typer Typer) bool {
 	_, ok := typer.(*PointerType)
 	return ok

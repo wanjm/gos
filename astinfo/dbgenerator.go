@@ -82,7 +82,7 @@ func (db *DbManager) Gen() {
 
 		// Deduplicate all collected columns and generate them
 		if len(allColumns) > 0 {
-			deduplicatedColumns := DeduplicateNamePairs(conflictMap, allColumns)
+			deduplicatedColumns := DeduplicateNamePairs(conflictMap, allColumns, pkg.FilePath)
 			genColumns(file, deduplicatedColumns)
 		}
 
@@ -150,15 +150,15 @@ type NamePair struct {
 // returns a deduplicated slice of NamePair pointers.
 // Uses VarName as the key for the map to check for duplicates.
 // If a NamePair with the same VarName exists but has different ColName, prints a warning.
-func DeduplicateNamePairs(nameMap map[string]*NamePair, namePairs []*NamePair) []*NamePair {
+func DeduplicateNamePairs(nameMap map[string]*NamePair, namePairs []*NamePair, filePath string) []*NamePair {
 	var result []*NamePair
 
 	for _, pair := range namePairs {
 		if existingPair, exists := nameMap[pair.VarName]; exists {
 			// Check if the existing pair has the same ColName
 			if existingPair.ColName != pair.ColName {
-				log.Printf("Warning: NamePair with VarName '%s' already exists with ColName '%s', but new pair has ColName '%s'",
-					pair.VarName, existingPair.ColName, pair.ColName)
+				log.Printf("Warning: NamePair with VarName '%s' already exists with ColName '%s', but new pair has ColName '%s' in package %s",
+					pair.VarName, existingPair.ColName, pair.ColName, filePath)
 			}
 			// Skip this pair as it already exists
 			continue
@@ -215,7 +215,7 @@ func getIdName(class *Struct) string {
 func getNamePair(class *Struct, tag string) []*NamePair {
 	var columns []*NamePair
 	for _, field := range class.Fields {
-		basicType := GetBasicType(field.Type)
+		basicType := GetRootBasicType(field.Type)
 		if subClass, ok := basicType.(*Struct); ok {
 			if subClass.GoSource.Pkg == class.GoSource.Pkg {
 				subColumns := getNamePair(subClass, tag)
