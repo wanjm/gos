@@ -8,6 +8,7 @@ import (
 
 	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/astinfo"
+	"github.com/wanjm/gos/basic"
 )
 
 type FlutterGen struct {
@@ -18,8 +19,11 @@ func NewFlutterGen() *FlutterGen {
 }
 
 func (f *FlutterGen) GenerateCode(mp *astinfo.MainProject) {
-	// 1. Determine output directory
-	outDir := filepath.Join(mp.CurrentProject.FilePath, "frontgen", "flutter")
+	// 1. Determine output directoroy
+	var outDir = basic.Cfg.Generation.FlutterPath
+	if outDir == "" {
+		return
+	}
 	if err := os.MkdirAll(outDir, 0755); err != nil {
 		fmt.Printf("Failed to create flutter gen directory: %v\n", err)
 		return
