@@ -157,7 +157,7 @@ type {{.StructName}} struct {
 }
 
 // mysqlTypeToGoType maps MySQL types to Go types (basic mapping)
-func mysqlTypeToGoType(mysqlType string, file *astbasic.GenedFile) string {
+func mysqlTypeToGoType(mysqlType string, file *astbasic.GenedGoFile) string {
 	t := strings.ToLower(mysqlType)
 	switch {
 	case strings.HasPrefix(t, "int"):

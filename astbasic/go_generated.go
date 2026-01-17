@@ -10,8 +10,8 @@ import (
 	"strings"
 )
 
-// 每个有自动生成代码的package 会有一个GenedFile类；
-type GenedFile struct {
+// 每个有自动生成代码的package 会有一个GenedGoFile类；
+type GenedGoFile struct {
 	Pkg *PkgBasic
 	// for gen code
 	name                 string               //文件名,没有go后缀
@@ -21,8 +21,8 @@ type GenedFile struct {
 	// Project              *Project           // 所属项目
 }
 
-func CreateGenedFile(fileName string) *GenedFile {
-	return &GenedFile{
+func CreateGenedFile(fileName string) *GenedGoFile {
+	return &GenedGoFile{
 		name:                 fileName,
 		genCodeImport:        make(map[string]*PkgBasic),
 		genCodeImportNameMap: make(map[string]int),
@@ -34,7 +34,7 @@ func CreateGenedFile(fileName string) *GenedFile {
 // 生成package语句
 // 生成import语句
 // 按照file.contents的顺序，生成文件内容
-func (file *GenedFile) Save() {
+func (file *GenedGoFile) Save() {
 	if len(file.contents) == 0 {
 		return
 	}
@@ -64,12 +64,12 @@ func (file *GenedFile) Save() {
 	osfile.Write(src)
 }
 
-func (file *GenedFile) AddBuilder(builder *strings.Builder) {
+func (file *GenedGoFile) AddBuilder(builder *strings.Builder) {
 	file.contents = append(file.contents, builder)
 }
 
 // 根据modePath获取Import信息；理论上该函数不需要modeName，但是为了最大限度的代码可读性，还是带上了modeName；
-func (file *GenedFile) GetImport(pkg *PkgBasic) (result *PkgBasic) {
+func (file *GenedGoFile) GetImport(pkg *PkgBasic) (result *PkgBasic) {
 	var modePath, modeName string
 	modePath = pkg.ModPath
 	modeName = pkg.Name
@@ -100,7 +100,7 @@ func (file *GenedFile) GetImport(pkg *PkgBasic) (result *PkgBasic) {
 	file.genCodeImport[modePath] = result
 	return
 }
-func (file *GenedFile) genImportCode() string {
+func (file *GenedGoFile) genImportCode() string {
 	if len(file.genCodeImport) == 0 {
 		return ""
 	}
