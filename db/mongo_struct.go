@@ -132,7 +132,7 @@ func genTableForMongo(tableName string, doc bson.M, pkg *astbasic.PkgBasic, dbVa
 	return generateStruct(structName, doc, tableFile)
 }
 
-func generateStruct(structName string, doc bson.M, tableFile *astbasic.GenedFile) error {
+func generateStruct(structName string, doc bson.M, tableFile *astbasic.GenedGoFile) error {
 	// 1. Prepare data for the main struct template
 	fields := make([]FieldInfo, 0, len(doc))
 	keys := make([]string, 0, len(doc))
@@ -176,7 +176,7 @@ func generateStruct(structName string, doc bson.M, tableFile *astbasic.GenedFile
 	return nil
 }
 
-func getGoTypeFromValue(key string, value interface{}, tableFile *astbasic.GenedFile) string {
+func getGoTypeFromValue(key string, value interface{}, tableFile *astbasic.GenedGoFile) string {
 	if value == nil {
 		return "interface{}"
 	}

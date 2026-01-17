@@ -175,7 +175,7 @@ func DeduplicateNamePairs(nameMap map[string]*NamePair, namePairs []*NamePair, f
 // 这样写，是为了解决一个entity目录中有多个表的情况；
 // 但是还需要解决多个表列名重复的问题， 所以最终还是需要一个entity一个目录；
 // 为了兼容多个表的情况，代码需要改为先产生namePair，然后在产生column的情况，这样可以去重；但名字相同，列名不同时，可以报错；
-func genColumns(file *astbasic.GenedFile, columns []*NamePair) {
+func genColumns(file *astbasic.GenedGoFile, columns []*NamePair) {
 	tmplText := `
 	const (
 	{{range .}}
@@ -248,7 +248,7 @@ func compareInfo(a, b *info) int {
 	return strings.Compare(a.TableName, b.TableName)
 }
 
-func genMysqlDal(data *info, file *astbasic.GenedFile) {
+func genMysqlDal(data *info, file *astbasic.GenedGoFile) {
 	codeTemplate := `
 // {{.RawTableName}}
 //
@@ -395,7 +395,7 @@ func (a *{{.TableName}}Dal) DeleteByIds(ctx context.Context, ids []int32) error 
 	file.AddBuilder(&content)
 }
 
-func genMongoDal(data *info, file *astbasic.GenedFile) {
+func genMongoDal(data *info, file *astbasic.GenedGoFile) {
 	codeTemplate := `
 // {{.RawTableName}}
 //
