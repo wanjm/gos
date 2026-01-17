@@ -229,13 +229,7 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 			continue
 		}
 		dartType := f.mapType(field.Type)
-		defaultValue := f.defaultValue(dartType)
-		parseString := ""
-		if strings.Contains(defaultValue, "(") {
-			parseString = strings.ReplaceAll(defaultValue, "(", "(json['"+name+"'] ??")
-		} else {
-			parseString = "json['" + name + "'] ?? " + defaultValue
-		}
+		defaultValue, parseString := f.defaultValue(dartType, name)
 		fields = append(fields, DTOField{
 			Name:         name,
 			DartType:     dartType,
@@ -315,23 +309,32 @@ func isBasicType(t string) bool {
 	return false
 }
 
-func (f *FlutterGen) defaultValue(dartType string) string {
+func (f *FlutterGen) defaultValue(dartType string, fieldName string) (defaultValue string, parseString string) {
 	if strings.HasPrefix(dartType, "List") {
-		return "const []"
+		defaultValue = "const []"
+		parseString = "((json['" + fieldName + "'] ?? []) as List).map((e) => " + dartType + ".fromJson(e)).toList()"
+		return
 	}
 
 	switch dartType {
 	case "String":
-		return "\"\""
+		defaultValue = "\"\""
+		parseString = "json['" + fieldName + "'] ?? " + defaultValue
 	case "int":
-		return "0"
+		defaultValue = "0"
+		parseString = "json['" + fieldName + "'] ?? " + defaultValue
 	case "double":
-		return "0.0"
+		defaultValue = "0.0"
+		parseString = "json['" + fieldName + "'] ?? " + defaultValue
 	case "bool":
-		return "false"
+		defaultValue = "false"
+		parseString = "json['" + fieldName + "'] ?? " + defaultValue
 	case "DateTime":
-		return "DateTime.fromMillisecondsSinceEpoch(0)"
+		defaultValue = "DateTime.fromMillisecondsSinceEpoch(0)"
+		parseString = "DateTime.fromMillisecondsSinceEpoch(json['" + fieldName + "'] ?? 0)"
 	default:
-		return dartType + ".fromJson({})"
+		defaultValue = dartType + ".fromJson({})"
+		parseString = dartType + ".fromJson(json['" + fieldName + "'] ?? {})"
 	}
+	return
 }
