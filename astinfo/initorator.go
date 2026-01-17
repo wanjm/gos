@@ -123,8 +123,7 @@ func GetValue(value any) {
 func GetValueByName(name string) any {
 	return nameValue[name]
 }
-func PrepareTest() {
-	Prepare()
+func prepareVariable() {
 	typeValue = make(map[reflect.Type]interface{})
 	nameValue = make(map[string]interface{})
 	{{range $username, $value := .NameValue}}	

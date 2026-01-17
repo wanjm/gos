@@ -97,28 +97,56 @@ func (v *Struct) IDName() string {
 	return v.GoSource.Pkg.ModPath + "." + v.StructName
 }
 
+func (v *Struct) FlatFields() []*Field {
+	var fields []*Field
+	for _, field := range v.Fields {
+		jsonName := field.GetJsonName()
+		if jsonName == "-" {
+			continue
+		}
+		// If it's an anonymous field and doesn't have a JSON tag, it should be flattened.
+		if field.Name == "" {
+			if st, ok := GetBasicType(field.Type).(*Struct); ok {
+				fields = append(fields, st.FlatFields()...)
+			}
+		} else {
+			fields = append(fields, field)
+		}
+	}
+	return fields
+}
+
 // 某些field需要wire，但是却没有名字，所以需要处理
 func getWireField(field *Field) *Field {
-	if IsRawType(field.Type) {
+	// 1. 原始类型，不需要wire；（可以通过default直接构造，或者make构造，或者不写，使用系统的默认0值）
+	if IsGolangType(field.Type) {
 		return nil
 	}
-	var result = *field
+	var name = field.wriedName()
+	if name == "" {
+		return nil
+	}
+	result := *field
+	result.Name = name
+	return &result
+}
+
+func (field *Field) wriedName() string {
 	name := field.Name
 	if name == "" {
 		t := GetBasicType(field.Type)
 		if t != nil {
 			name = t.RefName(nil)
 		}
-		result.Name = name
 	}
 	if name == "" || (name[0] <= 'z' && name[0] >= 'a') {
-		return nil
+		return ""
 	}
 
 	if field.Tags["wire"] == `-` {
-		return nil
+		return ""
 	}
-	return &result
+	return name
 }
 
 // 这里有两种情况。如果定义一个统一的wire，需要考虑一下；
@@ -142,40 +170,56 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 	//)
 	// 1. 有default，则wire；
 	// 2. wire为ture，且不是简单结构体（needWire），则寻找值去绑定；
+	if v.StructName == "AiKnowledgeEditReq" {
+		a := "hll"
+		_ = a
+	}
 	for _, field := range v.Fields {
-		v, ok := field.Tags["default"]
-		if ok {
+		var name = field.wriedName()
+		if name != "" {
 			//此处需要考虑default为字符串等各种情况；
-			sb.WriteString(field.Name + ":")
+			// RawType是原始数据类型；不包含map，chan；
+			// RawType 有default，也写上；不区分是否wire；
 			if rt, ok := field.Type.(*RawType); ok {
-				if rt.typeName == "string" {
-					v = `"` + v + `"`
+				v, ok := field.Tags["default"]
+				if ok {
+					sb.WriteString(name + ":")
+					if rt.typeName == "string" {
+						v = `"` + v + `"`
+					}
+					sb.WriteString(v)
+					sb.WriteString(",\n")
 				}
-			}
-			sb.WriteString(v)
-			sb.WriteString(",\n")
-		} else {
-			field := getWireField(field)
-			if field != nil && wire {
-				name := field.Name
+			} else if wire {
 				sb.WriteString(name + ":")
+				// 有可能是匿名field，但是不想改变原始的field，所以复制一份；
+				field := *field
+				field.Name = name
 				sb.WriteString(field.GenVariableCode(genFile, wire))
 				sb.WriteString(",\n")
 			}
 		}
+
 	}
 	sb.WriteString("}")
 
 	return sb.String()
 }
 
-// RequiredFields 返回结构体自己的字段，过滤掉原始类型或wire标记为"-"的字段
+// RequiredFields 返回结构体需要检查依赖注入的field；
+// 1. 原始类型不要依赖注入；(天然跳过有依赖注入的原始类型)
+// 2. 有wireName的需要依赖注入;
 func (v *Struct) RequiredFields() []*Field {
 	var requiredFields []*Field
 	for _, field := range v.Fields {
 		// 过滤原始类型
-		if field := getWireField(field); field != nil {
-			requiredFields = append(requiredFields, field)
+		if IsGolangType(field.Type) {
+			continue
+		}
+		if wireName := field.wriedName(); wireName != "" {
+			wireField := *field
+			wireField.Name = wireName
+			requiredFields = append(requiredFields, &wireField)
 		}
 	}
 	return requiredFields

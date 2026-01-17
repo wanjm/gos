@@ -150,7 +150,9 @@ func (mp *MainProject) genPrepare(file *GenedFile) {
 func Prepare() {
 	//from mp.InitFuncs4All
 {{range .InitFuncs4All}}	{{.}}()
-{{end}}}
+{{end}}
+	prepareVariable()
+}
 
 func prepare() {
 	Prepare()
@@ -197,6 +199,8 @@ type Config struct {
 	Cors bool
 	Addr string
 	ServerName string
+	UrlDir     string // 静态文件的url目录, 默认为"/web"
+	StaticDir  string // 静态文件目录, 为空时不开启；
 }
 func getAddr[T any](a T)*T{
 	return &a
@@ -266,6 +270,20 @@ func createServer(config Config) *http.Server {
 		router.Use(cors.New(config))
 	}
 	register(config.ServerName, router)
+	if config.StaticDir != "" {
+		url := config.UrlDir
+		if url != "" {
+			if url[0] != '/' {
+				url = "/" + url
+			}
+		}else{
+			url = "/web"
+		}
+		router.GET("/", func(c *gin.Context) {
+			c.Redirect(http.StatusFound, url)
+		})	
+		router.Static(url, config.StaticDir)
+	}
 	srv := &http.Server{
 		Addr:    config.Addr,
 		Handler: router,
@@ -561,7 +579,20 @@ func (mp *MainProject) GenerateCode() error {
 	mp.genProjectCode()
 
 	NewSwagger(mp).GenerateCode(&mp.Cfg.SwaggerCfg)
+	for _, gen := range projectGenerators {
+		gen.GenerateCode(mp)
+	}
 	return nil
+}
+
+type ProjectGenerator interface {
+	GenerateCode(mp *MainProject)
+}
+
+var projectGenerators []ProjectGenerator
+
+func RegisterProjectGenerator(gen ...ProjectGenerator) {
+	projectGenerators = append(projectGenerators, gen...)
 }
 func escapeModulePath(s string) string {
 	var result strings.Builder

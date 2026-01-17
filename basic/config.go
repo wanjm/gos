@@ -15,6 +15,7 @@ type Generation struct {
 	RpcLoggerMod string // 用于定义RpcLogger的结构体所在的包名；
 	CommonMod    string // github.com/wanjm/common 的别名
 	AutoGen      bool
+	FlutterPath  string // 自动生成前端的flutter路径
 }
 type Config struct {
 	InitMain   string // 改为字符串类型，存储模块名称

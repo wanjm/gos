@@ -103,6 +103,7 @@ func (pkg *Package) Parse() error {
 		return nil
 	}
 	pkg.finshedParse = true
+	// filename is the full path of the file
 	for filename, f := range pkg.Files {
 		if strings.HasSuffix(filename, "_test.go") {
 			continue

@@ -39,15 +39,33 @@ func GetBasicType(typer Typer) Typer {
 	}
 }
 
+// 返回根基本类型； array也会处理掉；
+func GetRootBasicType(typer Typer) Typer {
+	switch t := typer.(type) {
+	case *Alias:
+		return GetRootBasicType(t.Typer)
+	case *PointerType:
+		return GetRootBasicType(t.Typer)
+	case *ArrayType:
+		return GetRootBasicType(t.Typer)
+	default:
+		return typer
+	}
+}
+
 func IsPointer(typer Typer) bool {
 	_, ok := typer.(*PointerType)
 	return ok
 }
 
 // isRawType
-func IsRawType(typer Typer) bool {
-	_, ok := typer.(*RawType)
-	return ok
+func IsGolangType(typer Typer) bool {
+	switch typer.(type) {
+	case *RawType, *MapType, *ChanType:
+		return true
+	default:
+		return false
+	}
 }
 
 func PointerDepth(typer Typer) int {
@@ -101,7 +119,7 @@ func (b *BaseType) Parse() error {
 
 func (b *BaseType) GenConstructCode(genFile *GenedFile, _ bool) string {
 	switch b.typeName {
-	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64":
+	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "byte":
 		return "0"
 	case "float32", "float64":
 		return "0.0"
@@ -126,6 +144,19 @@ type MapType struct {
 	BaseType
 	KeyTyper   Typer
 	ValueTyper Typer
+}
+
+func (b *MapType) GenConstructCode(genFile *GenedFile, _ bool) string {
+	return "make(map[" + b.KeyTyper.RefName(genFile) + "]" + b.ValueTyper.RefName(genFile) + ")"
+}
+
+type ChanType struct {
+	BaseType
+	ValueTyper Typer
+}
+
+func (b *ChanType) GenConstructCode(genFile *GenedFile, _ bool) string {
+	return "make(chan " + b.ValueTyper.RefName(genFile) + ")"
 }
 
 type RawType struct {

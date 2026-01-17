@@ -41,6 +41,7 @@ var abbrMap = map[string]string{
 	"db":   "DB",
 }
 
+// 把单词的首字母改为大写，如果是go某些语法全部大写，配置如上表；
 func firstBig(word string, isGo bool) string {
 	var result string
 	if len(word) == 0 {

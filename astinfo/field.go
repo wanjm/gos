@@ -151,6 +151,8 @@ func parseType(fieldType ast.Expr, goSource *Gosourse, typeMap map[string]*Field
 	case *ast.MapType:
 		mapType := MapType{}
 		resultType = &mapType
+		mapType.KeyTyper = parseType(fieldType.Key, goSource, typeMap)
+		mapType.ValueTyper = parseType(fieldType.Value, goSource, typeMap)
 	case *ast.InterfaceType:
 		//匿名interface；
 	case *ast.StructType:
@@ -163,6 +165,8 @@ func parseType(fieldType ast.Expr, goSource *Gosourse, typeMap map[string]*Field
 		// goSource.Pkg.FillType(className, &resultType)
 	case *ast.FuncType:
 	case *ast.ChanType:
+		resultType = &ChanType{}
+		resultType.(*ChanType).ValueTyper = parseType(fieldType.Value, goSource, typeMap)
 	///...号参数在目前的解析情况下不会遇到；
 	case *ast.IndexExpr:
 		//atomic.Pointer[func()]
@@ -217,6 +221,25 @@ func (field *Field) genNilCode(nt Typer, file *GenedFile) string {
 	default:
 		return ""
 	}
+}
+
+// GetJsonName returns the JSON field name from the json tag if present,
+// otherwise returns the field name with first letter lowercased.
+// 如果是嵌套，且没有name，json tag返回空，由外面自动平铺
+func (field *Field) GetJsonName() string {
+	var name string
+	if jsonTag, ok := field.Tags["json"]; ok && jsonTag != "" {
+		parts := strings.Split(jsonTag, ",")
+		if parts[0] != "" {
+			name = parts[0]
+		}
+	}
+	if name == "" {
+		if field.Name != "" {
+			name = astbasic.FirstLower(field.Name)
+		}
+	}
+	return name
 }
 
 func NewField(root *ast.Field, source *Gosourse) *Field {

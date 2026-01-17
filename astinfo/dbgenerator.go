@@ -49,15 +49,30 @@ func (db *DbManager) Gen() {
 					DBVariable:   class.Comment.DbVarible,
 					Pkg:          &pkg.PkgBasic,
 				}
+				hasCreateTime := false
+				for _, field := range class.Fields {
+					if field.Tags["gorm"] == "create_time" {
+						hasCreateTime = true
+						break
+					}
+				}
 				for _, field := range class.Fields {
 					if field.Tags["gorm"] != "" {
 						// Collect NamePairs instead of immediately generating columns
 						allColumns = append(allColumns, getNamePair(class, "gorm")...)
+						if hasCreateTime {
+							data.OrderField = "create_time"
+							data.OrderDirection = "common.DESCStr"
+						} else {
+							data.OrderField = "id"
+							data.OrderDirection = "common.ASCStr"
+						}
 						mysqlInfo = append(mysqlInfo, &data)
 						break
 					} else if field.Tags["bson"] != "" {
 						// Collect NamePairs instead of immediately generating columns
 						allColumns = append(allColumns, getNamePair(class, "bson")...)
+						data.IDName = getIdName(class)
 						mongoInfo = append(mongoInfo, &data)
 						break
 					}
@@ -67,7 +82,7 @@ func (db *DbManager) Gen() {
 
 		// Deduplicate all collected columns and generate them
 		if len(allColumns) > 0 {
-			deduplicatedColumns := DeduplicateNamePairs(conflictMap, allColumns)
+			deduplicatedColumns := DeduplicateNamePairs(conflictMap, allColumns, pkg.FilePath)
 			genColumns(file, deduplicatedColumns)
 		}
 
@@ -135,15 +150,15 @@ type NamePair struct {
 // returns a deduplicated slice of NamePair pointers.
 // Uses VarName as the key for the map to check for duplicates.
 // If a NamePair with the same VarName exists but has different ColName, prints a warning.
-func DeduplicateNamePairs(nameMap map[string]*NamePair, namePairs []*NamePair) []*NamePair {
+func DeduplicateNamePairs(nameMap map[string]*NamePair, namePairs []*NamePair, filePath string) []*NamePair {
 	var result []*NamePair
 
 	for _, pair := range namePairs {
 		if existingPair, exists := nameMap[pair.VarName]; exists {
 			// Check if the existing pair has the same ColName
 			if existingPair.ColName != pair.ColName {
-				log.Printf("Warning: NamePair with VarName '%s' already exists with ColName '%s', but new pair has ColName '%s'",
-					pair.VarName, existingPair.ColName, pair.ColName)
+				log.Printf("Warning: NamePair with VarName '%s' already exists with ColName '%s', but new pair has ColName '%s' in package %s",
+					pair.VarName, existingPair.ColName, pair.ColName, filePath)
 			}
 			// Skip this pair as it already exists
 			continue
@@ -180,13 +195,27 @@ func genColumns(file *astbasic.GenedFile, columns []*NamePair) {
 	file.AddBuilder(&sb)
 }
 
+// getIdName 获取id的变量名，如果id不是系统默认类型，则返回空字符串；
+func getIdName(class *Struct) string {
+	for _, field := range class.Fields {
+		if field.Tags["bson"] == "_id" {
+			// 简单检查是否是ObjectID类型；
+			if field.Type.RefName(nil) == "ObjectID" {
+				return field.Name
+			}
+			return ""
+		}
+	}
+	return ""
+}
+
 // 获取指定tag的值，目前用在gorm和bson两个tag；
 // bson:"orgId,omitempty"
 // gorm:"column:id;primary_key;AUTO_INCREMENT"
 func getNamePair(class *Struct, tag string) []*NamePair {
 	var columns []*NamePair
 	for _, field := range class.Fields {
-		basicType := GetBasicType(field.Type)
+		basicType := GetRootBasicType(field.Type)
 		if subClass, ok := basicType.(*Struct); ok {
 			if subClass.GoSource.Pkg == class.GoSource.Pkg {
 				subColumns := getNamePair(subClass, tag)
@@ -206,10 +235,13 @@ func getNamePair(class *Struct, tag string) []*NamePair {
 }
 
 type info struct {
-	TableName    string
-	RawTableName string
-	DBVariable   string
-	Pkg          *astbasic.PkgBasic
+	TableName      string
+	RawTableName   string
+	DBVariable     string
+	Pkg            *astbasic.PkgBasic
+	OrderField     string
+	OrderDirection string
+	IDName         string // mongo中如果_id不是系统默认类型，则插入语句要少生成代码, 否则使用正确的类型；
 }
 
 func compareInfo(a, b *info) int {
@@ -302,8 +334,8 @@ func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, 
 			Limit:       int(pageSize),
 			OrderFields: []common.OrderByParam{
 				{
-					Field:     "create_time",
-					Direction: common.DESCStr,
+					Field:     "{{.OrderField}}",
+					Direction: {{.OrderDirection}},
 				},
 			},
 			SelectFields: colNames,
@@ -386,11 +418,15 @@ func (a *{{.TableName}}Dal) Create(ctx context.Context, item *{{.Pkg.Name}}.{{.T
 		common.Error(ctx, "insert record to mongo {{.RawTableName}} failed", common.Err(err))
 		return err
 	}
+	{{if not (eq .IDName "")}}
 	if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
-		item.ID = oid
+		item.{{.IDName}} = oid
 	} else {
 		common.Error(ctx, "insert record to mongo {{.TableName}} failed as inserted_id is not objectid")
 	}
+	{{else}}
+		_ = result
+	{{end}}
 	return nil
 }
 
@@ -409,13 +445,16 @@ func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, opts []common.Optio
 	// 执行查询
 	var cur *mongo.Cursor
 	cur, err = db.Find(ctx, filter, options.Find().SetProjection(projection).SetLimit(count))
-
 	if err != nil {
-		common.Error(ctx, "GetAll from mongo {{.RawTableName}} failed", common.Err(err))
+		common.Error(ctx, "GetAll from mongo {{.RawTableName}} failed when call find", common.Err(err))
 		return nil, err
 	}
 	defer cur.Close(ctx)
 	err = cur.All(ctx, &item)
+	if err != nil {
+		common.Error(ctx, "GetAll from mongo {{.RawTableName}} failed when call all/decode", common.Err(err))
+		return nil, err
+	}
 	return
 }
 
@@ -435,10 +474,10 @@ func (a *{{.TableName}}Dal) GetOneById(ctx context.Context, id primitive.ObjectI
 }
 
 func (a *{{.TableName}}Dal) Set(ctx context.Context, opts []common.Optioner,updates map[string]any) (result *mongo.UpdateResult, err error) {
-	return a.Update(ctx, opts, bson.M{"$set": updates})
+	return a.Update(ctx, opts, common.MongoMap{"$set": updates})
 }
-
-func (a *{{.TableName}}Dal) Update(ctx context.Context, opts []common.Optioner, updates map[string]any) (result *mongo.UpdateResult, err error) {
+// update 支持bit位等操作。如果仅仅简单更新，且需要更简单，需要Set方法；
+func (a *{{.TableName}}Dal) Update(ctx context.Context, opts []common.Optioner, updates common.MongoMap) (result *mongo.UpdateResult, err error) {
 	filter := common.GenMongoOption(opts)
 	db := a.getDB()
 	result, err = db.UpdateMany(ctx, filter, updates)
