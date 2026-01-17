@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/astinfo"
@@ -17,6 +18,36 @@ type FlutterGen struct {
 func NewFlutterGen() *FlutterGen {
 	return &FlutterGen{}
 }
+
+// DTOField represents a field in a DTO struct
+type DTOField struct {
+	Name         string
+	DartType     string
+	DefaultValue string
+}
+
+// DTOTemplateData holds the data for DTO template generation
+type DTOTemplateData struct {
+	StructName string
+	Fields     []DTOField
+}
+
+// DTO generation template
+const dtoTemplate = `@JsonSerializable()
+class {{.StructName}} extends JSONParameter {
+{{range .Fields}}  {{.DartType}} {{.Name}};
+{{end}}
+  {{.StructName}}({
+{{range $index, $field := .Fields}}    this.{{$field.Name}} = {{$field.DefaultValue}},
+{{end}}
+  });
+
+  factory {{.StructName}}.fromJson(Map<String, dynamic> json) => _${{.StructName}}FromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _${{.StructName}}ToJson(this);
+}
+`
 
 func (f *FlutterGen) GenerateCode(mp *astinfo.MainProject) {
 	// 1. Determine output directoroy
@@ -178,13 +209,10 @@ func (f *FlutterGen) collectStructs(t astinfo.Typer, seen map[string]*astinfo.St
 }
 
 func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
-	var sb strings.Builder
-	// DTO class with JsonSerializable annotation
-	sb.WriteString("@JsonSerializable()\n")
-	sb.WriteString(fmt.Sprintf("class %s extends JSONParameter {\n", s.StructName))
-
-	// Fields
+	// Collect fields for template
 	flatFields := s.FlatFields()
+	var fields []DTOField
+
 	for _, field := range flatFields {
 		name := field.GetJsonName()
 		if name == "" || name == "-" {
@@ -192,40 +220,43 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 			continue
 		}
 		dartType := f.mapType(field.Type)
-		// Remove final keyword - fields are no longer final
-		sb.WriteString(fmt.Sprintf("  %s %s;\n", dartType, name))
+		defaultValue := f.defaultValue(dartType)
+		fields = append(fields, DTOField{
+			Name:         name,
+			DartType:     dartType,
+			DefaultValue: defaultValue,
+		})
 	}
 
-	// Constructor
-	sb.WriteString(fmt.Sprintf("\n  %s({", s.StructName))
-	for _, field := range flatFields {
-		name := field.GetJsonName()
-		if name == "" || name == "-" {
-			continue
-		}
-		sb.WriteString(fmt.Sprintf("required this.%s, ", name))
+	// Prepare template data
+	data := DTOTemplateData{
+		StructName: s.StructName,
+		Fields:     fields,
 	}
-	sb.WriteString("});\n\n")
 
-	// fromJson - delegate to generated code
-	sb.WriteString(fmt.Sprintf("  factory %s.fromJson(Map<String, dynamic> json) => _$%sFromJson(json);\n\n", s.StructName, s.StructName))
+	// Parse and execute template
+	var sb strings.Builder
+	tpl, err := template.New("dto").Parse(dtoTemplate)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to parse DTO template: %v", err))
+	}
+	if err := tpl.Execute(&sb, data); err != nil {
+		panic(fmt.Sprintf("Failed to execute DTO template: %v", err))
+	}
 
-	// toJson - delegate to generated code
-	sb.WriteString("  @override\n")
-	sb.WriteString(fmt.Sprintf("  Map<String, dynamic> toJson() => _$%sToJson(this);\n", s.StructName))
-
-	sb.WriteString("}\n")
 	return sb.String()
 }
 
 func (f *FlutterGen) mapType(t astinfo.Typer) string {
-	t = astinfo.GetBasicType(t)
+	// t = astinfo.GetBasicType(t)
 	switch v := t.(type) {
 	case *astinfo.RawType:
 		switch v.IDName() {
 		case "string":
 			return "String"
-		case "int", "int32", "int64", "uint", "uint32", "uint64":
+		case "byte":
+			return "Uint8"
+		case "int", "int8", "int16", "int32", "int64", "uint", "uint32", "uint64", "uint8", "uint16":
 			return "int"
 		case "float32", "float64":
 			return "double"
@@ -235,12 +266,25 @@ func (f *FlutterGen) mapType(t astinfo.Typer) string {
 			return "dynamic"
 		}
 	case *astinfo.ArrayType:
-		return "List<" + f.mapType(v.Typer) + ">"
+		subName := f.mapType(v.Typer)
+		if subName == "Uint8" {
+			return "String"
+		}
+		return "List<" + subName + ">"
 	case *astinfo.Struct:
 		if v.StructName == "Time" && v.GoSource.Pkg.ModPath == "time" {
 			return "DateTime"
 		}
-		return v.StructName
+		return v.StructName //+ "?"
+	case *astinfo.PointerType:
+		va := f.mapType(v.Typer)
+		return va
+		// if strings.HasSuffix(va, "?") {
+		// 	return va
+		// }
+		// return va + "?"
+	case *astinfo.Alias:
+		return f.mapType(v.Typer)
 	default:
 		return "dynamic"
 	}
@@ -254,11 +298,11 @@ func isBasicType(t string) bool {
 	return false
 }
 
-func (f *FlutterGen) defaultValue(t astinfo.Typer) string {
-	dartType := f.mapType(t)
+func (f *FlutterGen) defaultValue(dartType string) string {
 	if strings.HasPrefix(dartType, "List") {
-		return "[]"
+		return "const []"
 	}
+
 	switch dartType {
 	case "String":
 		return "\"\""
@@ -269,21 +313,6 @@ func (f *FlutterGen) defaultValue(t astinfo.Typer) string {
 	case "bool":
 		return "false"
 	default:
-		// For structs, we ideally need a default instance or allow null.
-		// Prompt says "final int loginType = 0;"
-		// If it's a struct, we might need a factory or just throw.
-		// Using "null" but casting to type might fail if type is non-nullable.
-		// Let's rely on null for now and compilation errors will guide fixes if needed,
-		// OR construct a dummy object if possible? No.
-		// Let's assume nullable fields in DTO if it's a struct?
-		// Prompt DTO fields: final String name; (non-nullable).
-		return "null as " + dartType // Dangerous, but shows intent.
-		// Better: maybe we should generate nullable fields for Structs?
-		// The prompt example uses:
-		// factory HelloResponse.fromJson(Map<String, dynamic> json) {
-		//   return HelloResponse(json['name'] ?? '');
-		// }
-		// For structs, it doesn't show an example of nested struct null handling.
-		// "8. 对于对象中为数组的，如果服务端返回为null，则初始化为空数组；"
+		return "null"
 	}
 }
