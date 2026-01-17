@@ -1,8 +1,8 @@
 [[DBConfig]]
-DSN="root:wjm_nj123@tcp(localhost:3306)/plaso"
-DBName = "plasoDb"
+DSN="root:Wjm_123456@tcp(localhost:3306)/cc"
+DBName = "db"
 DBType = "mysql"
 
 [[DBConfig.DbGenCfgs]]
 OutPath = "business/package"
-TableNames = ["student"]
+TableNames = ["user"]
