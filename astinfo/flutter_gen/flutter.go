@@ -169,9 +169,13 @@ func (f *FlutterGen) genNetworkFile(outDir string, services []*astinfo.Struct) {
 			// Get URL from method comment, combine with struct url if needed
 			url := m.Comment.Url
 			fullUrl := strings.ReplaceAll(filepath.Join(s.Comment.Url, url), "\\", "/")
+			urlFieldName := astbasic.FirstLower(m.Name) + "Url"
+
+			fmt.Fprintf(&sb, "  /// %s\n", m.Comment.Title)
+			fmt.Fprintf(&sb, "  static const String %s = \"%s\";\n", urlFieldName, fullUrl)
 			fmt.Fprintf(&sb, "  /// %s\n", m.Comment.Title)
 			// Add @ReqConfig annotation
-			fmt.Fprintf(&sb, "  @ReqConfig(\"%s\")\n", fullUrl)
+			fmt.Fprintf(&sb, "  @ReqConfig(%s)\n", urlFieldName)
 
 			respType := "void"
 			// at lease one error result;
