@@ -8,7 +8,7 @@ import (
 
 type functionComment struct {
 	Url          string // url
-	title        string // 函数描述，供swagger使用
+	Title        string // 函数描述，供swagger使用
 	Method       string // http方法，GET,POST，默认是POST
 	isDeprecated bool
 	funcType     string //函数类型，filter，servlet，websocket，prpc，initiator,creator
@@ -65,7 +65,7 @@ func (comment *functionComment) dealValuePair(key, value string) {
 			fmt.Printf("method '%s' is not supported in function comment %s in %s\n", comment.Method, comment.owner.Name, comment.owner.GoSource.Path)
 		}
 	case Title:
-		comment.title = value
+		comment.Title = value
 	case Type:
 		comment.funcType = value
 		if value == Websocket {

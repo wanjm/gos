@@ -12,7 +12,7 @@ type FieldComment struct {
 	defaultValue string //记录该属性的默认值，在struct的field中有使用；
 	// isRequired   bool   //记录该字段是否必须赋值，区别于gin的默认处理方法，必传表示在报文中必须存在
 	validString string //校验变量是否符合要求的代码； $>10 && $<11
-	comment     string
+	CommentText string
 }
 
 func (comment *FieldComment) dealValuePair(key, value string) {
@@ -22,7 +22,7 @@ func (comment *FieldComment) dealValuePair(key, value string) {
 	case "valid":
 		comment.validString = value
 	default:
-		comment.comment = key
+		comment.CommentText = key
 	}
 }
 
