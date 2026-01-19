@@ -155,6 +155,7 @@ func (f *FlutterGen) genNetworkFile(outDir string, services []*astinfo.Struct) {
 	for _, s := range services {
 		// Abstract class with @DataInterface() annotation
 		sb.WriteString("@DataInterface()\n")
+		sb.WriteString("@FetchData()\n")
 		sb.WriteString(fmt.Sprintf("abstract class %s {\n", s.StructName))
 
 		// Sort methods by name
