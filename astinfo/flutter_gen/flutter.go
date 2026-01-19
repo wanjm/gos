@@ -42,8 +42,7 @@ const dtoTemplate = `class {{.StructName}} extends JSONParameter {
  {{.DartType}} {{.Name}};
 {{end}}
   {{.StructName}}({
-{{range .Fields}} 
- {{if .Required}} required this.{{.Name}} {{else}} this.{{.Name}} = {{.DefaultValue}}{{end}},
+{{range .Fields}} {{if .Required}} required this.{{.Name}} {{else}} this.{{.Name}} = {{.DefaultValue}}{{end}},
 {{end}}
   });
 
