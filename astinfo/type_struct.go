@@ -18,6 +18,7 @@ type structComment struct {
 	AutoGen    bool
 	TableName  string
 	DbVarible  string
+	EntityName string // entity name for FromEntity generation
 	class      *Struct
 }
 
@@ -64,6 +65,8 @@ func (comment *structComment) dealValuePair(key, value string) {
 		}
 	case dbVarible:
 		comment.DbVarible = astbasic.Capitalize(value)
+	case "entity":
+		comment.EntityName = value
 	}
 }
 
@@ -296,7 +299,14 @@ func (v *Struct) Parse() error {
 	if v.astRoot.TypeParams != nil {
 		v.TypeParameter = parseFields(v.astRoot.TypeParams.List, v.GoSource, nil)
 	}
-	return v.ParseField()
+	if err := v.ParseField(); err != nil {
+		return err
+	}
+	// Buffer entity structs to project EntityMap
+	if GlobalProject != nil && strings.Contains(v.GoSource.Pkg.ModPath, "/entity/") {
+		GlobalProject.EntityMap[v.StructName] = v
+	}
+	return nil
 }
 
 // parseComment
