@@ -37,7 +37,8 @@ type DTOTemplateData struct {
 }
 
 // DTO generation template
-const dtoTemplate = `class {{.StructName}} extends JSONParameter {
+const dtoTemplate = `// [{{range $i, $field := .Fields}}{{if $i}},{{end}}"{{$field.Name}}"{{end}}]
+class {{.StructName}} extends JSONParameter {
 {{range .Fields}} /// {{.Comment}}
  {{.DartType}} {{.Name}};
 {{end}}
