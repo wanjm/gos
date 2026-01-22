@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -122,6 +123,8 @@ func (file *GenedGoFile) genImportCode() string {
 		*/
 		i++
 	}
+	// Sort imports to ensure consistent ordering
+	sort.Strings(imports)
 	sb.WriteString(strings.Join(imports, "\n"))
 	sb.WriteString("\n)\n")
 	return sb.String()
