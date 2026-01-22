@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"unicode"
 
 	"github.com/wanjm/gos/astbasic"
 )
@@ -13,6 +14,55 @@ import (
 const (
 	globalPrefix = "__global_"
 )
+
+// typeToVariableName converts a type to a variable name suffix
+// Examples:
+//   - *redis.Client => redis_client
+//   - *dal.AiBillingDal => dal_aiBillingDal
+func typeToVariableName(typer Typer) string {
+	// Get the underlying type (unwrap pointers)
+	baseType := GetRootBasicType(typer)
+	
+	var pkgName string
+	var typeName string
+	
+	// Extract package name and type name based on type
+	switch t := baseType.(type) {
+	case *Struct:
+		pkgName = t.GoSource.Pkg.GetName()
+		typeName = t.StructName
+	case *Alias:
+		pkgName = t.Gosourse.Pkg.GetName()
+		typeName = t.Name
+	case *Interface:
+		pkgName = t.GoSource.Pkg.GetName()
+		typeName = t.InterfaceName
+	default:
+		// For other types (RawType, etc.), use RefName
+		typeStr := typer.RefName(nil)
+		typeStr = strings.TrimPrefix(typeStr, "*")
+		typeStr = strings.ReplaceAll(typeStr, ".", "_")
+		if len(typeStr) > 0 {
+			runes := []rune(typeStr)
+			runes[0] = unicode.ToLower(runes[0])
+			typeStr = string(runes)
+		}
+		return typeStr
+	}
+	
+	// Combine package name and type name
+	typeStr := pkgName + "_" + typeName
+	
+	// Lowercase the first character of the type name (after the last underscore)
+	if idx := strings.LastIndex(typeStr, "_"); idx >= 0 && idx+1 < len(typeStr) {
+		// Found underscore, lowercase the character after it
+		runes := []rune(typeStr)
+		runes[idx+1] = unicode.ToLower(runes[idx+1])
+		typeStr = string(runes)
+	}
+
+	return typeStr
+}
 
 // initiator 方法可以产生variable；
 // 结构体也可以产生variable；
@@ -77,19 +127,33 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 	if len(im.readyNode) == 0 {
 		return nil
 	}
+	// Create a sorted copy of nodes for variable definitions (keep original order for initialization)
+	sortedNodes := make([]*DependNode, len(im.readyNode))
+	copy(sortedNodes, im.readyNode)
+	sort.Slice(sortedNodes, func(i, j int) bool {
+		return sortedNodes[i].returnVariableName < sortedNodes[j].returnVariableName
+	})
+	
 	var definition strings.Builder
 	var call strings.Builder
 	definition.WriteString("var (\n")
+	// Write variable definitions in alphabetical order
+	for _, node := range sortedNodes {
+		if node.returnVariableName != "" {
+			definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type.RefName(goGenerated)))
+		}
+	}
+	definition.WriteString(")\n")
+	
+	// Write initialization calls in dependency order (original readyNode order)
 	call.WriteString("func initVariable() {\n")
 	for _, node := range im.readyNode {
 		if node.returnVariableName != "" {
-			definition.WriteString(fmt.Sprintf("%s %s\n", node.returnVariableName, node.getReturnField().Type.RefName(goGenerated)))
 			call.WriteString(fmt.Sprintf("%s = ", node.returnVariableName))
 		}
 		call.WriteString(node.Generator.GenerateDependcyCode(goGenerated))
 		call.WriteString("\n")
 	}
-	definition.WriteString(")\n")
 	call.WriteString("}\n")
 	goGenerated.AddBuilder(&definition)
 	goGenerated.AddBuilder(&call)
@@ -197,8 +261,6 @@ func (im *InitManager) collect() ([]*DependNode, VariableMap) {
 
 // initInitorator 初始化初始化函数
 func (im *InitManager) initInitorator() {
-	// 创建variableMap
-	var globalIndex int = 0
 	// waittingVariableMap 是所有返回值的map；
 	functions, waittingVariableMap := im.collect()
 	//将所有节点连接到父节点，
@@ -206,6 +268,8 @@ func (im *InitManager) initInitorator() {
 	for _, node := range functions {
 		im.initParent(node, waittingVariableMap)
 	}
+	// Track used variable names to handle conflicts
+	usedNames := make(map[string]int)
 	// 每轮从functions中取出已经准备好了的function，放到ready的function中；
 	var found bool = true
 	for found {
@@ -215,10 +279,29 @@ func (im *InitManager) initInitorator() {
 			if im.variableMap.checkReady(node) {
 				if node.getReturnField() != nil {
 					var realName = node.getReturnName()
-					node.returnVariableName = globalPrefix + realName + "_" + strconv.Itoa(globalIndex)
+					var baseName string
+					if realName != "" {
+						// Prefer realName if it exists (for initiator functions with named returns)
+						baseName = realName
+					} else {
+						// Use type name if realName is empty
+						baseName = typeToVariableName(node.getReturnField().Type)
+					}
+					// Check for conflicts and append suffix if needed
+					// Track base names (without prefix) to detect conflicts
+					count := usedNames[baseName]
+					var fullName string
+					if count == 0 {
+						// First occurrence, no suffix
+						fullName = globalPrefix + baseName
+					} else {
+						// Conflict detected, append suffix starting from 0
+						fullName = globalPrefix + baseName + "_" + strconv.Itoa(count-1)
+					}
+					usedNames[baseName] = count + 1
+					node.returnVariableName = fullName
 					// 如果realName为空，则覆盖，因为原本就没有计划要；
 					im.nameValue[realName] = node.returnVariableName
-					globalIndex++
 				}
 				found = true
 				im.variableMap.addNode(node)
