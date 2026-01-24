@@ -244,7 +244,7 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 		dartType := f.mapType(field.Type)
 		var defaultValue string
 		var parseString string
-		if (name == "updateTime" || name == "createTime") && dartType == "int" {
+		if (name == "updateTime" || name == "createTime" || name == "endTime") && dartType == "int" {
 			dartType = "DateTime"
 			defaultValue = "DateTime.fromMillisecondsSinceEpoch(0)"
 			parseString = "DateTime.fromMillisecondsSinceEpoch((json['" + name + "'] as num? ?? 0).toInt())"
