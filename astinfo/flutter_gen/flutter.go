@@ -25,9 +25,12 @@ type DTOField struct {
 	Name         string
 	Comment      string
 	DartType     string
-	DefaultValue string
-	Required     bool
-	ParseString  string
+	DefaultValue string //构造函数中 this.xxx=${DefaultValue};
+	// 在template中使用, 用于生成构造函数时，是否添加requred 关键字； requried this.XXX
+	// 主要原因是不想在结构中有null，但是对于需要调用函数构造的，构造函数可能不支持const，所以不能卸载this.XXx= DeaultValue；
+	// 目前只要是结构体，都添加required关键字；同时在fromJson中初始化
+	Required    bool
+	ParseString string
 }
 
 // DTOTemplateData holds the data for DTO template generation
@@ -239,14 +242,22 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 			continue
 		}
 		dartType := f.mapType(field.Type)
-		defaultValue, parseString := f.defaultValue(field.Type, name)
+		var defaultValue string
+		var parseString string
+		if (name == "updateTime" || name == "createTime") && dartType == "int" {
+			dartType = "DateTime"
+			defaultValue = "DateTime.fromMillisecondsSinceEpoch(0)"
+			parseString = "DateTime.fromMillisecondsSinceEpoch((json['" + name + "'] as num? ?? 0).toInt())"
+		} else {
+			defaultValue, parseString = f.defaultValue(field.Type, name)
+		}
 		fields = append(fields, DTOField{
 			Name:         name,
 			Comment:      field.Comment.CommentText,
 			DartType:     dartType,
 			DefaultValue: defaultValue,
-			Required:     strings.HasSuffix(defaultValue, ")"),
 			ParseString:  parseString,
+			Required:     strings.HasSuffix(defaultValue, ")"), //defaultValu以")"结尾表示这是结构体；
 		})
 	}
 
@@ -389,6 +400,8 @@ func (f *FlutterGen) genTypeDefault(t astinfo.Typer) string {
 	}
 }
 
+// defaultValue 是默认值；
+// parseString 是解析字符串；FromJson重的字符串 (json['status'] as num? ?? 0).toInt()
 func (f *FlutterGen) defaultValue(t astinfo.Typer, fieldName string) (defaultValue string, parseString string) {
 	defaultValue = f.genTypeDefault(t)
 	parseString = f.genTypeParse(t, "json['"+fieldName+"']")
