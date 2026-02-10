@@ -11,7 +11,19 @@ import (
 var commongened bool
 
 // 定义代码生成模板
-const cJsonTemplate = `{{if .HasResponseKey}}
+const cJsonTemplate = `
+func dealErrorResult(err error, c *gin.Context, code int, errorCode int, errMessage string) {
+	var extraInfo any
+	if exta, ok := err.(ExtraInfo); ok {
+		extraInfo = exta.GetExtraInfo()
+	}
+	cJSON(c, code, Response{
+		Code:      errorCode,
+		ExtraInfo: extraInfo,
+		Message:   errMessage,
+	})
+}
+{{if .HasResponseKey}}
 var responseKey {{.ImportName}}.{{.ResponseKey}}
 
 type JsonString struct {

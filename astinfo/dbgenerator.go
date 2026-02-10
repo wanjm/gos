@@ -125,10 +125,10 @@ func (db *DbManager) Gen() {
 		file := pkg.NewFile("mongo.dal")
 		file.GetImport(astbasic.SimplePackage("context", "context"))
 		file.GetImport(astbasic.SimplePackage(basic.Cfg.Generation.CommonMod, "common"))
-		file.GetImport(astbasic.SimplePackage("go.mongodb.org/mongo-driver/bson", "bson"))
+		// file.GetImport(astbasic.SimplePackage("go.mongodb.org/mongo-driver/bson", "bson"))
 		file.GetImport(astbasic.SimplePackage("go.mongodb.org/mongo-driver/bson/primitive", "primitive"))
 		file.GetImport(astbasic.SimplePackage("go.mongodb.org/mongo-driver/mongo", "mongo"))
-		file.GetImport(astbasic.SimplePackage("go.mongodb.org/mongo-driver/mongo/options", "options"))
+		// file.GetImport(astbasic.SimplePackage("go.mongodb.org/mongo-driver/mongo/options", "options"))
 		if len(mongoInfo) > 1 {
 			slices.SortFunc(mongoInfo, compareInfo)
 		}
@@ -175,7 +175,7 @@ func DeduplicateNamePairs(nameMap map[string]*NamePair, namePairs []*NamePair, f
 // 这样写，是为了解决一个entity目录中有多个表的情况；
 // 但是还需要解决多个表列名重复的问题， 所以最终还是需要一个entity一个目录；
 // 为了兼容多个表的情况，代码需要改为先产生namePair，然后在产生column的情况，这样可以去重；但名字相同，列名不同时，可以报错；
-func genColumns(file *astbasic.GenedFile, columns []*NamePair) {
+func genColumns(file *astbasic.GenedGoFile, columns []*NamePair) {
 	tmplText := `
 	const (
 	{{range .}}
@@ -248,7 +248,7 @@ func compareInfo(a, b *info) int {
 	return strings.Compare(a.TableName, b.TableName)
 }
 
-func genMysqlDal(data *info, file *astbasic.GenedFile) {
+func genMysqlDal(data *info, file *astbasic.GenedGoFile) {
 	codeTemplate := `
 // {{.RawTableName}}
 //
@@ -260,6 +260,7 @@ type {{.TableName}}Dal struct {
 func (a *{{.TableName}}Dal) getDB(ctx context.Context) *gorm.DB {
 	return a.{{.DBVariable}}.WithContext(ctx).Table("{{.RawTableName}}")
 }
+	
 func (c *{{.TableName}}Dal) getDBOperation(context context.Context) common.DbOperation {
 	return common.DbOperation{
 		Db:        c.{{.DBVariable}},
@@ -395,7 +396,7 @@ func (a *{{.TableName}}Dal) DeleteByIds(ctx context.Context, ids []int32) error 
 	file.AddBuilder(&content)
 }
 
-func genMongoDal(data *info, file *astbasic.GenedFile) {
+func genMongoDal(data *info, file *astbasic.GenedGoFile) {
 	codeTemplate := `
 // {{.RawTableName}}
 //
@@ -409,6 +410,10 @@ func (a *{{.TableName}}Dal) getDB() *mongo.Collection {
 	return a.{{.DBVariable}}.Collection(a.DbName)
 }
 
+func (a *{{.TableName}}Dal) getOperation(ctx context.Context, opts []common.Optioner) *common.MongoQueryOperation {
+	db := a.getDB()
+	return common.NewMongoQueryOperation(ctx, db, opts)
+}
 
 // Create 创建
 func (a *{{.TableName}}Dal) Create(ctx context.Context, item *{{.Pkg.Name}}.{{.TableName}}) error {
@@ -434,28 +439,39 @@ func (a *{{.TableName}}Dal) GetAll(ctx context.Context, opts []common.Optioner, 
 	return a.GetLimitAll(ctx, opts, 0, cols...)
 }
 func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, opts []common.Optioner,count int64, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
-	filter := common.GenMongoOption(opts)
-	db := a.getDB()
-	projection := bson.M{}
+	op := a.getOperation(ctx, opts)
+	op.SetLimit(count)
 	if len(cols) > 0 {
-		for _, col := range cols[0] {
-			projection[col] = 1
-		}
+		op.SetProjection(cols[0])
 	}
-	// 执行查询
-	var cur *mongo.Cursor
-	cur, err = db.Find(ctx, filter, options.Find().SetProjection(projection).SetLimit(count))
-	if err != nil {
-		common.Error(ctx, "GetAll from mongo {{.RawTableName}} failed when call find", common.Err(err))
-		return nil, err
-	}
-	defer cur.Close(ctx)
-	err = cur.All(ctx, &item)
+	err = op.Query(&item)
 	if err != nil {
 		common.Error(ctx, "GetAll from mongo {{.RawTableName}} failed when call all/decode", common.Err(err))
 		return nil, err
 	}
 	return
+}
+
+func (a *{{.TableName}}Dal) List(ctx context.Context, opts []common.Optioner, pageNum int, pageSize int, cols ...[]string) (list []*{{.Pkg.Name}}.{{.TableName}}, total int64, err error) {
+	op := a.getOperation(ctx, opts)
+	total, err = op.Count()
+	if err != nil {
+		common.Error(ctx, "count {{.RawTableName}} failed", common.Err(err))
+		return nil, 0, err
+	}
+	// Get paginated results
+	skip := int64(pageNum * pageSize)
+	limit := int64(pageSize)
+	op.SetSkip(skip).SetLimit(limit)
+	if len(cols) > 0 {
+		op.SetProjection(cols[0])
+	}
+	err = op.Query(&list)
+	if err != nil {
+		common.Error(ctx, "query {{.RawTableName}} failed", common.Err(err))
+		return nil, 0, err
+	}
+	return list, total, nil
 }
 
 func (a *{{.TableName}}Dal) GetOne(ctx context.Context, options []common.Optioner, cols ...[]string) (item *{{.Pkg.Name}}.{{.TableName}}, err error) {

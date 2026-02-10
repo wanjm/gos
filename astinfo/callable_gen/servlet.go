@@ -187,20 +187,15 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		var code = 200
 		if err != nil {
 			errorCode, errMessage := getErrorCode(err)
-			var extraInfo any
-			if exta, ok := err.(ExtraInfo); ok {
-				extraInfo = exta.GetExtraInfo()
+			if errorCode != 0 {
+				dealErrorResult(err, c, code, errorCode, errMessage)
+				return
 			}
-			cJSON(c, code, Response{
-				Code:      errorCode,
-				ExtraInfo: extraInfo,
-				Message:   errMessage,
-			})
-		} else {
-			cJSON(c, code, Response{
-				{{ if .HasResponse }}Object:  a,{{ end }}
-			})
 		}
+		cJSON(c, code, Response{
+			{{ if .HasResponse }}Object:  a,{{ end }}
+		})
+		
 	})
 		`
 

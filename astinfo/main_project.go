@@ -22,6 +22,7 @@ type MainProject struct {
 	Packages           map[string]*Package // 项目包含的包集合（key为包全路径）
 	SortedPacakgeNames []string
 	Cfg                *basic.Config
+	EntityMap          map[string]*Struct // entity structs by name (key: struct name, value: struct)
 
 	*InitManager
 	InitFuncs4All    []string   // 启动服务器和启动test都是用的方法；
@@ -579,6 +580,7 @@ func (mp *MainProject) GenerateCode() error {
 	mp.genProjectCode()
 
 	NewSwagger(mp).GenerateCode(&mp.Cfg.SwaggerCfg)
+	NewEntityGen(mp).GenerateCode()
 	for _, gen := range projectGenerators {
 		gen.GenerateCode(mp)
 	}
@@ -652,8 +654,9 @@ var GlobalProject *MainProject
 
 func CreateProject(path string, cfg *basic.Config) *MainProject {
 	GlobalProject = &MainProject{
-		Cfg:      cfg,
-		Packages: make(map[string]*Package),
+		Cfg:       cfg,
+		Packages:  make(map[string]*Package),
+		EntityMap: make(map[string]*Struct),
 		// initiatorMap: make(map[*Struct]*Initiators),
 		// servers:      make(map[string]*server),
 		// creators: make(map[*Struct]*Initiator),

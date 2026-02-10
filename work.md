@@ -10,34 +10,35 @@
 
 # work
 1. 错误日志分级，用参数控制；
-2. 添加了生成宏代码的能力，便于dev的校验和正式环境的简化；
-3. 变量名不使用数组，而是使用 变量名前缀的写法；  __global__91          *biz.NzuoyesBiz; => __global_biz_NzuoyesBiz;这也是唯一的；
-4.  生成代码不进入gen目录；
-5. servlet class添加group配置；
-6.  genfile带上pkg属性；
-7.  autogen支持变量名；
-8.  支持从字符串解析为具体的类型；（主要用于url参数的解析）
-9.  参数解析支持query和form；
-10. 跳过gen目录的解析；
-11. test环境变量的注入；
-12. servlet添加filter参数，参数可以配置；
-13. 返回值使用error；
-14. 添加http的第三个参数；
-15. 解决解析中报的各个错误；
-16. 添加prpc的实现；
-17. go_servlet的parse能力，自动跳过文件版本不匹配或则会ignore的文件，还有其他build标记；
-18. 打印依赖关系树
-19. package中不需要保存Structs，仅有servlet类型的struct需要保存；可以用service，servlet来保存，其他都用typer保存；
-20. field中的匿名结构体和匿名interface还没有解析；
-21. var的多行解析需求；
-22. 注解有无双引号的支持；
-23. 自动生成对象的checknil方法；
-24. 完成数据库对象的生成/函数的生成
-25. 完成FromEntity的定义；(包含list)
-26. 完成mongo的代码生成；
-27. 同一个类可以完成不同的servlet；
-28. 添加websocket的写法；
-29.  
+2. 数据库的调用，是否可以直接赋值，然后自动根据变化生成更新语句；
+3. 添加了生成宏代码的能力，便于dev的校验和正式环境的简化；
+4. 变量名不使用数组，而是使用 变量名前缀的写法；  __global__91          *biz.NzuoyesBiz; => __global_biz_NzuoyesBiz;这也是唯一的；
+5.  生成代码不进入gen目录；
+6. servlet class添加group配置；
+7.  genfile带上pkg属性；
+8.  autogen支持变量名；
+9.  支持从字符串解析为具体的类型；（主要用于url参数的解析）
+10. 参数解析支持query和form；
+11. 跳过gen目录的解析；
+12. test环境变量的注入；
+13. servlet添加filter参数，参数可以配置；
+14. 返回值使用error；
+15. 添加http的第三个参数；
+16. 解决解析中报的各个错误；
+17. 添加prpc的实现；
+18. go_servlet的parse能力，自动跳过文件版本不匹配或则会ignore的文件，还有其他build标记；
+19. 打印依赖关系树
+20. package中不需要保存Structs，仅有servlet类型的struct需要保存；可以用service，servlet来保存，其他都用typer保存；
+21. field中的匿名结构体和匿名interface还没有解析；
+22. var的多行解析需求；
+23. 注解有无双引号的支持；
+24. 自动生成对象的checknil方法；
+25. 完成数据库对象的生成/函数的生成
+26. 完成FromEntity的定义；(包含list)
+27. 完成mongo的代码生成；
+28. 同一个类可以完成不同的servlet；
+29. 添加websocket的写法；
+30.  
 ## 暂时不解析：
 ```
 type Pointer[T any] struct {

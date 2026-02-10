@@ -166,7 +166,7 @@ func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager) {
 			continue
 		}
 		pathItem := spec.PathItem{}
-		operation := initOperation(comment.title)
+		operation := initOperation(comment.Title)
 		var parameter []spec.Parameter
 		switch comment.Method {
 		case POST, "":
@@ -302,7 +302,7 @@ func (swagger *Swagger) genSchema(class *Struct) map[string]spec.Schema {
 
 		schema := spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: field.Comment.comment,
+				Description: field.Comment.CommentText,
 			},
 		}
 		if st, ok := field.Type.(SchemaType); ok {

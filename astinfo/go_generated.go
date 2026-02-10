@@ -5,7 +5,7 @@ import (
 )
 
 // 每个有自动生成代码的package 会有一个GenedFile类；
-type GenedFile = astbasic.GenedFile
+type GenedFile = astbasic.GenedGoFile
 
 func CreateGenedFile(fileName string) *GenedFile {
 	return GlobalProject.genPkg.NewFile(fileName)

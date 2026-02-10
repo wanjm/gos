@@ -24,7 +24,7 @@ func (p *PkgBasic) NewPkgBasic(name, pathValue string) *PkgBasic {
 	}
 }
 
-func (p *PkgBasic) NewFile(fileName string) *GenedFile {
+func (p *PkgBasic) NewFile(fileName string) *GenedGoFile {
 	file := CreateGenedFile(fileName)
 	file.Pkg = p
 	return file
