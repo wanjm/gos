@@ -184,6 +184,8 @@ func mysqlTypeToGoType(mysqlType string, file *astbasic.GenedGoFile) string {
 		return "float32"
 	case strings.HasPrefix(t, "double"), strings.HasPrefix(t, "decimal"):
 		return "float64"
+	case strings.HasPrefix(t, "binary"):
+		return "[]byte"
 	case strings.HasPrefix(t, "json"):
 		return "interface{}"
 	default:
