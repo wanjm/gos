@@ -33,3 +33,11 @@ const (
 	Servlet = "servlet" //用于定义struct是servlet，所以默认groupName是servlets
 	Prpc    = "prpc"    //用于定义struct是prpc，所以默认groupName是prpc
 )
+
+const (
+	CreateTime = "create_time"
+	Id         = "id"
+	GORM       = "gorm"
+	BSON       = "bson"
+	Column     = "column"
+)
