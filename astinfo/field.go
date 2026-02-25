@@ -74,8 +74,8 @@ func (field *Field) parseTag(fieldType *ast.BasicLit) {
 			if len(kv) == 2 {
 				value := strings.Trim(kv[1], "\"")
 				switch kv[0] {
-				case "gorm":
-					field.Tags["gorm"] = getColumnName(value)
+				case GORM:
+					field.Tags[GORM] = getColumnName(value)
 				default:
 					field.Tags[kv[0]] = strings.Split(value, ",")[0]
 				}

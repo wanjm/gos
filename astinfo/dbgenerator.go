@@ -50,28 +50,34 @@ func (db *DbManager) Gen() {
 					Pkg:          &pkg.PkgBasic,
 				}
 				hasCreateTime := false
+				hasId := false
 				for _, field := range class.Fields {
-					if field.Tags["gorm"] == "create_time" {
+					// 此处已经进行了column的处理
+					colName := field.Tags[GORM]
+					if colName == CreateTime {
 						hasCreateTime = true
-						break
+					}
+					if colName == Id {
+						hasId = true
 					}
 				}
 				for _, field := range class.Fields {
-					if field.Tags["gorm"] != "" {
+					if field.Tags[GORM] != "" {
 						// Collect NamePairs instead of immediately generating columns
-						allColumns = append(allColumns, getNamePair(class, "gorm")...)
+						allColumns = append(allColumns, getNamePair(class, GORM)...)
 						if hasCreateTime {
-							data.OrderField = "create_time"
+							data.OrderField = CreateTime
 							data.OrderDirection = "common.DESCStr"
-						} else {
-							data.OrderField = "id"
+						} else if hasId {
+							data.OrderField = Id
 							data.OrderDirection = "common.ASCStr"
 						}
+						// else keep OrderField empty
 						mysqlInfo = append(mysqlInfo, &data)
 						break
-					} else if field.Tags["bson"] != "" {
+					} else if field.Tags[BSON] != "" {
 						// Collect NamePairs instead of immediately generating columns
-						allColumns = append(allColumns, getNamePair(class, "bson")...)
+						allColumns = append(allColumns, getNamePair(class, BSON)...)
 						data.IDName = getIdName(class)
 						mongoInfo = append(mongoInfo, &data)
 						break
@@ -198,7 +204,7 @@ func genColumns(file *astbasic.GenedGoFile, columns []*NamePair) {
 // getIdName 获取id的变量名，如果id不是系统默认类型，则返回空字符串；
 func getIdName(class *Struct) string {
 	for _, field := range class.Fields {
-		if field.Tags["bson"] == "_id" {
+		if field.Tags[BSON] == "_id" {
 			// 简单检查是否是ObjectID类型；
 			if field.Type.RefName(nil) == "ObjectID" {
 				return field.Name
@@ -333,12 +339,14 @@ func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, 
 			QueryFields: option,
 			Offset:      int(pageNo * pageSize),
 			Limit:       int(pageSize),
+			{{if .OrderField}}
 			OrderFields: []common.OrderByParam{
 				{
 					Field:     "{{.OrderField}}",
 					Direction: {{.OrderDirection}},
 				},
 			},
+			{{end}}
 			SelectFields: colNames,
 		},
 		&total,
