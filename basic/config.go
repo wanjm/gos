@@ -16,6 +16,7 @@ type Generation struct {
 	CommonMod    string // github.com/wanjm/common 的别名
 	AutoGen      bool
 	FlutterPath  string // 自动生成前端的flutter路径
+	Jsonv2       bool   // 是否使用jsonv2
 }
 type Config struct {
 	InitMain   string // 改为字符串类型，存储模块名称

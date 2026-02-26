@@ -25,6 +25,7 @@ func dealErrorResult(err error, c *gin.Context, code int, errorCode int, errMess
 }
 {{if .HasResponseKey}}
 var responseKey {{.ImportName}}.{{.ResponseKey}}
+{{end}}
 
 type JsonString struct {
 	context context.Context
@@ -37,10 +38,13 @@ func (r JsonString) Render(w http.ResponseWriter) error {
 	if err != nil {
 		return err
 	}
+
+	{{if .HasResponseKey}}
 	v := r.context.Value(responseKey)
 	if v != nil {
 		*(v.(*string)) = string(jsonBytes)
 	}
+	{{end}}
 	_, err = w.Write(jsonBytes)
 	return err
 }
@@ -59,11 +63,6 @@ func cJSON(c *gin.Context, code int,response any) {
 		data:    response,
 	})
 }
-{{else}}
-func cJSON(c *gin.Context, code int, response any) {
-	c.JSON(code, response)
-}
-{{end}}
 `
 
 func generateCommon() {
@@ -89,10 +88,14 @@ func generateCommon() {
 		oneImport := file.GetImport(astbasic.SimplePackage(Project.Cfg.Generation.ResponseMod, "xx"))
 		data.ImportName = oneImport.Name
 		data.ResponseKey = Project.Cfg.Generation.ResponseKey
-		file.GetImport(astbasic.SimplePackage("context", "context"))
-		file.GetImport(astbasic.SimplePackage("encoding/json", "json"))
-		file.GetImport(astbasic.SimplePackage("net/http", "http"))
 	}
+	file.GetImport(astbasic.SimplePackage("context", "context"))
+	if Project.Cfg.Generation.Jsonv2 {
+		file.GetImport(astbasic.SimplePackage("encoding/json/v2", "json"))
+	} else {
+		file.GetImport(astbasic.SimplePackage("encoding/json", "json"))
+	}
+	file.GetImport(astbasic.SimplePackage("net/http", "http"))
 
 	// 解析并执行模板
 	tpl, err := template.New("common").Parse(cJsonTemplate)
