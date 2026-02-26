@@ -34,19 +34,33 @@ type JsonString struct {
 
 func (r JsonString) Render(w http.ResponseWriter) error {
 	r.WriteContentType(w)
-	jsonBytes, err := json.Marshal(r.data)
-	if err != nil {
-		return err
-	}
+	{{if and .Jsonv2 (not .HasResponseKey)}}	
+		return json.MarshalWrite(w,r.data)
+	{{else}}
+		{{if .Jsonv2}}
+		var err error
+		buf := new(bytes.Buffer)
+		// MarshalWrite 比 Marshal 更省内存，因为它减少了大切片的扩容分配
+		if err = json.MarshalWrite(buf, r.data); err != nil {
+			return err
+		}
+		jsonBytes := buf.Bytes()
+		{{else}}
+		jsonBytes, err := json.Marshal(r.data)
+		if err != nil {
+				return err
+			}
+		{{end}}
 
-	{{if .HasResponseKey}}
-	v := r.context.Value(responseKey)
-	if v != nil {
-		*(v.(*string)) = string(jsonBytes)
-	}
+		{{if .HasResponseKey}}
+		v := r.context.Value(responseKey)
+		if v != nil {
+			*(v.(*string)) = string(jsonBytes)
+		}
+		{{end}}
+		_, err = w.Write(jsonBytes)
+		return err
 	{{end}}
-	_, err = w.Write(jsonBytes)
-	return err
 }
 
 // WriteContentType (JSON) writes JSON ContentType.
@@ -81,6 +95,7 @@ func generateCommon() {
 		HasResponseKey bool
 		ImportName     string
 		ResponseKey    string
+		Jsonv2         bool
 	}{}
 
 	if Project.Cfg.Generation.ResponseKey != "" {
@@ -90,8 +105,15 @@ func generateCommon() {
 		data.ResponseKey = Project.Cfg.Generation.ResponseKey
 	}
 	file.GetImport(astbasic.SimplePackage("context", "context"))
-	if Project.Cfg.Generation.Jsonv2 {
+	data.Jsonv2 = Project.Cfg.Generation.Jsonv2
+	if data.Jsonv2 {
 		file.GetImport(astbasic.SimplePackage("encoding/json/v2", "json"))
+		if data.HasResponseKey {
+			// 如果需要使用 responseKey, it will use bytes.Buffer to marshal the data
+			// so we need to import bytes
+			// otherwise, it will MarshalWrite directly to writer so no bytes needed
+			file.GetImport(astbasic.SimplePackage("bytes", "bytes"))
+		}
 	} else {
 		file.GetImport(astbasic.SimplePackage("encoding/json", "json"))
 	}
