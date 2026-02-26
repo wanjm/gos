@@ -3,6 +3,7 @@ package astinfo
 import (
 	"fmt"
 	"go/ast"
+	"sort"
 	"strings"
 )
 
@@ -180,7 +181,14 @@ func (eg *EntityGen) hasFormatEntityMethod(schemaStruct *Struct) bool {
 
 func (eg *EntityGen) generateFromEntitysForPackage(pkg *Package, genFile *GenedFile) {
 	// Find all array type aliases where element type has entity annotation
-	for _, typer := range pkg.Types {
+	keys := make([]string, 0, len(pkg.Types))
+	for k := range pkg.Types {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, name := range keys {
+		typer := pkg.Types[name]
 		if typer == nil {
 			continue
 		}
