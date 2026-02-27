@@ -190,8 +190,8 @@ func (mp *MainProject) genBasicCode(file *GenedFile) {
 	type Response struct {
 		Code    int         "json:\"code\""
 		Message string      "json:\"message,omitempty\""
-		ExtraInfo any         "json:\"extra,omitempty\"" //用于在失败的情况下也返回给前端一些信息；
-		Object  interface{} "json:\"obj,omitempty\""
+		ExtraInfo any       "json:\"extra,omitempty\"" //用于在失败的情况下也返回给前端一些信息；
+		Object  any         "json:\"obj\""
 	}
 
 type Config struct {
