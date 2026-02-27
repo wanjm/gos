@@ -542,9 +542,9 @@ func genEntityList(class *Struct, file *astbasic.GenedGoFile) {
 	sb.WriteString(fmt.Sprintf("\ntype %s []*%s\n", listType, entityName))
 
 	// Helper to find field
-	findField := func(name string) *Field {
+	findField := func(dbColumnName string) *Field {
 		for _, f := range class.Fields {
-			if f.Name == name {
+			if f.DbColumnName == dbColumnName {
 				return f
 			}
 		}
@@ -552,22 +552,22 @@ func genEntityList(class *Struct, file *astbasic.GenedGoFile) {
 	}
 
 	// 2. Generate Arrays methods
-	for _, fieldName := range class.Comment.Arrays {
-		field := findField(fieldName)
+	for _, columnName := range class.Comment.Arrays {
+		field := findField(columnName)
 		if field == nil {
-			log.Printf("Warning: Field %s not found in struct %s for array generation", fieldName, entityName)
+			log.Printf("Warning: Field %s not found in struct %s for array generation", columnName, entityName)
 			continue
 		}
 
 		fieldType := field.Type.RefName(file)
 		// Get{FieldName}List
-		methodName := "Get" + fieldName + "List"
+		methodName := "Get" + field.Name + "List"
 
 		sb.WriteString(fmt.Sprintf("\nfunc (l %s) %s() []%s {\n", listType, methodName, fieldType))
 		sb.WriteString(fmt.Sprintf("\tdata := make([]%s, 0, len(l))\n", fieldType))
 		sb.WriteString("\tfor _, item := range l {\n")
 		sb.WriteString("\t\tif item != nil {\n")
-		sb.WriteString(fmt.Sprintf("\t\t\tdata = append(data, item.%s)\n", fieldName))
+		sb.WriteString(fmt.Sprintf("\t\t\tdata = append(data, item.%s)\n", field.Name))
 		sb.WriteString("\t\t}\n")
 		sb.WriteString("\t}\n")
 		sb.WriteString("\treturn data\n")
@@ -575,22 +575,22 @@ func genEntityList(class *Struct, file *astbasic.GenedGoFile) {
 	}
 
 	// 3. Generate Maps methods
-	for _, fieldName := range class.Comment.Maps {
-		field := findField(fieldName)
+	for _, columnName := range class.Comment.Maps {
+		field := findField(columnName)
 		if field == nil {
-			log.Printf("Warning: Field %s not found in struct %s for map generation", fieldName, entityName)
+			log.Printf("Warning: Field %s not found in struct %s for map generation", columnName, entityName)
 			continue
 		}
 
 		fieldType := field.Type.RefName(file)
 		// GetMapBy{FieldName}
-		methodName := "GetMapBy" + fieldName
+		methodName := "GetMapBy" + field.Name
 
 		sb.WriteString(fmt.Sprintf("\nfunc (l %s) %s() map[%s]*%s {\n", listType, methodName, fieldType, entityName))
 		sb.WriteString(fmt.Sprintf("\tdata := make(map[%s]*%s, len(l))\n", fieldType, entityName))
 		sb.WriteString("\tfor _, item := range l {\n")
 		sb.WriteString("\t\tif item != nil {\n")
-		sb.WriteString(fmt.Sprintf("\t\t\tdata[item.%s] = item\n", fieldName))
+		sb.WriteString(fmt.Sprintf("\t\t\tdata[item.%s] = item\n", field.Name))
 		sb.WriteString("\t\t}\n")
 		sb.WriteString("\t}\n")
 		sb.WriteString("\treturn data\n")
