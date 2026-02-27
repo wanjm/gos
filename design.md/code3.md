@@ -135,7 +135,9 @@ DBType = "mysql"
 
 [[DBConfig.DbGenCfgs]]
 OutPath = "business/package"
-TableNames = ["student"]
+Tables = [
+  { Name = "student" }
+]
 ```
 
 ## 代码生成

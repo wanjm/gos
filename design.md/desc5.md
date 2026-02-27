@@ -167,7 +167,9 @@ DBType = "mysql"
 
 [[DBConfig.DbGenCfgs]]
 OutPath = "business/package"
-TableNames = ["student"]
+Tables = [
+  { Name = "student", Arrays = ["StudentId"], Maps = ["StudentId"] }
+]
 ```
 
 ### ✔️ 执行生成命令

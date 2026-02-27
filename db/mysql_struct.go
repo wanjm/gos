@@ -34,7 +34,8 @@ func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
 	entityPkg := pkg.NewPkgBasic("entity", "entity")
 	file := entityPkg.NewFile("mysql.alias")
 	var aliasStringBuilder strings.Builder
-	for _, tableName := range tableCfg.TableNames {
+	for _, t := range tableCfg.Tables {
+		tableName := t.Name
 		// 2. Get DDL
 		ddl, err := getTableDDL(db, tableName)
 		if err != nil {
@@ -44,12 +45,12 @@ func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
 		// 3. Parse DDL and generate struct
 		tablepkg := entityPkg.NewPkgBasic(tableName, "mysql/"+tableName)
 		file.GetImport(tablepkg)
-		structName, err := GenerateStructFromDDL(tableName, ddl, tablepkg, tableCfg.DBName)
+		structName, err := GenerateStructFromDDL(tableName, ddl, tablepkg, tableCfg.DBName, t.Arrays, t.Maps)
 		if err != nil {
 			fmt.Printf("生成结构体代码失败: %v\n", err)
 			return err
 		}
-		aliasStringBuilder.WriteString("type " + structName + "= " + tableName + "." + structName + "\n")
+		aliasStringBuilder.WriteString("type " + structName + " = " + tableName + "." + structName + "\n")
 	}
 	file.AddBuilder(&aliasStringBuilder)
 	file.Save()
@@ -72,7 +73,7 @@ func getTableDDL(db *sql.DB, tableName string) (string, error) {
 
 // GenerateStructFromDDL parses the DDL and generates a Go struct definition
 // return Struct Name;
-func GenerateStructFromDDL(tableName, ddl string, tablepkg *astbasic.PkgBasic, dbVariable string) (string, error) {
+func GenerateStructFromDDL(tableName, ddl string, tablepkg *astbasic.PkgBasic, dbVariable string, arrays []string, maps []string) (string, error) {
 	tableFile := tablepkg.NewFile("table")
 	// Simple parser: extract column lines from DDL
 	lines := strings.Split(ddl, "\n")
@@ -128,7 +129,7 @@ func GenerateStructFromDDL(tableName, ddl string, tablepkg *astbasic.PkgBasic, d
 	}
 	const structTpl = `
 	{{.StructComment}}
-	// @gos tblName={{.TableName}} dbVariable={{.DbVariable}}
+	// @gos tblName={{.TableName}} dbVariable={{.DbVariable}}{{if .Arrays}} arrays={{.Arrays}}{{end}}{{if .Maps}} maps={{.Maps}}{{end}}
 type {{.StructName}} struct {
 {{range .Fields}}
 	{{.Name}} {{.Type}} "json:\"{{.JsonTag}}\" gorm:\"column:{{.GormTag}}\"" // {{.Comment}}
@@ -141,12 +142,18 @@ type {{.StructName}} struct {
 		return "", err
 	}
 	var sb strings.Builder
+	
+	arraysStr := strings.Join(arrays, ",")
+	mapsStr := strings.Join(maps, ",")
+	
 	err = tpl.Execute(&sb, map[string]interface{}{
 		"StructComment": structComment,
 		"StructName":    structName,
 		"Fields":        fields,
 		"TableName":     tableName,
 		"DbVariable":    dbVariable,
+		"Arrays":        arraysStr,
+		"Maps":          mapsStr,
 	})
 	if err != nil {
 		return "", err
@@ -155,6 +162,7 @@ type {{.StructName}} struct {
 	tableFile.Save()
 	return structName, nil
 }
+
 
 // mysqlTypeToGoType maps MySQL types to Go types (basic mapping)
 func mysqlTypeToGoType(mysqlType string, file *astbasic.GenedGoFile) string {
