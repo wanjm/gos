@@ -13,7 +13,7 @@ DBType = "mysql"
 [[DBConfig.DbGenCfgs]]
 OutPath = "business/package" # 生成的table所在的相对工程根目录
 Tables = [
-  { Name = "table_name", Arrays = ["FieldId"], Maps = ["FieldId"] }
+  { Name = "table_name", Arrays = ["column_name"], Maps = ["column_name"] }
 ]
 ```
 

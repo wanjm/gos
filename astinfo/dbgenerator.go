@@ -285,13 +285,13 @@ func (a *{{.TableName}}Dal) Create(ctx context.Context, item *{{.Pkg.Name}}.{{.T
 	return err
 }
 
-func (a *{{.TableName}}Dal) GetAll(ctx context.Context, options []common.Optioner, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
+func (a *{{.TableName}}Dal) GetAll(ctx context.Context, options []common.Optioner, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	return a.GetLimitAll(ctx, options, 0, cols...)
 }
-func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, options []common.Optioner,count int, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
+func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, options []common.Optioner,count int, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	return a.GetLimitAllWithStart(ctx, options, 0, count, cols...)
 }
-func (a *{{.TableName}}Dal) GetLimitAllWithStart(ctx context.Context, options []common.Optioner,start, count int, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
+func (a *{{.TableName}}Dal) GetLimitAllWithStart(ctx context.Context, options []common.Optioner,start, count int, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	var colNames []string
 	if len(cols) > 0 {
 		colNames = cols[0]

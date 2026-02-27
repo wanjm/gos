@@ -38,6 +38,9 @@ func GenTableFromMongo(config *basic.DBConfig, moduleMap map[string]struct{}) er
 	// 2. 遍历所有表的生成配置
 	for _, tableCfg := range config.DbGenCfgs {
 		pkg := astinfo.GlobalProject.CurrentProject.NewPkgBasic("", tableCfg.ModulePath)
+		entityPkg := pkg.NewPkgBasic("entity", "entity")
+		file := entityPkg.NewFile("mongo.alias")
+		var aliasStringBuilder strings.Builder
 		// 3. 遍历每个表并调用生成函数
 		for _, t := range tableCfg.Tables {
 			tableName := t.Name
@@ -53,13 +56,19 @@ func GenTableFromMongo(config *basic.DBConfig, moduleMap map[string]struct{}) er
 			if err != nil {
 				return fmt.Errorf("获取文档失败: %w", err)
 			}
-			err = genTableForMongo(tableName, doc, pkg, config.DBName, t.Arrays, t.Maps)
+			err = genTableForMongo(doc, pkg, config.DBName, t)
 			if err != nil {
 				log.Printf("为集合 '%s' 生成结构体失败: %v", tableName, err)
 				continue
 			}
+			structName := astbasic.ToCamelCase(tableName, true)
+			tablePkg := pkg.NewPkgBasic(tableName, "entity/mongo/"+tableName)
+			file.GetImport(tablePkg)
+			aliasStringBuilder.WriteString("type " + structName + " = " + tableName + "." + structName + "\n")
 			log.Printf("成功为集合 '%s' 生成文件。", tableName)
 		}
+		file.AddBuilder(&aliasStringBuilder)
+		file.Save()
 	}
 	return nil
 }
@@ -114,7 +123,8 @@ const structTpl = `type {{.Name}} struct {
 }
 `
 
-func genTableForMongo(tableName string, doc bson.M, pkg *astbasic.PkgBasic, dbVariable string, arrays []string, maps []string) error {
+func genTableForMongo(doc bson.M, pkg *astbasic.PkgBasic, dbVariable string, t basic.TableCfg) error {
+	tableName := t.Name
 	structName := astbasic.ToCamelCase(tableName, true)
 	tablepkg := pkg.NewPkgBasic(tableName, "entity/mongo/"+tableName)
 	tableFile := tablepkg.NewFile("table")
@@ -123,18 +133,29 @@ func genTableForMongo(tableName string, doc bson.M, pkg *astbasic.PkgBasic, dbVa
 	gosStringBuilder.WriteString(tableName)
 	gosStringBuilder.WriteString(" dbVariable=")
 	gosStringBuilder.WriteString(dbVariable)
-	if len(arrays) > 0 {
+	if len(t.Arrays) > 0 {
 		gosStringBuilder.WriteString(" arrays=")
-		gosStringBuilder.WriteString(strings.Join(arrays, ","))
+		gosStringBuilder.WriteString(strings.Join(t.Arrays, ","))
 	}
-	if len(maps) > 0 {
+	if len(t.Maps) > 0 {
 		gosStringBuilder.WriteString(" maps=")
-		gosStringBuilder.WriteString(strings.Join(maps, ","))
+		gosStringBuilder.WriteString(strings.Join(t.Maps, ","))
 	}
 	gosStringBuilder.WriteString("\n")
 	tableFile.AddBuilder(&gosStringBuilder)
-	_, err := generateStruct(structName, doc, tableFile)
-	return err
+	fields, err := generateStruct(structName, doc, tableFile)
+	if err != nil {
+		return err
+	}
+	var methods []string
+	for _, a := range t.Arrays {
+		methods = append(methods, a+"s")
+	}
+	for _, m := range t.Maps {
+		methods = append(methods, m+"Map")
+	}
+
+	return genTableGenForMongo(tablepkg, structName, methods, fields)
 }
 
 func generateStruct(structName string, doc bson.M, tableFile *astbasic.GenedGoFile) ([]FieldInfo, error) {
@@ -228,7 +249,6 @@ func genTableGenForMongo(tablepkg *astbasic.PkgBasic, structName string, methods
 	genFile.Save()
 	return nil
 }
-
 
 func getGoTypeFromValue(key string, value interface{}, tableFile *astbasic.GenedGoFile) string {
 	if value == nil {

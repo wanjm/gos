@@ -105,7 +105,7 @@ func (a *{{.TableName}}Dal) Create(ctx context.Context, item *entity.{{.TableNam
 	return nil
 }
 
-func (a *{{.TableName}}Dal) GetAll(ctx context.Context, opts []common.Optioner, cols ...[]string) (item []*entity.{{.TableName}}, err error) {
+func (a *{{.TableName}}Dal) GetAll(ctx context.Context, opts []common.Optioner, cols ...[]string) (item entity.{{.TableName}}s, err error) {
 	filter := common.GenMongoOption(opts)
 	db := a.getDB()
 	projection := bson.M{}
