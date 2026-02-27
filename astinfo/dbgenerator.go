@@ -1,6 +1,7 @@
 package astinfo
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"path/filepath"
@@ -37,12 +38,16 @@ func (db *DbManager) Gen() {
 		var mysqlInfo []*info
 		var mongoInfo []*info
 		file := pkg.NewFile("column")
+		listFile := pkg.NewFile("list")
+		hasList := false
 		var conflictMap = make(map[string]*NamePair)
 		var allColumns []*NamePair
 
 		for _, className := range pkg.SortedStructNames {
 			class := pkg.Structs[className]
 			if class.Comment.TableName != "" {
+				genEntityList(class, listFile)
+				hasList = true
 				var data = info{
 					TableName:    class.StructName,
 					RawTableName: class.Comment.TableName,
@@ -93,6 +98,9 @@ func (db *DbManager) Gen() {
 		}
 
 		file.Save()
+		if hasList {
+			listFile.Save()
+		}
 		if len(mysqlInfo) == 0 && len(mongoInfo) == 0 {
 			continue
 		}
@@ -328,7 +336,7 @@ func (a *{{.TableName}}Dal) GetOneById(ctx context.Context, id int32, cols ...[]
 	return a.GetOne(ctx, []common.Optioner{common.Eq("id", id)}, cols...)
 }
 
-func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, pageNo, pageSize int, cols ...[]string) (list []*{{.Pkg.Name}}.{{.TableName}}, total int64, err error) {
+func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, pageNo, pageSize int, cols ...[]string) (list {{.Pkg.Name}}.{{.TableName}}List, total int64, err error) {
 	var colNames []string
 	if len(cols) > 0 {
 		colNames = cols[0]
@@ -443,10 +451,10 @@ func (a *{{.TableName}}Dal) Create(ctx context.Context, item *{{.Pkg.Name}}.{{.T
 	return nil
 }
 
-func (a *{{.TableName}}Dal) GetAll(ctx context.Context, opts []common.Optioner, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
+func (a *{{.TableName}}Dal) GetAll(ctx context.Context, opts []common.Optioner, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	return a.GetLimitAll(ctx, opts, 0, cols...)
 }
-func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, opts []common.Optioner,count int64, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
+func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, opts []common.Optioner,count int64, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	op := a.getOperation(ctx, opts)
 	op.SetLimit(count)
 	if len(cols) > 0 {
@@ -460,7 +468,7 @@ func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, opts []common.Optio
 	return
 }
 
-func (a *{{.TableName}}Dal) List(ctx context.Context, opts []common.Optioner, pageNum int, pageSize int, cols ...[]string) (list []*{{.Pkg.Name}}.{{.TableName}}, total int64, err error) {
+func (a *{{.TableName}}Dal) List(ctx context.Context, opts []common.Optioner, pageNum int, pageSize int, cols ...[]string) (list {{.Pkg.Name}}.{{.TableName}}List, total int64, err error) {
 	op := a.getOperation(ctx, opts)
 	total, err = op.Count()
 	if err != nil {
@@ -523,4 +531,72 @@ func (a *{{.TableName}}Dal) Update(ctx context.Context, opts []common.Optioner, 
 	}
 	file.GetImport(data.Pkg)
 	file.AddBuilder(&content)
+}
+
+func genEntityList(class *Struct, file *astbasic.GenedGoFile) {
+	// 1. Generate List Type
+	// type {Entity}List []*Entity
+	entityName := class.StructName
+	listType := entityName + "List"
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("\ntype %s []*%s\n", listType, entityName))
+
+	// Helper to find field
+	findField := func(name string) *Field {
+		for _, f := range class.Fields {
+			if f.Name == name {
+				return f
+			}
+		}
+		return nil
+	}
+
+	// 2. Generate Arrays methods
+	for _, fieldName := range class.Comment.Arrays {
+		field := findField(fieldName)
+		if field == nil {
+			log.Printf("Warning: Field %s not found in struct %s for array generation", fieldName, entityName)
+			continue
+		}
+
+		fieldType := field.Type.RefName(file)
+		// Get{FieldName}List
+		methodName := "Get" + fieldName + "List"
+
+		sb.WriteString(fmt.Sprintf("\nfunc (l %s) %s() []%s {\n", listType, methodName, fieldType))
+		sb.WriteString(fmt.Sprintf("\tdata := make([]%s, 0, len(l))\n", fieldType))
+		sb.WriteString("\tfor _, item := range l {\n")
+		sb.WriteString("\t\tif item != nil {\n")
+		sb.WriteString(fmt.Sprintf("\t\t\tdata = append(data, item.%s)\n", fieldName))
+		sb.WriteString("\t\t}\n")
+		sb.WriteString("\t}\n")
+		sb.WriteString("\treturn data\n")
+		sb.WriteString("}\n")
+	}
+
+	// 3. Generate Maps methods
+	for _, fieldName := range class.Comment.Maps {
+		field := findField(fieldName)
+		if field == nil {
+			log.Printf("Warning: Field %s not found in struct %s for map generation", fieldName, entityName)
+			continue
+		}
+
+		fieldType := field.Type.RefName(file)
+		// GetMapBy{FieldName}
+		methodName := "GetMapBy" + fieldName
+
+		sb.WriteString(fmt.Sprintf("\nfunc (l %s) %s() map[%s]*%s {\n", listType, methodName, fieldType, entityName))
+		sb.WriteString(fmt.Sprintf("\tdata := make(map[%s]*%s, len(l))\n", fieldType, entityName))
+		sb.WriteString("\tfor _, item := range l {\n")
+		sb.WriteString("\t\tif item != nil {\n")
+		sb.WriteString(fmt.Sprintf("\t\t\tdata[item.%s] = item\n", fieldName))
+		sb.WriteString("\t\t}\n")
+		sb.WriteString("\t}\n")
+		sb.WriteString("\treturn data\n")
+		sb.WriteString("}\n")
+	}
+
+	file.AddBuilder(&sb)
 }
