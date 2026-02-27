@@ -647,7 +647,19 @@ func (mp *MainProject) Parse() error {
 	sort.Slice(mp.Projects, func(i, j int) bool {
 		return mp.Projects[i].ModPath > mp.Projects[j].ModPath
 	})
-	return p.ParseCode()
+	err := p.ParseCode()
+	if err != nil {
+		return err
+	}
+	mp.FinishedParse()
+	return nil
+}
+
+// FinishedParse calls FinishedParse on each package for post-parse reordering.
+func (mp *MainProject) FinishedParse() {
+	for _, pkg := range mp.Packages {
+		pkg.FinishedParse()
+	}
 }
 
 var GlobalProject *MainProject

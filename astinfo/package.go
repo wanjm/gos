@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 
 	"github.com/wanjm/gos/astbasic"
@@ -103,11 +104,15 @@ func (pkg *Package) Parse() error {
 		return nil
 	}
 	pkg.finshedParse = true
-	// filename is the full path of the file
-	for filename, f := range pkg.Files {
-		if strings.HasSuffix(filename, "_test.go") {
-			continue
+	var filenames []string
+	for name := range pkg.Files {
+		if !strings.HasSuffix(name, "_test.go") {
+			filenames = append(filenames, name)
 		}
+	}
+	sort.Strings(filenames)
+	for _, filename := range filenames {
+		f := pkg.Files[filename]
 		gofile := NewGosourse(f, pkg, filename)
 		gofile.Parse()
 	}
@@ -122,6 +127,18 @@ func (pkg *Package) Parse() error {
 	}
 
 	return nil
+}
+
+// FinishedParse reorders methods within each struct by Comment.Url for deterministic output.
+func (pkg *Package) FinishedParse() {
+	for _, s := range pkg.Structs {
+		if len(s.MethodManager.Server) == 0 {
+			continue
+		}
+		sort.Slice(s.MethodManager.Server, func(i, j int) bool {
+			return s.MethodManager.Server[i].Comment.Url < s.MethodManager.Server[j].Comment.Url
+		})
+	}
 }
 
 // NewPackage creates a new Package instance with the given module path
