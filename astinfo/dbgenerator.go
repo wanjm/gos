@@ -58,7 +58,7 @@ func (db *DbManager) Gen() {
 				hasId := false
 				for _, field := range class.Fields {
 					// 此处已经进行了column的处理
-					colName := field.Tags[GORM]
+					colName := field.DbColumnName
 					if colName == CreateTime {
 						hasCreateTime = true
 					}
@@ -69,7 +69,7 @@ func (db *DbManager) Gen() {
 				for _, field := range class.Fields {
 					if field.Tags[GORM] != "" {
 						// Collect NamePairs instead of immediately generating columns
-						allColumns = append(allColumns, getNamePair(class, GORM)...)
+						allColumns = append(allColumns, getNamePair(class)...)
 						if hasCreateTime {
 							data.OrderField = CreateTime
 							data.OrderDirection = "common.DESCStr"
@@ -82,7 +82,7 @@ func (db *DbManager) Gen() {
 						break
 					} else if field.Tags[BSON] != "" {
 						// Collect NamePairs instead of immediately generating columns
-						allColumns = append(allColumns, getNamePair(class, BSON)...)
+						allColumns = append(allColumns, getNamePair(class)...)
 						data.IDName = getIdName(class)
 						mongoInfo = append(mongoInfo, &data)
 						break
@@ -212,7 +212,7 @@ func genColumns(file *astbasic.GenedGoFile, columns []*NamePair) {
 // getIdName 获取id的变量名，如果id不是系统默认类型，则返回空字符串；
 func getIdName(class *Struct) string {
 	for _, field := range class.Fields {
-		if field.Tags[BSON] == "_id" {
+		if field.DbColumnName == "_id" {
 			// 简单检查是否是ObjectID类型；
 			if field.Type.RefName(nil) == "ObjectID" {
 				return field.Name
@@ -226,18 +226,17 @@ func getIdName(class *Struct) string {
 // 获取指定tag的值，目前用在gorm和bson两个tag；
 // bson:"orgId,omitempty"
 // gorm:"column:id;primary_key;AUTO_INCREMENT"
-func getNamePair(class *Struct, tag string) []*NamePair {
+func getNamePair(class *Struct) []*NamePair {
 	var columns []*NamePair
 	for _, field := range class.Fields {
 		basicType := GetRootBasicType(field.Type)
 		if subClass, ok := basicType.(*Struct); ok {
 			if subClass.GoSource.Pkg == class.GoSource.Pkg {
-				subColumns := getNamePair(subClass, tag)
+				subColumns := getNamePair(subClass)
 				columns = append(columns, subColumns...)
 			}
 		}
-		tag := field.Tags[tag]
-		colname := strings.Split(tag, ",")[0]
+		colname := field.DbColumnName
 		if colname != "" && colname != "-" {
 			columns = append(columns, &NamePair{
 				VarName: "C_" + field.Name,
