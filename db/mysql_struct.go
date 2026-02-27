@@ -136,7 +136,6 @@ type {{.StructName}} struct {
 {{end}}
 }
 
-type {{.StructName}}List []*{{.StructName}}
 `
 
 	tpl, err := template.New("struct").Parse(structTpl)
