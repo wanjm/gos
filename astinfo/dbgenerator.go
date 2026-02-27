@@ -1,7 +1,6 @@
 package astinfo
 
 import (
-	"fmt"
 	"html/template"
 	"log"
 	"path/filepath"
@@ -533,68 +532,102 @@ func (a *{{.TableName}}Dal) Update(ctx context.Context, opts []common.Optioner, 
 }
 
 func genEntityList(class *Struct, file *astbasic.GenedGoFile) {
-	// 1. Generate List Type
-	// type {Entity}List []*Entity
-	entityName := class.StructName
-	listType := entityName + "List"
+	// 1. Setup map keys
+	fieldMap := make(map[string]*Field)
+	for _, col := range class.Comment.Arrays {
+		fieldMap[col] = nil
+	}
+	for _, col := range class.Comment.Maps {
+		fieldMap[col] = nil
+	}
+
+	// 2. Populate map
+	for _, field := range class.Fields {
+		if _, ok := fieldMap[field.DbColumnName]; ok {
+			fieldMap[field.DbColumnName] = field
+		}
+	}
+
+	// 3. Prepare data for template
+	type MethodData struct {
+		MethodName string
+		FieldType  string
+		FieldName  string
+	}
+
+	type ListData struct {
+		ListType   string
+		EntityName string
+		Arrays     []MethodData
+		Maps       []MethodData
+	}
+
+	data := ListData{
+		ListType:   class.StructName + "List",
+		EntityName: class.StructName,
+	}
+
+	// Process Arrays
+	for _, col := range class.Comment.Arrays {
+		field := fieldMap[col]
+		if field == nil {
+			log.Printf("Warning: Field %s not found in struct %s for array generation", col, class.StructName)
+			continue
+		}
+		data.Arrays = append(data.Arrays, MethodData{
+			MethodName: "Get" + field.Name + "List",
+			FieldType:  field.Type.RefName(file),
+			FieldName:  field.Name,
+		})
+	}
+
+	// Process Maps
+	for _, col := range class.Comment.Maps {
+		field := fieldMap[col]
+		if field == nil {
+			log.Printf("Warning: Field %s not found in struct %s for map generation", col, class.StructName)
+			continue
+		}
+		data.Maps = append(data.Maps, MethodData{
+			MethodName: "GetMapBy" + field.Name,
+			FieldType:  field.Type.RefName(file),
+			FieldName:  field.Name,
+		})
+	}
+
+	// 4. Use template
+	tmplText := `
+type {{.ListType}} []*{{.EntityName}}
+{{range .Arrays}}
+func (l {{$.ListType}}) {{.MethodName}}() []{{.FieldType}} {
+	data := make([]{{.FieldType}}, 0, len(l))
+	for _, item := range l {
+		if item != nil {
+			data = append(data, item.{{.FieldName}})
+		}
+	}
+	return data
+}
+{{end}}{{range .Maps}}
+func (l {{$.ListType}}) {{.MethodName}}() map[{{.FieldType}}]*{{$.EntityName}} {
+	data := make(map[{{.FieldType}}]*{{$.EntityName}}, len(l))
+	for _, item := range l {
+		if item != nil {
+			data[item.{{.FieldName}}] = item
+		}
+	}
+	return data
+}
+{{end}}`
+
+	tmpl, err := template.New("entityList").Parse(tmplText)
+	if err != nil {
+		panic(err)
+	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("\ntype %s []*%s\n", listType, entityName))
-
-	// Helper to find field
-	findField := func(dbColumnName string) *Field {
-		for _, f := range class.Fields {
-			if f.DbColumnName == dbColumnName {
-				return f
-			}
-		}
-		return nil
-	}
-
-	// 2. Generate Arrays methods
-	for _, columnName := range class.Comment.Arrays {
-		field := findField(columnName)
-		if field == nil {
-			log.Printf("Warning: Field %s not found in struct %s for array generation", columnName, entityName)
-			continue
-		}
-
-		fieldType := field.Type.RefName(file)
-		// Get{FieldName}List
-		methodName := "Get" + field.Name + "List"
-
-		sb.WriteString(fmt.Sprintf("\nfunc (l %s) %s() []%s {\n", listType, methodName, fieldType))
-		sb.WriteString(fmt.Sprintf("\tdata := make([]%s, 0, len(l))\n", fieldType))
-		sb.WriteString("\tfor _, item := range l {\n")
-		sb.WriteString("\t\tif item != nil {\n")
-		sb.WriteString(fmt.Sprintf("\t\t\tdata = append(data, item.%s)\n", field.Name))
-		sb.WriteString("\t\t}\n")
-		sb.WriteString("\t}\n")
-		sb.WriteString("\treturn data\n")
-		sb.WriteString("}\n")
-	}
-
-	// 3. Generate Maps methods
-	for _, columnName := range class.Comment.Maps {
-		field := findField(columnName)
-		if field == nil {
-			log.Printf("Warning: Field %s not found in struct %s for map generation", columnName, entityName)
-			continue
-		}
-
-		fieldType := field.Type.RefName(file)
-		// GetMapBy{FieldName}
-		methodName := "GetMapBy" + field.Name
-
-		sb.WriteString(fmt.Sprintf("\nfunc (l %s) %s() map[%s]*%s {\n", listType, methodName, fieldType, entityName))
-		sb.WriteString(fmt.Sprintf("\tdata := make(map[%s]*%s, len(l))\n", fieldType, entityName))
-		sb.WriteString("\tfor _, item := range l {\n")
-		sb.WriteString("\t\tif item != nil {\n")
-		sb.WriteString(fmt.Sprintf("\t\t\tdata[item.%s] = item\n", field.Name))
-		sb.WriteString("\t\t}\n")
-		sb.WriteString("\t}\n")
-		sb.WriteString("\treturn data\n")
-		sb.WriteString("}\n")
+	if err := tmpl.Execute(&sb, data); err != nil {
+		panic(err)
 	}
 
 	file.AddBuilder(&sb)
