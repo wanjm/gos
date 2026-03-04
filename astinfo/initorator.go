@@ -22,10 +22,10 @@ const (
 func typeToVariableName(typer Typer) string {
 	// Get the underlying type (unwrap pointers)
 	baseType := GetRootBasicType(typer)
-	
+
 	var pkgName string
 	var typeName string
-	
+
 	// Extract package name and type name based on type
 	switch t := baseType.(type) {
 	case *Struct:
@@ -49,10 +49,10 @@ func typeToVariableName(typer Typer) string {
 		}
 		return typeStr
 	}
-	
+
 	// Combine package name and type name
 	typeStr := pkgName + "_" + typeName
-	
+
 	// Lowercase the first character of the type name (after the last underscore)
 	if idx := strings.LastIndex(typeStr, "_"); idx >= 0 && idx+1 < len(typeStr) {
 		// Found underscore, lowercase the character after it
@@ -133,7 +133,7 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 	sort.Slice(sortedNodes, func(i, j int) bool {
 		return sortedNodes[i].returnVariableName < sortedNodes[j].returnVariableName
 	})
-	
+
 	var definition strings.Builder
 	var call strings.Builder
 	definition.WriteString("var (\n")
@@ -144,7 +144,7 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 		}
 	}
 	definition.WriteString(")\n")
-	
+
 	// Write initialization calls in dependency order (original readyNode order)
 	call.WriteString("func initVariable() {\n")
 	for _, node := range im.readyNode {
@@ -338,13 +338,13 @@ func (mp *MainProject) GetVariableName(typer Typer, name string) string {
 }
 
 func (mp *MainProject) GetVariableNode(typer Typer, name string) *DependNode {
-	name = astbasic.FirstLower(name)
 	return mp.InitManager.variableMap.getVariable(typer, name)
 }
 
 type VariableMap map[string]*InitGroup //key是原始类型的名字"int"，"pkg.Struct"
 
 func (vm VariableMap) getVariable(typer Typer, name string) *DependNode {
+	name = astbasic.FirstLower(name)
 	group := vm[typer.IDName()]
 	if group == nil {
 		return nil
@@ -353,6 +353,9 @@ func (vm VariableMap) getVariable(typer Typer, name string) *DependNode {
 		if initorator.getReturnName() == name {
 			return initorator
 		}
+	}
+	if len(group.Initorators) > 1 {
+		fmt.Printf("more than one function return the same type %s, but %s expected\n", typer.IDName(), name)
 	}
 	return group.Default
 }
