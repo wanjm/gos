@@ -5,4 +5,6 @@ DBType = "mysql"
 
 [[DBConfig.DbGenCfgs]]
 OutPath = "business/package"
-TableNames = ["user"]
+Tables = [
+  { Name = "user" }
+]

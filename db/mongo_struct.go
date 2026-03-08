@@ -37,33 +37,38 @@ func GenTableFromMongo(config *basic.DBConfig, moduleMap map[string]struct{}) er
 	database := client.Database(config.DBName)
 	// 2. 遍历所有表的生成配置
 	for _, tableCfg := range config.DbGenCfgs {
-		if len(tableCfg.TableNames) != len(tableCfg.RecordIds) {
-			log.Printf("警告: 配置 %v 中的 TableNames 和 RecordIds 数量不匹配，跳过此配置。", tableCfg)
-			continue
-		}
-
 		pkg := astinfo.GlobalProject.CurrentProject.NewPkgBasic("", tableCfg.ModulePath)
-		// 3. 遍历每个表名并调用生成函数
-		for i, recordID := range tableCfg.RecordIds {
-			if len(recordID) == 0 {
+		entityPkg := pkg.NewPkgBasic("entity", "entity")
+		file := entityPkg.NewFile("mongo.alias")
+		var aliasStringBuilder strings.Builder
+		// 3. 遍历每个表并调用生成函数
+		for _, t := range tableCfg.Tables {
+			tableName := t.Name
+			recordIDs := t.RecordIds
+			if len(recordIDs) == 0 {
+				log.Printf("警告: 表 '%s' 没有 RecordIds，跳过。", tableName)
 				continue
 			}
-			tableName := tableCfg.TableNames[i]
+			recordID := recordIDs[0]
 			log.Printf("正在为集合 '%s' (ID: %s) 生成结构体...", tableName, recordID)
-			// 1. 获取文档
 			collection := database.Collection(tableName)
 			doc, err := getDocumentByID(collection, recordID)
 			if err != nil {
 				return fmt.Errorf("获取文档失败: %w", err)
 			}
-			err = genTableForMongo(tableName, doc, pkg, config.DBName)
+			err = genTableForMongo(doc, pkg, config.DBName, t)
 			if err != nil {
 				log.Printf("为集合 '%s' 生成结构体失败: %v", tableName, err)
-				// 选择继续处理下一个表而不是直接返回错误
 				continue
 			}
+			structName := astbasic.ToCamelCase(tableName, true)
+			tablePkg := pkg.NewPkgBasic(tableName, "entity/mongo/"+tableName)
+			file.GetImport(tablePkg)
+			aliasStringBuilder.WriteString("type " + structName + " = " + tableName + "." + structName + "\n")
 			log.Printf("成功为集合 '%s' 生成文件。", tableName)
 		}
+		file.AddBuilder(&aliasStringBuilder)
+		file.Save()
 	}
 	return nil
 }
@@ -118,7 +123,8 @@ const structTpl = `type {{.Name}} struct {
 }
 `
 
-func genTableForMongo(tableName string, doc bson.M, pkg *astbasic.PkgBasic, dbVariable string) error {
+func genTableForMongo(doc bson.M, pkg *astbasic.PkgBasic, dbVariable string, t basic.TableCfg) error {
+	tableName := t.Name
 	structName := astbasic.ToCamelCase(tableName, true)
 	tablepkg := pkg.NewPkgBasic(tableName, "entity/mongo/"+tableName)
 	tableFile := tablepkg.NewFile("table")
@@ -126,13 +132,33 @@ func genTableForMongo(tableName string, doc bson.M, pkg *astbasic.PkgBasic, dbVa
 	gosStringBuilder.WriteString("// @gos tblName=")
 	gosStringBuilder.WriteString(tableName)
 	gosStringBuilder.WriteString(" dbVariable=")
-	gosStringBuilder.WriteString(dbVariable) //由于生成dal中的DB指针的变量名；
+	gosStringBuilder.WriteString(dbVariable)
+	if len(t.Arrays) > 0 {
+		gosStringBuilder.WriteString(" arrays=")
+		gosStringBuilder.WriteString(strings.Join(t.Arrays, ","))
+	}
+	if len(t.Maps) > 0 {
+		gosStringBuilder.WriteString(" maps=")
+		gosStringBuilder.WriteString(strings.Join(t.Maps, ","))
+	}
 	gosStringBuilder.WriteString("\n")
 	tableFile.AddBuilder(&gosStringBuilder)
-	return generateStruct(structName, doc, tableFile)
+	fields, err := generateStruct(structName, doc, tableFile)
+	if err != nil {
+		return err
+	}
+	var methods []string
+	for _, a := range t.Arrays {
+		methods = append(methods, a+"s")
+	}
+	for _, m := range t.Maps {
+		methods = append(methods, m+"Map")
+	}
+
+	return genTableGenForMongo(tablepkg, structName, methods, fields)
 }
 
-func generateStruct(structName string, doc bson.M, tableFile *astbasic.GenedGoFile) error {
+func generateStruct(structName string, doc bson.M, tableFile *astbasic.GenedGoFile) ([]FieldInfo, error) {
 	// 1. Prepare data for the main struct template
 	fields := make([]FieldInfo, 0, len(doc))
 	keys := make([]string, 0, len(doc))
@@ -143,7 +169,6 @@ func generateStruct(structName string, doc bson.M, tableFile *astbasic.GenedGoFi
 
 	for _, key := range keys {
 		value := doc[key]
-		// getGoTypeFromValue will populate nestedStructs as a side effect through recursive calls
 		goType := getGoTypeFromValue(key, value, tableFile)
 		jsonTag := key
 		if key == "_id" {
@@ -160,7 +185,7 @@ func generateStruct(structName string, doc bson.M, tableFile *astbasic.GenedGoFi
 	// 2. Execute the template for the main struct
 	t, err := template.New("struct").Parse(structTpl)
 	if err != nil {
-		return fmt.Errorf("failed to parse struct template: %w", err)
+		return nil, fmt.Errorf("failed to parse struct template: %w", err)
 	}
 
 	var mainStructBuilder strings.Builder
@@ -169,10 +194,59 @@ func generateStruct(structName string, doc bson.M, tableFile *astbasic.GenedGoFi
 		Fields: fields,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to execute struct template: %w", err)
+		return nil, fmt.Errorf("failed to execute struct template: %w", err)
 	}
 	tableFile.AddBuilder(&mainStructBuilder)
 	tableFile.Save()
+	return fields, nil
+}
+
+// genTableGenForMongo generates table.gen.go with collection type and Xs/Xmap methods.
+func genTableGenForMongo(tablepkg *astbasic.PkgBasic, structName string, methods []string, fields []FieldInfo) error {
+	fieldMap := make(map[string]string)
+	for _, f := range fields {
+		fieldMap[f.Name] = f.Type
+	}
+	genFile := tablepkg.NewFile("table.gen")
+	var sb strings.Builder
+	sb.WriteString("// Code generated by gos DO NOT EDIT.\n\n")
+	sb.WriteString("// Collection type\n")
+	collectionType := structName + "s"
+	sb.WriteString("type " + collectionType + " []*" + structName + "\n\n")
+	for _, methodName := range methods {
+		fieldName, isMap := parseMethodName(methodName)
+		if fieldName == "" {
+			continue
+		}
+		fieldType, ok := fieldMap[fieldName]
+		if !ok {
+			continue
+		}
+		if isMap {
+			sb.WriteString("// Xmap: returns map from field value to *" + structName + "\n")
+			sb.WriteString("func (u " + collectionType + ") " + methodName + "() map[" + fieldType + "]*" + structName + " {\n")
+			sb.WriteString("\tout := make(map[" + fieldType + "]*" + structName + ", len(u))\n")
+			sb.WriteString("\tfor _, e := range u {\n")
+			sb.WriteString("\t\tif e != nil {\n")
+			sb.WriteString("\t\t\tout[e." + fieldName + "] = e\n")
+			sb.WriteString("\t\t}\n")
+			sb.WriteString("\t}\n")
+			sb.WriteString("\treturn out\n")
+		} else {
+			sb.WriteString("// Xs: returns slice of field values (same type as field)\n")
+			sb.WriteString("func (u " + collectionType + ") " + methodName + "() []" + fieldType + " {\n")
+			sb.WriteString("\tout := make([]" + fieldType + ", 0, len(u))\n")
+			sb.WriteString("\tfor _, e := range u {\n")
+			sb.WriteString("\t\tif e != nil {\n")
+			sb.WriteString("\t\t\tout = append(out, e." + fieldName + ")\n")
+			sb.WriteString("\t\t}\n")
+			sb.WriteString("\t}\n")
+			sb.WriteString("\treturn out\n")
+		}
+		sb.WriteString("}\n\n")
+	}
+	genFile.AddBuilder(&sb)
+	genFile.Save()
 	return nil
 }
 
@@ -197,7 +271,7 @@ func getGoTypeFromValue(key string, value interface{}, tableFile *astbasic.Gened
 		return "float64"
 	case bson.M:
 		structName := astbasic.ToCamelCase(key, true)
-		generateStruct(structName, v, tableFile)
+		_, _ = generateStruct(structName, v, tableFile)
 		return structName
 	case primitive.A:
 		if len(v) == 0 {

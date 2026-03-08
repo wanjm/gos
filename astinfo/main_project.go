@@ -190,8 +190,8 @@ func (mp *MainProject) genBasicCode(file *GenedFile) {
 	type Response struct {
 		Code    int         "json:\"code\""
 		Message string      "json:\"message,omitempty\""
-		ExtraInfo any         "json:\"extra,omitempty\"" //用于在失败的情况下也返回给前端一些信息；
-		Object  interface{} "json:\"obj,omitempty\""
+		ExtraInfo any       "json:\"extra,omitempty\"" //用于在失败的情况下也返回给前端一些信息；
+		Object  any         "json:\"obj\""
 	}
 
 type Config struct {
@@ -647,7 +647,19 @@ func (mp *MainProject) Parse() error {
 	sort.Slice(mp.Projects, func(i, j int) bool {
 		return mp.Projects[i].ModPath > mp.Projects[j].ModPath
 	})
-	return p.ParseCode()
+	err := p.ParseCode()
+	if err != nil {
+		return err
+	}
+	mp.FinishedParse()
+	return nil
+}
+
+// FinishedParse calls FinishedParse on each package for post-parse reordering.
+func (mp *MainProject) FinishedParse() {
+	for _, pkg := range mp.Packages {
+		pkg.FinishedParse()
+	}
 }
 
 var GlobalProject *MainProject

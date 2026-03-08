@@ -12,7 +12,9 @@ DBType = "mysql"
 
 [[DBConfig.DbGenCfgs]]
 OutPath = "business/package" # 生成的table所在的相对工程根目录
-TableNames = ["table_name"]
+Tables = [
+  { Name = "table_name", Arrays = ["column_name"], Maps = ["column_name"] }
+]
 ```
 
 ## mongo 说明

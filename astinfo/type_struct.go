@@ -19,6 +19,8 @@ type structComment struct {
 	TableName  string
 	DbVarible  string
 	EntityName string // entity name for FromEntity generation
+	Arrays     []string
+	Maps       []string
 	class      *Struct
 }
 
@@ -67,6 +69,10 @@ func (comment *structComment) dealValuePair(key, value string) {
 		comment.DbVarible = astbasic.Capitalize(value)
 	case "entity":
 		comment.EntityName = value
+	case "arrays":
+		comment.Arrays = strings.Split(value, ",")
+	case "maps":
+		comment.Maps = strings.Split(value, ",")
 	}
 }
 

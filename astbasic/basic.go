@@ -8,6 +8,9 @@ import (
 )
 
 func FirstLower(word string) string {
+	if word == "" {
+		return word
+	}
 	return string(unicode.ToLower([]rune(word)[0])) + word[1:]
 }
 func Capitalize(s string) string {

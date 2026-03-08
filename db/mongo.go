@@ -42,8 +42,8 @@ func GenMongoModule(mongoGenCfg *basic.TableGenCfg, db *gorm.DB, dbVariable stri
 	generator := MongoGenerator{}
 	var sb strings.Builder
 	sb.WriteString(generator.PrepareDal(mongoGenCfg.ModulePath))
-	for _, tableName := range mongoGenCfg.TableNames {
-		fileContent := generator.GenDal(toCamelCase(tableName, true), tableName, dbVariable)
+	for _, t := range mongoGenCfg.Tables {
+		fileContent := generator.GenDal(toCamelCase(t.Name, true), t.Name, dbVariable)
 		sb.WriteString(fileContent)
 	}
 	err := os.WriteFile(path.Join(mongoGenCfg.OutPath, "dal/mongo.gen.go"), []byte(sb.String()), 0644)
@@ -72,9 +72,9 @@ import (
 }
 func (gen *MongoGenerator) GenDal(modelName, tableName, dbVariableName string) string {
 	type info struct {
-		TableName    string
-		RawTableName string
-		DBVariable   string
+		TableName     string
+		RawTableName  string
+		DBVariable    string
 	}
 	codeTemplate := `
 // {{.RawTableName}}
@@ -105,7 +105,7 @@ func (a *{{.TableName}}Dal) Create(ctx context.Context, item *entity.{{.TableNam
 	return nil
 }
 
-func (a *{{.TableName}}Dal) GetAll(ctx context.Context, opts []common.Optioner, cols ...[]string) (item []*entity.{{.TableName}}, err error) {
+func (a *{{.TableName}}Dal) GetAll(ctx context.Context, opts []common.Optioner, cols ...[]string) (item entity.{{.TableName}}s, err error) {
 	filter := common.GenMongoOption(opts)
 	db := a.getDB()
 	projection := bson.M{}
@@ -153,9 +153,9 @@ func (a *{{.TableName}}Dal) Update(ctx context.Context, opts []common.Optioner, 
 }
 `
 	var data = info{
-		TableName:    modelName,
-		RawTableName: tableName,
-		DBVariable:   dbVariableName,
+		TableName:     modelName,
+		RawTableName:  tableName,
+		DBVariable:    dbVariableName,
 	}
 	tpl, err := template.New("common").Parse(codeTemplate)
 	if err != nil {

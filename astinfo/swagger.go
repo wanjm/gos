@@ -308,7 +308,7 @@ func (swagger *Swagger) genSchema(class *Struct) map[string]spec.Schema {
 		if st, ok := field.Type.(SchemaType); ok {
 			st.InitSchema(&schema, swagger)
 		} else {
-			fmt.Printf("ERROR: field %s::%s %T is not a SchemaType\n", field.Type.IDName(), field.Name, field.Type)
+			fmt.Printf("ERROR: field %s::%s %T is not a SchemaType\n", class.IDName(), field.Name, field.Type)
 		}
 		schemas[name] = schema
 	}

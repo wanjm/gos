@@ -37,12 +37,16 @@ func (db *DbManager) Gen() {
 		var mysqlInfo []*info
 		var mongoInfo []*info
 		file := pkg.NewFile("column")
+		listFile := pkg.NewFile("list")
+		hasList := false
 		var conflictMap = make(map[string]*NamePair)
 		var allColumns []*NamePair
 
 		for _, className := range pkg.SortedStructNames {
 			class := pkg.Structs[className]
 			if class.Comment.TableName != "" {
+				genEntityList(class, listFile)
+				hasList = true
 				var data = info{
 					TableName:    class.StructName,
 					RawTableName: class.Comment.TableName,
@@ -53,7 +57,7 @@ func (db *DbManager) Gen() {
 				hasId := false
 				for _, field := range class.Fields {
 					// 此处已经进行了column的处理
-					colName := field.Tags[GORM]
+					colName := field.DbColumnName
 					if colName == CreateTime {
 						hasCreateTime = true
 					}
@@ -64,7 +68,7 @@ func (db *DbManager) Gen() {
 				for _, field := range class.Fields {
 					if field.Tags[GORM] != "" {
 						// Collect NamePairs instead of immediately generating columns
-						allColumns = append(allColumns, getNamePair(class, GORM)...)
+						allColumns = append(allColumns, getNamePair(class)...)
 						if hasCreateTime {
 							data.OrderField = CreateTime
 							data.OrderDirection = "common.DESCStr"
@@ -77,7 +81,7 @@ func (db *DbManager) Gen() {
 						break
 					} else if field.Tags[BSON] != "" {
 						// Collect NamePairs instead of immediately generating columns
-						allColumns = append(allColumns, getNamePair(class, BSON)...)
+						allColumns = append(allColumns, getNamePair(class)...)
 						data.IDName = getIdName(class)
 						mongoInfo = append(mongoInfo, &data)
 						break
@@ -93,6 +97,9 @@ func (db *DbManager) Gen() {
 		}
 
 		file.Save()
+		if hasList {
+			listFile.Save()
+		}
 		if len(mysqlInfo) == 0 && len(mongoInfo) == 0 {
 			continue
 		}
@@ -204,7 +211,7 @@ func genColumns(file *astbasic.GenedGoFile, columns []*NamePair) {
 // getIdName 获取id的变量名，如果id不是系统默认类型，则返回空字符串；
 func getIdName(class *Struct) string {
 	for _, field := range class.Fields {
-		if field.Tags[BSON] == "_id" {
+		if field.DbColumnName == "_id" {
 			// 简单检查是否是ObjectID类型；
 			if field.Type.RefName(nil) == "ObjectID" {
 				return field.Name
@@ -218,18 +225,17 @@ func getIdName(class *Struct) string {
 // 获取指定tag的值，目前用在gorm和bson两个tag；
 // bson:"orgId,omitempty"
 // gorm:"column:id;primary_key;AUTO_INCREMENT"
-func getNamePair(class *Struct, tag string) []*NamePair {
+func getNamePair(class *Struct) []*NamePair {
 	var columns []*NamePair
 	for _, field := range class.Fields {
 		basicType := GetRootBasicType(field.Type)
 		if subClass, ok := basicType.(*Struct); ok {
 			if subClass.GoSource.Pkg == class.GoSource.Pkg {
-				subColumns := getNamePair(subClass, tag)
+				subColumns := getNamePair(subClass)
 				columns = append(columns, subColumns...)
 			}
 		}
-		tag := field.Tags[tag]
-		colname := strings.Split(tag, ",")[0]
+		colname := field.DbColumnName
 		if colname != "" && colname != "-" {
 			columns = append(columns, &NamePair{
 				VarName: "C_" + field.Name,
@@ -285,13 +291,13 @@ func (a *{{.TableName}}Dal) Create(ctx context.Context, item *{{.Pkg.Name}}.{{.T
 	return err
 }
 
-func (a *{{.TableName}}Dal) GetAll(ctx context.Context, options []common.Optioner, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
+func (a *{{.TableName}}Dal) GetAll(ctx context.Context, options []common.Optioner, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	return a.GetLimitAll(ctx, options, 0, cols...)
 }
-func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, options []common.Optioner,count int, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
+func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, options []common.Optioner,count int, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	return a.GetLimitAllWithStart(ctx, options, 0, count, cols...)
 }
-func (a *{{.TableName}}Dal) GetLimitAllWithStart(ctx context.Context, options []common.Optioner,start, count int, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
+func (a *{{.TableName}}Dal) GetLimitAllWithStart(ctx context.Context, options []common.Optioner,start, count int, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	var colNames []string
 	if len(cols) > 0 {
 		colNames = cols[0]
@@ -328,7 +334,7 @@ func (a *{{.TableName}}Dal) GetOneById(ctx context.Context, id int32, cols ...[]
 	return a.GetOne(ctx, []common.Optioner{common.Eq("id", id)}, cols...)
 }
 
-func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, pageNo, pageSize int, cols ...[]string) (list []*{{.Pkg.Name}}.{{.TableName}}, total int64, err error) {
+func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, pageNo, pageSize int, cols ...[]string) (list {{.Pkg.Name}}.{{.TableName}}List, total int64, err error) {
 	var colNames []string
 	if len(cols) > 0 {
 		colNames = cols[0]
@@ -443,10 +449,10 @@ func (a *{{.TableName}}Dal) Create(ctx context.Context, item *{{.Pkg.Name}}.{{.T
 	return nil
 }
 
-func (a *{{.TableName}}Dal) GetAll(ctx context.Context, opts []common.Optioner, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
+func (a *{{.TableName}}Dal) GetAll(ctx context.Context, opts []common.Optioner, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	return a.GetLimitAll(ctx, opts, 0, cols...)
 }
-func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, opts []common.Optioner,count int64, cols ...[]string) (item []*{{.Pkg.Name}}.{{.TableName}}, err error) {
+func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, opts []common.Optioner,count int64, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	op := a.getOperation(ctx, opts)
 	op.SetLimit(count)
 	if len(cols) > 0 {
@@ -460,7 +466,7 @@ func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, opts []common.Optio
 	return
 }
 
-func (a *{{.TableName}}Dal) List(ctx context.Context, opts []common.Optioner, pageNum int, pageSize int, cols ...[]string) (list []*{{.Pkg.Name}}.{{.TableName}}, total int64, err error) {
+func (a *{{.TableName}}Dal) List(ctx context.Context, opts []common.Optioner, pageNum int, pageSize int, cols ...[]string) (list {{.Pkg.Name}}.{{.TableName}}List, total int64, err error) {
 	op := a.getOperation(ctx, opts)
 	total, err = op.Count()
 	if err != nil {
@@ -523,4 +529,106 @@ func (a *{{.TableName}}Dal) Update(ctx context.Context, opts []common.Optioner, 
 	}
 	file.GetImport(data.Pkg)
 	file.AddBuilder(&content)
+}
+
+func genEntityList(class *Struct, file *astbasic.GenedGoFile) {
+	// 1. Setup map keys
+	fieldMap := make(map[string]*Field)
+	for _, col := range class.Comment.Arrays {
+		fieldMap[col] = nil
+	}
+	for _, col := range class.Comment.Maps {
+		fieldMap[col] = nil
+	}
+
+	// 2. Populate map
+	for _, field := range class.Fields {
+		if _, ok := fieldMap[field.DbColumnName]; ok {
+			fieldMap[field.DbColumnName] = field
+		}
+	}
+
+	// 3. Prepare data for template
+	type MethodData struct {
+		MethodName string
+		FieldType  string
+		FieldName  string
+	}
+
+	type ListData struct {
+		ListType   string
+		EntityName string
+		Arrays     []MethodData
+		Maps       []MethodData
+	}
+
+	data := ListData{
+		ListType:   class.StructName + "List",
+		EntityName: class.StructName,
+	}
+
+	// Process Arrays
+	for _, col := range class.Comment.Arrays {
+		field := fieldMap[col]
+		if field == nil {
+			log.Printf("Warning: Field %s not found in struct %s for array generation", col, class.StructName)
+			continue
+		}
+		data.Arrays = append(data.Arrays, MethodData{
+			MethodName: "Get" + field.Name + "List",
+			FieldType:  field.Type.RefName(file),
+			FieldName:  field.Name,
+		})
+	}
+
+	// Process Maps
+	for _, col := range class.Comment.Maps {
+		field := fieldMap[col]
+		if field == nil {
+			log.Printf("Warning: Field %s not found in struct %s for map generation", col, class.StructName)
+			continue
+		}
+		data.Maps = append(data.Maps, MethodData{
+			MethodName: "GetMapBy" + field.Name,
+			FieldType:  field.Type.RefName(file),
+			FieldName:  field.Name,
+		})
+	}
+
+	// 4. Use template
+	tmplText := `
+type {{.ListType}} []*{{.EntityName}}
+{{range .Arrays}}
+func (l {{$.ListType}}) {{.MethodName}}() []{{.FieldType}} {
+	data := make([]{{.FieldType}}, 0, len(l))
+	for _, item := range l {
+		if item != nil {
+			data = append(data, item.{{.FieldName}})
+		}
+	}
+	return data
+}
+{{end}}{{range .Maps}}
+func (l {{$.ListType}}) {{.MethodName}}() map[{{.FieldType}}]*{{$.EntityName}} {
+	data := make(map[{{.FieldType}}]*{{$.EntityName}}, len(l))
+	for _, item := range l {
+		if item != nil {
+			data[item.{{.FieldName}}] = item
+		}
+	}
+	return data
+}
+{{end}}`
+
+	tmpl, err := template.New("entityList").Parse(tmplText)
+	if err != nil {
+		panic(err)
+	}
+
+	var sb strings.Builder
+	if err := tmpl.Execute(&sb, data); err != nil {
+		panic(err)
+	}
+
+	file.AddBuilder(&sb)
 }

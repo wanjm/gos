@@ -75,7 +75,15 @@ func (field *Field) parseTag(fieldType *ast.BasicLit) {
 				value := strings.Trim(kv[1], "\"")
 				switch kv[0] {
 				case GORM:
-					field.Tags[GORM] = getColumnName(value)
+					val := getColumnName(value)
+					field.Tags[GORM] = val
+					field.DbColumnName = val
+				case BSON:
+					val := strings.Split(value, ",")[0]
+					field.Tags[BSON] = val
+					if field.DbColumnName == "" {
+						field.DbColumnName = val
+					}
 				default:
 					field.Tags[kv[0]] = strings.Split(value, ",")[0]
 				}
@@ -193,8 +201,9 @@ func (field *FieldBasic) ParseType(fieldType ast.Expr, typeMap map[string]*Field
 
 type Field struct {
 	FieldBasic
-	Tags   map[string]string
-	astTag *ast.BasicLit
+	Tags         map[string]string
+	astTag       *ast.BasicLit
+	DbColumnName string
 }
 
 func (field *Field) Parse(typeMap map[string]*Field) error {

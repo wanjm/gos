@@ -39,9 +39,9 @@ func (r JsonString) Render(w http.ResponseWriter) error {
 	{{else}}
 		{{if .Jsonv2}}
 		var err error
-		buf := new(bytes.Buffer)
+		var buf bytes.Buffer
 		// MarshalWrite 比 Marshal 更省内存，因为它减少了大切片的扩容分配
-		if err = json.MarshalWrite(buf, r.data); err != nil {
+		if err = json.MarshalWrite(&buf, r.data); err != nil {
 			return err
 		}
 		jsonBytes := buf.Bytes()

@@ -38,8 +38,8 @@ func GenTables(config1 *basic.TableGenCfg, db *gorm.DB, dbVariable string) {
 	// 生成所有表的模型
 	var sb strings.Builder
 	sb.WriteString(PrepareDal(config1.ModulePath))
-	for _, tableName := range config1.TableNames {
-		a := g.GenerateModel(tableName)
+	for _, t := range config1.Tables {
+		a := g.GenerateModel(t.Name)
 		_ = a
 		// sb.WriteString(genMysqlDal(a.ModelStructName, tableName, dbVariable))
 	}
