@@ -39,4 +39,5 @@
 
 ## field的解析：
 1. 支持json，bson, gorm等tag字段；
-2. 支持header，default，valid 等tag字段；
+2. 支持header，default，validate 等tag字段；
+3. header表示该字段从http头中获取；

@@ -33,7 +33,11 @@ type MainProject struct {
 func (mp *MainProject) genGoMod() {
 	_, err := os.Stat("go.mod")
 	if os.IsNotExist(err) {
-		var content = "module " + mp.Cfg.InitMain + "\n" + strings.Replace(runtime.Version(), "go", "go ", 1) + "\n"
+		version := runtime.Version()
+		parts := strings.Split(version, " ")
+		version = parts[0]
+		version = strings.Replace(version, "go", "go ", 1)
+		var content = "module " + mp.Cfg.InitMain + "\n" + version + "\n"
 		os.WriteFile("go.mod", []byte(content), 0660)
 	}
 }
