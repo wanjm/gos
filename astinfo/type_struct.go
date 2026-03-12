@@ -179,10 +179,6 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 	//)
 	// 1. 有default，则wire；
 	// 2. wire为ture，且不是简单结构体（needWire），则寻找值去绑定；
-	if v.StructName == "AiKnowledgeEditReq" {
-		a := "hll"
-		_ = a
-	}
 	for _, field := range v.Fields {
 		var name = field.wriedName()
 		if name != "" {
@@ -190,7 +186,7 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 			// RawType是原始数据类型；不包含map，chan；
 			// RawType 有default，也写上；不区分是否wire；
 			if rt, ok := field.Type.(*RawType); ok {
-				v, ok := field.Tags["default"]
+				v, ok := field.Tags[DEFAULT]
 				if ok {
 					sb.WriteString(name + ":")
 					if rt.typeName == "string" {
