@@ -125,6 +125,17 @@ func (v *Struct) FlatFields() []*Field {
 	return fields
 }
 
+// FieldsWithTag returns fields that have the specified tag key.
+func (s *Struct) FieldsWithTag(tagKey string) []*Field {
+	var result []*Field
+	for _, f := range s.Fields {
+		if _, ok := f.Tags[tagKey]; ok {
+			result = append(result, f)
+		}
+	}
+	return result
+}
+
 // 某些field需要wire，但是却没有名字，所以需要处理
 func getWireField(field *Field) *Field {
 	// 1. 原始类型，不需要wire；（可以通过default直接构造，或者make构造，或者不写，使用系统的默认0值）

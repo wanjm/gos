@@ -109,16 +109,17 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 	//  有request请求，需要解析request，有些情况下，服务端不需要request；
 	// 参数为context.Context, request *schema.Request
 	type CodeParam struct {
-		HttpMethod       string
-		MethodName       string
-		Url              string
-		FilterName       string //自带最后一个逗号
-		RequestConstruct string
-		UrlParameterStr  string
-		HasRequest       bool
-		HasResponse      bool
-		ResponseNilCode  string
-		DataError        int
+		HttpMethod        string
+		MethodName        string
+		Url               string
+		FilterName        string //自带最后一个逗号
+		RequestConstruct  string
+		UrlParameterStr   string
+		HeaderParameterStr string
+		HasRequest        bool
+		HasResponse       bool
+		ResponseNilCode   string
+		DataError         int
 	}
 	tm := &CodeParam{
 		HttpMethod: method.Comment.Method,
@@ -135,6 +136,15 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		}
 		tm.HasRequest = true
 		tm.RequestConstruct = requestParam.GenVariableCode(file, false)
+		if st, ok := astinfo.GetBasicType(requestParam.Type).(*astinfo.Struct); ok {
+			for _, f := range st.FieldsWithTag(astinfo.HEADER) {
+				if headerName, hasHeader := f.GetHeaderName(); hasHeader {
+					if rt, isRaw := astinfo.GetBasicType(f.Type).(*astinfo.RawType); isRaw && rt.RefName(nil) == "string" {
+						tm.HeaderParameterStr += fmt.Sprintf("request.%s=c.GetHeader(\"%s\")\n", f.Name, headerName)
+					}
+				}
+			}
+		}
 	}
 	if len(method.Results) > 1 {
 		tm.HasResponse = true
@@ -172,7 +182,8 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 	tmplText := `engine.{{.HttpMethod}} ( "{{.Url}}", {{.FilterName}} func(c *gin.Context) {
 		{{ if .HasRequest }}
 		request := {{.RequestConstruct}}
-		{{.UrlParameterStr}}	
+		{{.UrlParameterStr}}
+		{{.HeaderParameterStr}}
 		// 利用gin的自动绑定功能，将请求内容绑定到request对象上；兼容get,post等情况
 		if err := c.ShouldBind(request); err != nil {
 			cJSON(c, 200, Response{
