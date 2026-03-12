@@ -51,6 +51,7 @@ func main() {
 	cfg.InitMain = basic.Argument.GoMod
 	var project = astinfo.CreateProject(basic.Argument.SourcePath, cfg)
 	if err := project.CurrentProject.ParseModule(); err != nil {
+		fmt.Printf("parse module failed with %s", err.Error())
 		return
 	}
 	// 产生db数据；

@@ -138,7 +138,7 @@ func isIgnoreFile(file *ast.File) bool {
 func (g *Gosourse) Parse() error {
 	g.parseImport(g.File.Imports)
 	decls := g.File.Decls
-	for i := 0; i < len(decls); i++ {
+	for i := range decls {
 		switch decl := decls[i].(type) {
 		case *ast.GenDecl:
 			g.getGenDeclParser(decl)

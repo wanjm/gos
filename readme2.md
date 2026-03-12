@@ -16,6 +16,9 @@ type => struct, interface, function, method ,variable
 先从go.mod中解析依赖的progject；
 在解析自己这个project。这样保证了自己依赖的package都已经被知道；
 但是本工程内部的解析过程，由于是按照目录顺序解析的，所以可能会出现依赖的package还没有被解析的情况。
+当一个工程引用了其他package的type时， 会触发其他pacakge的解析工作；
+注意：其实此时可能Apackage仅仅使用了这个type，实际无需深入了解， 理论行只需要有这个type就可以了，无需深入解析，此处有性能浪费， 后续需要优化；对于其他package的类型，仅仅是需要初始化时，才需要详细解析；
+因此对于多个pacakge带gos的解析，工作，还需要主动解析；
 ```
 ### goSource解析
 1. import记录的保存；
