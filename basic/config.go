@@ -7,16 +7,17 @@ import (
 )
 
 type Generation struct {
-	TraceKey     string // 用于定义traceKy的结构体名字；用于context中记录traceId
-	TraceKeyMod  string // 用于定义traceKy的结构体所在的包名；
-	ResponseKey  string // 用于定义Response的结构体名字；用于context中记录一个http请求的Response String
-	ResponseMod  string // 用于定义Response的结构体所在的包名；
-	RpcLoggerKey string // 用于定义RpcLogger的结构体名字; 用于打印rpc请求的日志
-	RpcLoggerMod string // 用于定义RpcLogger的结构体所在的包名；
-	CommonMod    string // github.com/wanjm/common 的别名
-	AutoGen      bool
-	FlutterPath  string // 自动生成前端的flutter路径
-	Jsonv2       bool   // 是否使用jsonv2
+	TraceKey      string // 用于定义traceKy的结构体名字；用于context中记录traceId
+	TraceKeyMod   string // 用于定义traceKy的结构体所在的包名；
+	ResponseKey   string // 用于定义Response的结构体名字；用于context中记录一个http请求的Response String
+	ResponseMod   string // 用于定义Response的结构体所在的包名；
+	RpcLoggerKey  string // 用于定义RpcLogger的结构体名字; 用于打印rpc请求的日志
+	RpcLoggerMod  string // 用于定义RpcLogger的结构体所在的包名；
+	CommonMod     string // github.com/wanjm/common 的别名
+	AutoGen       bool
+	FlutterPath   string   // 自动生成前端的flutter路径
+	Jsonv2        bool     // 是否使用jsonv2
+	ParseProjects []string // Additional modPaths to parse (from go.mod require)
 }
 type Config struct {
 	InitMain   string // 改为字符串类型，存储模块名称

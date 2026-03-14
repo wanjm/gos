@@ -15,7 +15,7 @@ import (
 
 // Project 表示一个Go项目的基本信息
 type Project struct {
-	Simple bool
+	Simple bool // 该project是简单扫描，则其中的每个package都是简单扫描；
 	astbasic.PkgBasic
 	// Name     string // 项目名称
 	// ModPath  string // 项目模块名称（从go.mod解析）

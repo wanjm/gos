@@ -668,14 +668,23 @@ func (mp *MainProject) Parse() error {
 		cfg.Generation.ResponseMod = p.ModPath + "/" + responseMod
 	}
 	mp.Projects = append(mp.Projects, p)
+
+	var projectsToParse []*Project
+	projectsToParse = append(projectsToParse, p) // CurrentProject always first
+
 	goPath := os.Getenv("GOPATH")
+	parseProjectsSet := make(map[string]struct{})
+	for _, modPath := range cfg.Generation.ParseProjects {
+		parseProjectsSet[modPath] = struct{}{}
+	}
+
 	for _, mod := range p.Require {
 		// if mod.Indirect {
 		// 	continue
 		// }
 
 		filePath := mp.resolveModulePath(mod, goPath)
-		proj := Project{
+		proj := &Project{
 			PkgBasic: astbasic.PkgBasic{
 				FilePath: filePath,
 			},
@@ -685,14 +694,20 @@ func (mp *MainProject) Parse() error {
 		if proj.ModPath == "" {
 			proj.ModPath = mod.Mod.Path
 		}
-		mp.Projects = append(mp.Projects, &proj)
+		mp.Projects = append(mp.Projects, proj)
+		if _, ok := parseProjectsSet[mod.Mod.Path]; ok {
+			proj.Simple = false // 需要扫描的project都不能simple扫描；
+			projectsToParse = append(projectsToParse, proj)
+		}
 	}
 	sort.Slice(mp.Projects, func(i, j int) bool {
 		return mp.Projects[i].ModPath > mp.Projects[j].ModPath
 	})
-	err := p.ParseCode()
-	if err != nil {
-		return err
+
+	for _, proj := range projectsToParse {
+		if err := proj.ParseCode(); err != nil {
+			return err
+		}
 	}
 	mp.FinishedParse()
 	return nil
