@@ -125,7 +125,7 @@ func genServlet(project *astinfo.MainProject) {
 		&callable_gen.RawGen{},
 	)
 	astinfo.RegisterProjectGenerator(flutter_gen.NewFlutterGen())
-	astinfo.RegisterClientGen(&rpcgen.PrpcGen{})
+	astinfo.RegisterClientGen(&rpcgen.PrpcGen{}, &rpcgen.SrpcGen{})
 
 	// 移除原来的判断，因为现在InitMain直接存储模块名称
 	// if len(modName) > 0 {
