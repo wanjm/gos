@@ -1,6 +1,7 @@
 package callable_gen
 
 import (
+	"fmt"
 	"strings"
 	"text/template"
 
@@ -10,14 +11,23 @@ import (
 
 var commongened bool
 
+// GenerateBuildInCommon ensures build_in_common.gen.go is generated (includes TraceIdNameInContext, cJSON, etc).
+// Called by rpc_gen when generating rpc clients so they can use TraceIdNameInContext.
+func GenerateBuildInCommon() {
+	generateCommon()
+}
+
 // 定义代码生成模板
 const cJsonTemplate = `
+var TraceIdNameInContext = {{.TraceIdNameInContextValue}}
+
+
 func dealErrorResult(err error, c *gin.Context, code int, errorCode int, errMessage string) {
 	var extraInfo any
 	if exta, ok := err.(ExtraInfo); ok {
 		extraInfo = exta.GetExtraInfo()
 	}
-	cJSON(c, code, Response{
+	servletJson(c, code, Response{
 		Code:      errorCode,
 		ExtraInfo: extraInfo,
 		Message:   errMessage,
@@ -71,12 +81,26 @@ func (r JsonString) WriteContentType(w http.ResponseWriter) {
 	}
 }
 
-func cJSON(c *gin.Context, code int,response any) {
+func cJSON(c *gin.Context, code int, response any) {
 	c.Render(code, JsonString{
 		context: c,
 		data:    response,
 	})
 }
+
+{{if .HasTraceKey}}
+func servletJson(c *gin.Context, code int, response Response) {
+	traceId := c.Value(TraceIdNameInContext)
+	if traceId != nil {
+		response.TraceId = traceId.(string)
+	}
+	cJSON(c, code, response)
+}
+{{else}}
+func servletJson(c *gin.Context, code int, response Response) {
+	cJSON(c, code, response)
+}
+{{end}}
 `
 
 func generateCommon() {
@@ -92,10 +116,12 @@ func generateCommon() {
 
 	// 准备模板数据
 	data := struct {
-		HasResponseKey bool
-		ImportName     string
-		ResponseKey    string
-		Jsonv2         bool
+		HasResponseKey            bool
+		ImportName                string
+		ResponseKey               string
+		Jsonv2                    bool
+		HasTraceKey               bool
+		TraceIdNameInContextValue string
 	}{}
 
 	if Project.Cfg.Generation.ResponseKey != "" {
@@ -103,6 +129,13 @@ func generateCommon() {
 		oneImport := file.GetImport(astbasic.SimplePackage(Project.Cfg.Generation.ResponseMod, "xx"))
 		data.ImportName = oneImport.Name
 		data.ResponseKey = Project.Cfg.Generation.ResponseKey
+	}
+	if Project.Cfg.Generation.TraceKey != "" {
+		data.HasTraceKey = true
+		oneImport := file.GetImport(astbasic.SimplePackage(Project.Cfg.Generation.TraceKeyMod, "common"))
+		data.TraceIdNameInContextValue = fmt.Sprintf("%s.%s{}", oneImport.Name, Project.Cfg.Generation.TraceKey)
+	} else {
+		data.TraceIdNameInContextValue = `"badTraceIdName plase config in Generation TraceKeyMod"`
 	}
 	file.GetImport(astbasic.SimplePackage("context", "context"))
 	data.Jsonv2 = Project.Cfg.Generation.Jsonv2

@@ -45,7 +45,7 @@ const filterTemplate = `func {{.FilterName}}(c *gin.Context) {
 	err := {{.ImportName}}.{{.FunctionName}}(c, &c.Request)
 	errorCode,errMessage:=getErrorCode(err)
 	if errorCode != 0 {
-		cJSON(c, 200, Response{
+		servletJson(c, 200, Response{
 			Code:    errorCode,
 			Message: errMessage,
 		})
@@ -186,7 +186,7 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		{{.HeaderParameterStr}}
 		// 利用gin的自动绑定功能，将请求内容绑定到request对象上；兼容get,post等情况
 		if err := c.ShouldBind(request); err != nil {
-			cJSON(c, 200, Response{
+			servletJson(c, 200, Response{
 				Code:    {{.DataError}},
 				Message: "param error",
 			})
@@ -203,7 +203,7 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 				return
 			}
 		}
-		cJSON(c, code, Response{
+		servletJson(c, code, Response{
 			{{ if .HasResponse }}Object:  a,{{ end }}
 		})
 		

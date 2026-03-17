@@ -194,10 +194,11 @@ func (mp *MainProject) genBasicCode(file *GenedFile) {
 	var content strings.Builder
 	content.WriteString(`
 	type Response struct {
-		Code    int         "json:\"code\""
-		Message string      "json:\"message,omitempty\""
-		ExtraInfo any       "json:\"extra,omitempty\"" //用于在失败的情况下也返回给前端一些信息；
-		Object  any         "json:\"obj\""
+		Code     int    "json:\"code\""
+		Message  string "json:\"message,omitempty\""
+		ExtraInfo any   "json:\"extra,omitempty\"" //用于在失败的情况下也返回给前端一些信息；
+		Object   any    "json:\"obj\""
+		TraceId  string "json:\"traceId,omitempty\""
 	}
 
 type Config struct {

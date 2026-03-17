@@ -1,22 +1,26 @@
 package rpcgen
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/astinfo"
+	"github.com/wanjm/gos/astinfo/callable_gen"
 )
 
 var rpcCommonGenerated bool
 
-// GenRpcCommon generates shared rpc infrastructure (rpcLogger, defaultRpcLogger, TraceIdNameInContext)
-// into rpc_common.gen.go. Called by both PrpcGen and SrpcGen to avoid duplication.
+// GenRpcCommon generates shared rpc infrastructure (rpcLogger, defaultRpcLogger)
+// into rpc_common.gen.go. TraceIdNameInContext is generated in build_in_common.
+// Called by both PrpcGen and SrpcGen to avoid duplication.
 func GenRpcCommon() {
 	if rpcCommonGenerated {
 		return
 	}
 	rpcCommonGenerated = true
+
+	// Ensure build_in_common (with TraceIdNameInContext) is generated first
+	callable_gen.GenerateBuildInCommon()
 
 	file := astinfo.CreateGenedFile("rpc_common")
 	file.GetImport(astbasic.SimplePackage("context", "context"))
@@ -42,14 +46,6 @@ func (logger *defaultRpcLogger) LogError(_ context.Context, url, err string) {
 	fmt.Printf("Error in '%s' err=%s\n", url, err)
 }
 `)
-	key := astinfo.GlobalProject.Cfg.Generation.TraceKey
-	if key != "" {
-		module := astinfo.GlobalProject.Cfg.Generation.TraceKeyMod
-		oneImport := file.GetImport(astbasic.SimplePackage(module, "xx"))
-		content.WriteString(fmt.Sprintf("var TraceIdNameInContext = %s.%s{}\n", oneImport.Name, key))
-	} else {
-		content.WriteString("var TraceIdNameInContext = \"badTraceIdName plase config in Generation TraceKeyMod\"\n")
-	}
 	file.AddBuilder(&content)
 	file.Save()
 }

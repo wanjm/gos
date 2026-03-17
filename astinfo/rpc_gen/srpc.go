@@ -112,9 +112,9 @@ type SrpcClient struct {
 	rpcLogger rpcLogger
 }
 
-func (client *SrpcClient) SendRequest(ctx context.Context, name string, array any, result any) error {
+func (client *SrpcClient) SendRequest(ctx context.Context, name string, parameter any, result any) error {
 	url := client.Prefix + name
-	content, marError := json.Marshal(array)
+	content, marError := json.Marshal(parameter)
 	if marError != nil {
 		client.rpcLogger.LogError(ctx, url, marError.Error())
 		return marError
