@@ -401,6 +401,59 @@ func (sm *ServerManager) Prepare() {
 	sm.splitServers()
 }
 
+// isMainProject returns true if the package belongs to the main (current) project.
+func (sm *ServerManager) isMainProject(pkgModPath string) bool {
+	mainMod := GlobalProject.CurrentProject.ModPath
+	return pkgModPath == mainMod || strings.HasPrefix(pkgModPath, mainMod+"/")
+}
+
+// collectReferencedFilters gathers filter names and method URLs per group from all routers.
+func (sm *ServerManager) collectReferencedFilters() (map[string]map[string]struct{}, map[string][]string) {
+	refFilterNames := make(map[string]map[string]struct{})
+	methodUrlsByGroup := make(map[string][]string)
+	for _, server := range sm.servers {
+		groupName := server.Name
+		refFilterNames[groupName] = make(map[string]struct{})
+		for _, router := range server.routers {
+			for _, method := range router.MethodManager.Server {
+				for _, name := range strings.Split(method.Comment.Filter, ",") {
+					name = strings.Trim(name, "\t ")
+					if name != "" {
+						refFilterNames[groupName][name] = struct{}{}
+					}
+				}
+				methodUrl := strings.Trim(method.Comment.Url, "\"")
+				if methodUrl != "" {
+					fullUrl := strings.Trim(path.Join(router.Comment.Url, methodUrl), "\"")
+					methodUrlsByGroup[groupName] = append(methodUrlsByGroup[groupName], fullUrl)
+				}
+			}
+		}
+	}
+	return refFilterNames, methodUrlsByGroup
+}
+
+// filterNeeded returns true if the filter should be generated for this server.
+func (sm *ServerManager) filterNeeded(filter *Function, groupName string, refFilterNames map[string]map[string]struct{}, methodUrlsByGroup map[string][]string, pkgModPath string) bool {
+	if sm.isMainProject(pkgModPath) {
+		return true
+	}
+	if names, ok := refFilterNames[groupName]; ok {
+		if _, has := names[filter.Name]; has {
+			return true
+		}
+	}
+	if filter.Comment.Url != "" && filter.Comment.Url != "\"\"" {
+		filterUrl := strings.Trim(filter.Comment.Url, "\"")
+		for _, methodUrl := range methodUrlsByGroup[groupName] {
+			if strings.Contains(methodUrl, filterUrl) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // 扫描所有的程序，将服务按照group分为多个server；
 func (sm *ServerManager) splitServers() {
 	project := GlobalProject
@@ -435,13 +488,16 @@ func (sm *ServerManager) splitServers() {
 			server.routers = append(server.routers, router)
 		}
 	}
+	refFilterNames, methodUrlsByGroup := sm.collectReferencedFilters()
 	for _, pkg := range project.Packages {
 		for _, filter := range pkg.Filter {
 			var server *Server
 			var ok bool
 			var groupName = filter.Comment.groupName
 			if server, ok = sm.servers[groupName]; ok {
-				server.filters = append(server.filters, filter)
+				if sm.filterNeeded(filter, groupName, refFilterNames, methodUrlsByGroup, pkg.ModPath) {
+					server.filters = append(server.filters, filter)
+				}
 			} else {
 				fmt.Printf("failed to found server %s\n", groupName)
 			}

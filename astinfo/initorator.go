@@ -78,6 +78,7 @@ type DependNode struct {
 	Generator          VariableGenerator
 	Parent             []*DependNode
 	returnVariableName string
+	Needed             bool // true if transitively required by main project or routers
 }
 
 // getReturnName 获取返回值名称
@@ -259,6 +260,72 @@ func (im *InitManager) collect() ([]*DependNode, VariableMap) {
 	return dependNode, waittingVariableMap
 }
 
+// getGeneratorModPath returns the module path for a VariableGenerator.
+func getGeneratorModPath(g VariableGenerator) string {
+	switch v := g.(type) {
+	case *Function:
+		return v.GoSource.Pkg.ModPath
+	case *Struct:
+		return v.GoSource.Pkg.ModPath
+	default:
+		return ""
+	}
+}
+
+// isMainProject returns true if the package belongs to the main project.
+func (im *InitManager) isMainProject(modPath string) bool {
+	mainMod := im.project.CurrentProject.ModPath
+	return mainMod != "" && (modPath == mainMod || strings.HasPrefix(modPath, mainMod+"/"))
+}
+
+// markNeededNodes marks roots (main project + router receivers) and transitively marks all dependencies.
+func (im *InitManager) markNeededNodes(functions []*DependNode, waittingVariableMap VariableMap) {
+	p := im.project
+
+	// Collect router struct type IDs (structs with GroupName set).
+	routerTypeIDs := make(map[string]struct{})
+	for _, pkgName := range p.SortedPacakgeNames {
+		pkg := p.Packages[pkgName]
+		for _, structName := range pkg.SortedStructNames {
+			router := pkg.Structs[structName]
+			if router.Comment.GroupName != "" {
+				routerTypeIDs[router.IDName()] = struct{}{}
+			}
+		}
+	}
+
+	// Mark roots: main project nodes and router receiver types.
+	for _, node := range functions {
+		if im.isMainProject(getGeneratorModPath(node.Generator)) {
+			node.Needed = true
+			continue
+		}
+		rf := node.getReturnField()
+		if rf != nil {
+			typeID := GetRootBasicType(rf.Type).IDName()
+			if _, isRouter := routerTypeIDs[typeID]; isRouter {
+				node.Needed = true
+			}
+		}
+	}
+
+	// Recursively mark all parents of needed nodes.
+	var markParents func(*DependNode)
+	markParents = func(node *DependNode) {
+		for _, parent := range node.Parent {
+			if !parent.Needed {
+				parent.Needed = true
+				markParents(parent)
+			}
+		}
+	}
+	for _, node := range functions {
+		if node.Needed {
+			markParents(node)
+		}
+	}
+}
+
 // initInitorator 初始化初始化函数
 func (im *InitManager) initInitorator() {
 	// waittingVariableMap 是所有返回值的map；
@@ -268,14 +335,19 @@ func (im *InitManager) initInitorator() {
 	for _, node := range functions {
 		im.initParent(node, waittingVariableMap)
 	}
+	// Mark which nodes are needed (main project + router receivers + their dependencies).
+	im.markNeededNodes(functions, waittingVariableMap)
 	// Track used variable names to handle conflicts
 	usedNames := make(map[string]int)
-	// 每轮从functions中取出已经准备好了的function，放到ready的function中；
+	// 每轮从functions中取出已经准备好了的function，放到ready的function中；仅处理Needed的节点。
 	var found bool = true
 	for found {
 		found = false
 		var index int = 0
 		for _, node := range functions {
+			if !node.Needed {
+				continue
+			}
 			if im.variableMap.checkReady(node) {
 				if node.getReturnField() != nil {
 					var realName = node.getReturnName()
