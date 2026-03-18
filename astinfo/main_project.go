@@ -312,6 +312,8 @@ type Server struct {
 	filters          []*Function
 	routers          []*Struct
 	manager          *ServerManager
+	UrlList          []string            // all servlet URLs in this server
+	RefFilterNames   map[string]struct{} // filter names explicitly referenced by methods
 	// initRouteFuns []string           //initRoute 调用的init函数； 有package生成，生成路由代码时生成，一个package生成一个路由代码
 	// urlFilters    map[string]*Filter //记录url过滤器函数,key是url, url是原始文件中的url，可能包含引号
 	// initFuncs     []string           //initAll 调用的init函数；
@@ -372,6 +374,44 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 	return name
 }
 
+// collectFromRouter collects filter names and servlet URLs from the router into this server.
+func (s *Server) collectFromRouter(router *Struct) {
+	for _, method := range router.MethodManager.Server {
+		for _, name := range strings.Split(method.Comment.Filter, ",") {
+			name = strings.Trim(name, "\t ")
+			if name != "" {
+				s.RefFilterNames[name] = struct{}{}
+			}
+		}
+		methodUrl := strings.Trim(method.Comment.Url, "\"")
+		if methodUrl != "" {
+			fullUrl := strings.Trim(path.Join(router.Comment.Url, methodUrl), "\"")
+			s.UrlList = append(s.UrlList, fullUrl)
+		}
+	}
+}
+
+// filterNeeded returns true if the filter should be generated for this server.
+func (s *Server) filterNeeded(filter *Function, pkgModPath string) bool {
+	if s.manager.isMainProject(pkgModPath) {
+		return true
+	}
+	if _, has := s.RefFilterNames[filter.Name]; has {
+		return true
+	}
+	// If filterUrl is null/empty, the filter is needed
+	if filter.Comment.Url == "" || filter.Comment.Url == "\"\"" {
+		return true
+	}
+	filterUrl := strings.Trim(filter.Comment.Url, "\"")
+	for _, methodUrl := range s.UrlList {
+		if strings.Contains(methodUrl, filterUrl) {
+			return true
+		}
+	}
+	return false
+}
+
 // 负责对配置的每个server进行初始化，管理其中的filter，servlet；并生成最终代码中的server代码。打通filter和servlet的注册环节
 // 其生成代码分为连个部分；
 // 1. 最终代码的server代码。完成代码的filter和路由的注册；
@@ -408,53 +448,6 @@ func (sm *ServerManager) isMainProject(pkgModPath string) bool {
 	return pkgModPath == mainMod || strings.HasPrefix(pkgModPath, mainMod+"/")
 }
 
-// collectReferencedFilters gathers filter names and method URLs per group from all routers.
-func (sm *ServerManager) collectReferencedFilters() (map[string]map[string]struct{}, map[string][]string) {
-	refFilterNames := make(map[string]map[string]struct{})
-	methodUrlsByGroup := make(map[string][]string)
-	for _, server := range sm.servers {
-		groupName := server.Name
-		refFilterNames[groupName] = make(map[string]struct{})
-		for _, router := range server.routers {
-			for _, method := range router.MethodManager.Server {
-				for _, name := range strings.Split(method.Comment.Filter, ",") {
-					name = strings.Trim(name, "\t ")
-					if name != "" {
-						refFilterNames[groupName][name] = struct{}{}
-					}
-				}
-				methodUrl := strings.Trim(method.Comment.Url, "\"")
-				if methodUrl != "" {
-					fullUrl := strings.Trim(path.Join(router.Comment.Url, methodUrl), "\"")
-					methodUrlsByGroup[groupName] = append(methodUrlsByGroup[groupName], fullUrl)
-				}
-			}
-		}
-	}
-	return refFilterNames, methodUrlsByGroup
-}
-
-// filterNeeded returns true if the filter should be generated for this server.
-func (sm *ServerManager) filterNeeded(filter *Function, groupName string, refFilterNames map[string]map[string]struct{}, methodUrlsByGroup map[string][]string, pkgModPath string) bool {
-	if sm.isMainProject(pkgModPath) {
-		return true
-	}
-	if names, ok := refFilterNames[groupName]; ok {
-		if _, has := names[filter.Name]; has {
-			return true
-		}
-	}
-	if filter.Comment.Url != "" && filter.Comment.Url != "\"\"" {
-		filterUrl := strings.Trim(filter.Comment.Url, "\"")
-		for _, methodUrl := range methodUrlsByGroup[groupName] {
-			if strings.Contains(methodUrl, filterUrl) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // 扫描所有的程序，将服务按照group分为多个server；
 func (sm *ServerManager) splitServers() {
 	project := GlobalProject
@@ -480,23 +473,24 @@ func (sm *ServerManager) splitServers() {
 					continue
 				}
 				server = &Server{
-					Name:    groupName,
-					callGen: gen,
-					manager: sm,
+					Name:           groupName,
+					callGen:        gen,
+					manager:        sm,
+					RefFilterNames: make(map[string]struct{}),
 				}
 				sm.servers[groupName] = server
 			}
 			server.routers = append(server.routers, router)
+			server.collectFromRouter(router)
 		}
 	}
-	refFilterNames, methodUrlsByGroup := sm.collectReferencedFilters()
 	for _, pkg := range project.Packages {
 		for _, filter := range pkg.Filter {
 			var server *Server
 			var ok bool
 			var groupName = filter.Comment.groupName
 			if server, ok = sm.servers[groupName]; ok {
-				if sm.filterNeeded(filter, groupName, refFilterNames, methodUrlsByGroup, pkg.ModPath) {
+				if server.filterNeeded(filter, pkg.ModPath) {
 					server.filters = append(server.filters, filter)
 				}
 			} else {
