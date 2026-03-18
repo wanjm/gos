@@ -33,7 +33,7 @@ func (srpc *SrpcGen) Generate(class *astinfo.Interface, file *astinfo.GenedFile)
 func (srpc *SrpcGen) genRpcClientCode(file *astinfo.GenedFile, structName string, method *astinfo.InterfaceField) {
 	const clientTemplate = `
 func (receiver *{{.StructName}}) {{.MethodName}}(ctx context.Context, {{.Params}}) ({{.Results}}) {
-	err = receiver.client.SendRequest(ctx, {{.Url}}, {{.RequestArg}}, &obj)
+	err = receiver.client.SendRequest(ctx, {{.Url}}, {{.RequestArg}}, {{.ResultArg}})
 	return
 }
 `
@@ -44,6 +44,7 @@ func (receiver *{{.StructName}}) {{.MethodName}}(ctx context.Context, {{.Params}
 		Params     string
 		Results    string
 		RequestArg string
+		ResultArg  string
 		Url        string
 	}{
 		StructName: structName,
@@ -73,6 +74,9 @@ func (receiver *{{.StructName}}) {{.MethodName}}(ctx context.Context, {{.Params}
 	if len(method.Results) >= 2 {
 		resultP0 := method.Results[0]
 		results = append(results, "obj "+resultP0.Type.RefName(file))
+		data.ResultArg = "&obj"
+	} else {
+		data.ResultArg = "&struct{}{}"
 	}
 	results = append(results, "err error")
 	data.Results = strings.Join(results, ",")
