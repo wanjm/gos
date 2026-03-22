@@ -200,7 +200,7 @@ RpcLoggerKey="RpcLogger"
 RpcLoggerMod="github.com/wanjm/common"
 CommonMod="github.com/wanjm/common"
 FlutterPath="../lang_client/lib/data/http"
-ParseProjects = ["github/wanjm/common"]
+ParseProjects = ["github.com/wanjm/common"]
 ## DBConfig配置（切片类型，使用[[ ]]表示数组元素）
 ##[[DBConfig]]
 #DSN="user:passwd@tcp(dbhost:3306)/dbplaso in private file"
@@ -833,9 +833,9 @@ func (mp *MainProject) Parse() error {
 	projectsToParse = append(projectsToParse, p) // CurrentProject always first
 
 	goPath := os.Getenv("GOPATH")
-	parseProjectsSet := make(map[string]struct{})
+	parseProjectsSet := make(map[string]bool)
 	for _, modPath := range cfg.Generation.ParseProjects {
-		parseProjectsSet[modPath] = struct{}{}
+		parseProjectsSet[modPath] = false
 	}
 
 	for _, mod := range p.Require {
@@ -858,6 +858,12 @@ func (mp *MainProject) Parse() error {
 		if _, ok := parseProjectsSet[mod.Mod.Path]; ok {
 			proj.Simple = false // 需要扫描的project都不能simple扫描；
 			projectsToParse = append(projectsToParse, proj)
+			parseProjectsSet[mod.Mod.Path] = true
+		}
+	}
+	for modPath, found := range parseProjectsSet {
+		if !found {
+			fmt.Printf("ParseProjects not found in go.mod require (fix configuration): %s\n", modPath)
 		}
 	}
 	sort.Slice(mp.Projects, func(i, j int) bool {
