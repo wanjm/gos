@@ -44,51 +44,131 @@ func (mp *MainProject) genGoMod() {
 	}
 }
 
-// genMain
+// writeScaffoldFileIfAbsent creates relPath with content only if it does not exist (-i 初始化时不覆盖已有文件)。
+func writeScaffoldFileIfAbsent(relPath string, content []byte) error {
+	if _, err := os.Stat(relPath); err == nil {
+		return nil
+	}
+	dir := filepath.Dir(relPath)
+	if dir != "." && dir != "" {
+		_ = os.MkdirAll(dir, 0750)
+	}
+	return os.WriteFile(relPath, content, 0660)
+}
+
+// genMain 与 lang_server 默认 main 一致（module 路径来自 -i）
 func (mp *MainProject) genMain() {
-	var content strings.Builder
-	content.WriteString("package main\n")
-	//	import "gitlab.plaso.cn/message-center/gen"
-	content.WriteString("import (\"flag\"\n\"" + mp.CurrentProject.ModPath + "/gen\")\n")
-	content.WriteString(`
+	mod := mp.CurrentProject.ModPath
+	body := fmt.Sprintf(`package main
+
+import (
+	"context"
+	"time"
+
+	"github.com/wanjm/common"
+	"%s/basic"
+	"%s/gen"
+)
+
 func main() {
-	parseArgument();
+	parseArgument()
 	run()
 }
 func parseArgument() {
-	flag.Parse()
+	basic.ParseArgument()
 }
 func run() {
-	wg:=gen.Run(gen.Config{
-		Cors: true,
-		Addr: ":8080",
-		ServerName: "servlet", // this is the name of group tag in comments;
-	})
-	wg.Wait()
-	/*
-	下面的方法以来 github.com/wanjm/common 包，需要手动添加依赖；使用了优雅退出机制；
 	common.InitLogger()
 	manager := common.GracefulManager
 	shutdown := gen.Start(gen.Config{
 		Cors:       true,
-		Addr:       ":8080",
+		Addr:       basic.Cfg.Server.ServerHost,
 		ServerName: "servlet", // this is the name of group tag in comments;
 	})
 	manager.Go("http server shutdown monitor", func(ctx context.Context) {
 		shutdown(ctx, 5*time.Second)
 	})
 	manager.Wait()
- 	*/
 }
-	`)
-	os.WriteFile("main.go", []byte(content.String()), 0660)
-
+`, mod, mod)
+	_ = writeScaffoldFileIfAbsent("main.go", []byte(body))
 }
 
-// genBasic 生成basic.go
+// genBasic 生成 basic 包默认文件（与 lang_server 一致）
 func (mp *MainProject) genBasic() {
-	os.Mkdir("basic", 0750)
-	os.WriteFile("basic/message.go", []byte(`package basic
+	_ = os.Mkdir("basic", 0750)
+
+	_ = writeScaffoldFileIfAbsent("basic/config.go", []byte(`package basic
+
+import (
+	"flag"
+	"fmt"
+	"os"
+
+	"github.com/wanjm/common"
+)
+
+type CommandOption struct {
+	ConfigPath string
+	Help       bool
+}
+
+type Server struct {
+	ServerHost string
+}
+
+type Config struct {
+	Server        Server
+	DbConfig      common.DbConfig
+	CommandOption CommandOption
+	// Rpc Rpc
+}
+
+// type Rpc struct {
+// 	CourseGoPrefix string
+// }
+
+var Cfg Config
+
+func ParseArgument() {
+	common.Cfg = &Cfg.DbConfig
+	versionFlag := flag.Bool("v", false, "Print version information")
+	flag.StringVar(&Cfg.CommandOption.ConfigPath, "d", "configs", "配置文件目录")
+	flag.BoolVar(&Cfg.CommandOption.Help, "h", false, "帮助")
+	flag.Parse()
+	if Cfg.CommandOption.Help {
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
+	const Version = "0.0.2"
+	if *versionFlag {
+		fmt.Println("dataentry-go version", Version)
+		os.Exit(0)
+	}
+	// common.LoadConfigFile(&Cfg, path.Join(Cfg.CommandOption.ConfigPath, "business.public.toml"))
+	// fmt.Printf("Cfg: %+v\n", Cfg.Server.ServerHost)
+}
+`))
+
+	_ = writeScaffoldFileIfAbsent("basic/const.go", []byte(`package basic
+
+const (
+	SUCCESS               = iota //成功
+	SERVER_INTERNAL_ERROR        //服务器内部错误
+	ACCESS_TOKEN_ERROR           //访问令牌错误
+	_
+	INPUT_DATA_ERROR     //输入数据错误
+	NO_RECORD_FOUND      // 数据不存在
+	RECORD_ALREADY_EXIST // 数据已存在
+	_
+	_
+	CLIENT_VERSION_OLD // 客户版本太老
+	FORMAT_ERROR       // 格式错误
+)
+`))
+
+	_ = writeScaffoldFileIfAbsent("basic/message.go", []byte(`package basic
+
 type Error struct {
 	Code    int    "json:\"code\""
 	Message string "json:\"message\""
@@ -107,7 +187,35 @@ func New(code int, msg string) error {
 func (error *Error) GetErrorCode() int {
 	return error.Code
 }
-	`), 0660)
+`))
+}
+
+func (mp *MainProject) genProjectPublicToml() {
+	toml := `[Generation]
+TraceKey="TraceIdstruct"
+TraceKeyMod="github.com/wanjm/common"
+ResponseKey="ResponseData"
+ResponseMod="filter"
+RpcLoggerKey="RpcLogger"
+RpcLoggerMod="github.com/wanjm/common"
+CommonMod="github.com/wanjm/common"
+FlutterPath="../lang_client/lib/data/http"
+ParseProjects = ["github/wanjm/common"]
+## DBConfig配置（切片类型，使用[[ ]]表示数组元素）
+##[[DBConfig]]
+#DSN="user:passwd@tcp(dbhost:3306)/dbplaso in private file"
+#DBName = "mysqlDB"
+#DBType = "mysql"
+#[[ DBConfig.DbGenCfgs ]]
+#OutPath = "business/basic"
+#Tables = [
+#  { Name = "admin_org" },
+#]
+#[[DBConfig]]
+#DBName = "mongoDB"
+#DBType = "mongo"
+`
+	_ = writeScaffoldFileIfAbsent("project.public.toml", []byte(toml))
 }
 
 func (mp *MainProject) genProjectCode() {
@@ -633,6 +741,7 @@ func (mp *MainProject) GenerateCode() error {
 	if mp.Cfg.InitMain != "" {
 		mp.genMain()
 		mp.genBasic()
+		mp.genProjectPublicToml()
 	}
 	mp.genProjectCode()
 
