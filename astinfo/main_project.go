@@ -662,7 +662,7 @@ type ExtraInfo interface {
 	GetExtraInfo() any
 }
 `
-	tmpl, err := template.New("personInfo").Parse(tmplText)
+	tmpl, err := template.New("server_manager").Parse(tmplText)
 	if err != nil {
 		log.Fatalf("解析模板失败: %v", err)
 	}

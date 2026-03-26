@@ -132,7 +132,7 @@ func (prpc *PrpcGen) GenRouterCode(method *astinfo.Method, file *astinfo.GenedFi
 	})
 })
 	`
-	tmpl, err := template.New("personInfo").Parse(tmplText)
+	tmpl, err := template.New("prpc_router").Parse(tmplText)
 	if err != nil {
 		log.Fatalf("解析rpc模板失败: %v", err)
 	}

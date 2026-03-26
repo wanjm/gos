@@ -210,7 +210,7 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 	})
 		`
 
-	tmpl, err := template.New("personInfo").Parse(tmplText)
+	tmpl, err := template.New("servlet_router").Parse(tmplText)
 	if err != nil {
 		log.Fatalf("解析模板失败: %v", err)
 	}
