@@ -20,8 +20,8 @@ type FilterInfo struct {
 type ServletGen struct {
 	filters       []*FilterInfo
 	filterMap     map[string]*FilterInfo
-	InternalError int
-	DataError     int
+	InternalError int // error code number for internal error;
+	DataError     int // error code number for valid param error;
 }
 
 func NewServletGen(dataError, internalError int) *ServletGen {
@@ -109,17 +109,17 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 	//  有request请求，需要解析request，有些情况下，服务端不需要request；
 	// 参数为context.Context, request *schema.Request
 	type CodeParam struct {
-		HttpMethod        string
-		MethodName        string
-		Url               string
-		FilterName        string //自带最后一个逗号
-		RequestConstruct  string
-		UrlParameterStr   string
+		HttpMethod         string
+		MethodName         string
+		Url                string
+		FilterName         string //自带最后一个逗号
+		RequestConstruct   string
+		UrlParameterStr    string
 		HeaderParameterStr string
-		HasRequest        bool
-		HasResponse       bool
-		ResponseNilCode   string
-		DataError         int
+		HasRequest         bool
+		HasResponse        bool
+		ResponseNilCode    string
+		DataError          int
 	}
 	tm := &CodeParam{
 		HttpMethod: method.Comment.Method,

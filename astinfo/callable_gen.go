@@ -12,7 +12,7 @@ var callableGens []CallableGen
 //	{
 //		&ServletGen{},
 //		&prpcGen{},
-//		&ResutfulGen{},
+//		&RestfulGen{},
 //	}
 func RegisterCallableGen(gen ...CallableGen) {
 	callableGens = append(callableGens, gen...)

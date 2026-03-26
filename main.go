@@ -121,7 +121,7 @@ func genServlet(project *astinfo.MainProject) {
 	astinfo.RegisterCallableGen(
 		callable_gen.NewServletGen(4, 1),
 		&callable_gen.PrpcGen{},
-		&callable_gen.ResutfulGen{},
+		&callable_gen.RestfulGen{},
 		&callable_gen.RawGen{},
 	)
 	astinfo.RegisterProjectGenerator(flutter_gen.NewFlutterGen())
