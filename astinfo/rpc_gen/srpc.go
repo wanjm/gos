@@ -7,71 +7,51 @@ import (
 
 	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/astinfo"
-	"github.com/wanjm/gos/astinfo/callable_gen"
 )
 
-type PrpcGen struct {
+type SrpcGen struct {
 }
 
-func (prpc *PrpcGen) GetName() string {
-	return "prpc"
+func (srpc *SrpcGen) GetName() string {
+	return "srpc"
 }
 
-func (prpc *PrpcGen) Generate(class *astinfo.Interface, file *astinfo.GenedFile) error {
+func (srpc *SrpcGen) Generate(class *astinfo.Interface, file *astinfo.GenedFile) error {
 	if len(class.Methods) == 0 {
 		return nil
 	}
 	var sb strings.Builder
 	className := class.InterfaceName + "Struct"
-	sb.WriteString("type " + className + " struct {\nclient PrpcClient\n}\n")
+	sb.WriteString("type " + className + " struct {\nclient SrpcClient\n}\n")
 	file.AddBuilder(&sb)
-	// 生成rpc strutct 代码；
-	for _, servlet := range class.Methods {
-		prpc.genRpcClientCode(file, className, servlet)
+	for _, method := range class.Methods {
+		srpc.genRpcClientCode(file, className, method)
 	}
 	return nil
 }
 
-// 修改genRpcClientCode函数为使用template的形式
-func (prpc *PrpcGen) genRpcClientCode(file *astinfo.GenedFile, structName string, method *astinfo.InterfaceField) {
-	// 定义模板字符串
+func (srpc *SrpcGen) genRpcClientCode(file *astinfo.GenedFile, structName string, method *astinfo.InterfaceField) {
 	const clientTemplate = `
-	func (receiver *{{.StructName}}) {{.MethodName}}(ctx context.Context, {{.Params}}) ({{.Results}}) {
-    var argument = []interface{}{ {{.Args}} }
-
-    var res = receiver.client.SendRequest(ctx, {{.Url}}, argument)
-    if res.C != 0 {
-        err = errors.New("failed to call {{.MethodName}}")
-        return
-    }
-    if res.O[0] != nil {
-        err = res.O[0].(error)
-        return 
-    }
-    {{if .HasResults}}    
-    //无论object是否位指针，都需要取地址
-    json.Unmarshal(*res.O[1].(*json.RawMessage), &obj)
-    {{end}}    return
+func (receiver *{{.StructName}}) {{.MethodName}}(ctx context.Context, {{.Params}}) ({{.Results}}) {
+	err = receiver.client.SendRequest(ctx, {{.Url}}, {{.RequestArg}}, {{.ResultArg}})
+	return
 }
 `
 
-	// 准备模板数据
 	data := struct {
 		StructName string
 		MethodName string
 		Params     string
 		Results    string
-		Args       string
+		RequestArg string
+		ResultArg  string
 		Url        string
-		HasResults bool
 	}{
 		StructName: structName,
 		MethodName: method.Name,
 		Url:        method.Comment.Url,
-		HasResults: len(method.Results) >= 2,
 	}
 
-	// 处理参数
 	var args []string
 	var params []string
 	for i, l := 1, len(method.Params); i < l; i++ {
@@ -81,68 +61,67 @@ func (prpc *PrpcGen) genRpcClientCode(file *astinfo.GenedFile, structName string
 		args = append(args, param.Name)
 	}
 	data.Params = strings.Join(params, ",")
-	data.Args = strings.Join(args, ",")
 
-	// 处理返回值
+	if len(args) == 1 {
+		data.RequestArg = args[0]
+	} else if len(args) > 1 {
+		data.RequestArg = "[]interface{}{" + strings.Join(args, ",") + "}"
+	} else {
+		data.RequestArg = "nil"
+	}
+
 	var results []string
 	if len(method.Results) >= 2 {
 		resultP0 := method.Results[0]
-		info := "obj " + resultP0.Type.RefName(file)
-		results = append(results, info)
+		results = append(results, "obj "+resultP0.Type.RefName(file))
+		data.ResultArg = "&obj"
+	} else {
+		data.ResultArg = "&struct{}{}"
 	}
 	results = append(results, "err error")
 	data.Results = strings.Join(results, ",")
 
-	// 创建并解析模板
-	tpl, err := template.New("client").Parse(clientTemplate)
+	tpl, err := template.New("srpcClient").Parse(clientTemplate)
 	if err != nil {
-		panic("Failed to parse client template: " + err.Error())
+		panic("Failed to parse srpc client template: " + err.Error())
 	}
 
-	// 渲染模板到strings.Builder
 	var sb strings.Builder
 	if err := tpl.Execute(&sb, data); err != nil {
-		panic("Failed to execute client template: " + err.Error())
+		panic("Failed to execute srpc client template: " + err.Error())
 	}
 
-	// 添加必要的导入
 	file.GetImport(astbasic.SimplePackage("context", "context"))
-	file.GetImport(astbasic.SimplePackage("errors", "errors"))
-	if data.HasResults {
-		file.GetImport(astbasic.SimplePackage("encoding/json", "json"))
-	}
-
-	// 将生成的代码添加到文件
 	file.AddBuilder(&sb)
 }
 
-var generated bool
+var srpcGenerated bool
 
-func (prpc *PrpcGen) GenerateCommon(file *astinfo.GenedFile) {
-	if generated {
+func (srpc *SrpcGen) GenerateCommon(file *astinfo.GenedFile) {
+	if srpcGenerated {
 		return
 	}
 	GenRpcCommon()
-	callable_gen.GenBasicError(file)
-	generated = true
+	srpcGenerated = true
 	file.GetImport(astbasic.SimplePackage("bytes", "bytes"))
 	file.GetImport(astbasic.SimplePackage("encoding/json", "json"))
+	file.GetImport(astbasic.SimplePackage("errors", "errors"))
 	file.GetImport(astbasic.SimplePackage("net/http", "http"))
 	file.GetImport(astbasic.SimplePackage("io", "io"))
 	file.GetImport(astbasic.SimplePackage("context", "context"))
 	var content strings.Builder
 	content.WriteString(`
-type PrpcClient struct {
+type SrpcClient struct {
 	Prefix    string
 	rpcLogger rpcLogger
 }
 
-func (client *PrpcClient) SendRequest(ctx context.Context, name string, array []any) RpcResult {
+func (client *SrpcClient) SendRequest(ctx context.Context, name string, parameter any, result any) error {
 	url := client.Prefix + name
-	content, marError := json.Marshal(array)
+	content, marError := json.Marshal(parameter)
 	if marError != nil {
 		client.rpcLogger.LogError(ctx, url, marError.Error())
-		return RpcResult{C: 1, O: [2]any{nil, &json.RawMessage{}}}
+		return marError
 	}
 	req, err := http.NewRequest("POST", url, bytes.NewReader(content))
 	var resp *http.Response
@@ -154,25 +133,31 @@ func (client *PrpcClient) SendRequest(ctx context.Context, name string, array []
 	}
 	if err != nil {
 		client.rpcLogger.LogError(ctx, url, err.Error())
-		return RpcResult{C: 1, O: [2]any{&Error{Message: "send request failed"}, &json.RawMessage{}}}
+		return err
 	}
 	requestBody, _ := io.ReadAll(resp.Body)
 	client.rpcLogger.LogResponse(ctx, url, string(requestBody))
 	resp.Body.Close()
-	var res = RpcResult{
-		O: [2]any{&Error{}, &json.RawMessage{}},
+	var res struct {
+		Code    int    ` + "`json:\"code\"`" + `
+		Message string ` + "`json:\"message\"`" + `
+		Object  any    ` + "`json:\"obj\"`" + `
 	}
+	res.Object = result
 	dec := json.NewDecoder(bytes.NewReader(requestBody))
 	_ = dec.Decode(&res)
-	return res
+	if res.Code != 0 {
+		return errors.New(res.Message)
+	}
+	return nil
 }
 `)
 	file.AddBuilder(&content)
 }
 
-func (prpc *PrpcGen) InitClientVariable(rpcClientVar map[*astinfo.Interface]*astinfo.VarField, file *astinfo.GenedFile) string {
+func (srpc *SrpcGen) InitClientVariable(rpcClientVar map[*astinfo.Interface]*astinfo.VarField, file *astinfo.GenedFile) string {
 	rpcClientTpl := `
-func initRpcClient() {
+func initSrpcClient() {
 	{{if .HasLogger}}
 	var rpclogger {{.LoggerImport}}.{{.LoggerKey}}
 	{{else}}
@@ -181,7 +166,7 @@ func initRpcClient() {
 
 	{{range .RpcFields}}
 	{{.ImportName}}.{{.FieldName}} = &{{.TypeName}}Struct{
-		client: PrpcClient{
+		client: SrpcClient{
 			Prefix: {{.Host}},
 			rpcLogger: &rpclogger,
 		},
@@ -190,7 +175,6 @@ func initRpcClient() {
 }
 	`
 	generationCfg := astinfo.GlobalProject.Cfg.Generation
-	// 准备模板数据
 	type RpcFieldData struct {
 		ImportName string
 		FieldName  string
@@ -207,7 +191,6 @@ func initRpcClient() {
 		HasLogger: generationCfg.RpcLoggerKey != "",
 	}
 
-	// 处理日志配置
 	if data.HasLogger {
 		data.LoggerImport = file.GetImport(astbasic.SimplePackage(generationCfg.RpcLoggerMod, "xx")).Name
 		data.LoggerKey = generationCfg.RpcLoggerKey
@@ -229,17 +212,16 @@ func initRpcClient() {
 		})
 	}
 
-	// 解析并执行模板
-	tpl, err := template.New("rpcClient").Parse(rpcClientTpl)
+	tpl, err := template.New("srpcClientInit").Parse(rpcClientTpl)
 	if err != nil {
-		log.Fatalf("Failed to parse rpc client template: %v", err)
+		log.Fatalf("Failed to parse srpc client template: %v", err)
 	}
 
 	var content strings.Builder
 	if err := tpl.Execute(&content, data); err != nil {
-		log.Fatalf("Failed to execute rpc client template: %v", err)
+		log.Fatalf("Failed to execute srpc client template: %v", err)
 	}
 
 	file.AddBuilder(&content)
-	return "initRpcClient"
+	return "initSrpcClient"
 }

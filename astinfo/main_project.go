@@ -44,51 +44,131 @@ func (mp *MainProject) genGoMod() {
 	}
 }
 
-// genMain
+// writeScaffoldFileIfAbsent creates relPath with content only if it does not exist (-i 初始化时不覆盖已有文件)。
+func writeScaffoldFileIfAbsent(relPath string, content []byte) error {
+	if _, err := os.Stat(relPath); err == nil {
+		return nil
+	}
+	dir := filepath.Dir(relPath)
+	if dir != "." && dir != "" {
+		_ = os.MkdirAll(dir, 0750)
+	}
+	return os.WriteFile(relPath, content, 0660)
+}
+
+// genMain 与 lang_server 默认 main 一致（module 路径来自 -i）
 func (mp *MainProject) genMain() {
-	var content strings.Builder
-	content.WriteString("package main\n")
-	//	import "gitlab.plaso.cn/message-center/gen"
-	content.WriteString("import (\"flag\"\n\"" + mp.CurrentProject.ModPath + "/gen\")\n")
-	content.WriteString(`
+	mod := mp.CurrentProject.ModPath
+	body := fmt.Sprintf(`package main
+
+import (
+	"context"
+	"time"
+
+	"github.com/wanjm/common"
+	"%s/basic"
+	"%s/gen"
+)
+
 func main() {
-	parseArgument();
+	parseArgument()
 	run()
 }
 func parseArgument() {
-	flag.Parse()
+	basic.ParseArgument()
 }
 func run() {
-	wg:=gen.Run(gen.Config{
-		Cors: true,
-		Addr: ":8080",
-		ServerName: "servlet", // this is the name of group tag in comments;
-	})
-	wg.Wait()
-	/*
-	下面的方法以来 github.com/wanjm/common 包，需要手动添加依赖；使用了优雅退出机制；
 	common.InitLogger()
 	manager := common.GracefulManager
 	shutdown := gen.Start(gen.Config{
 		Cors:       true,
-		Addr:       ":8080",
+		Addr:       basic.Cfg.Server.ServerHost,
 		ServerName: "servlet", // this is the name of group tag in comments;
 	})
 	manager.Go("http server shutdown monitor", func(ctx context.Context) {
 		shutdown(ctx, 5*time.Second)
 	})
 	manager.Wait()
- 	*/
 }
-	`)
-	os.WriteFile("main.go", []byte(content.String()), 0660)
-
+`, mod, mod)
+	_ = writeScaffoldFileIfAbsent("main.go", []byte(body))
 }
 
-// genBasic 生成basic.go
+// genBasic 生成 basic 包默认文件（与 lang_server 一致）
 func (mp *MainProject) genBasic() {
-	os.Mkdir("basic", 0750)
-	os.WriteFile("basic/message.go", []byte(`package basic
+	_ = os.Mkdir("basic", 0750)
+
+	_ = writeScaffoldFileIfAbsent("basic/config.go", []byte(`package basic
+
+import (
+	"flag"
+	"fmt"
+	"os"
+
+	"github.com/wanjm/common"
+)
+
+type CommandOption struct {
+	ConfigPath string
+	Help       bool
+}
+
+type Server struct {
+	ServerHost string
+}
+
+type Config struct {
+	Server        Server
+	DbConfig      common.DbConfig
+	CommandOption CommandOption
+	// Rpc Rpc
+}
+
+// type Rpc struct {
+// 	CourseGoPrefix string
+// }
+
+var Cfg Config
+
+func ParseArgument() {
+	common.Cfg = &Cfg.DbConfig
+	versionFlag := flag.Bool("v", false, "Print version information")
+	flag.StringVar(&Cfg.CommandOption.ConfigPath, "d", "configs", "配置文件目录")
+	flag.BoolVar(&Cfg.CommandOption.Help, "h", false, "帮助")
+	flag.Parse()
+	if Cfg.CommandOption.Help {
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
+	const Version = "0.0.2"
+	if *versionFlag {
+		fmt.Println("dataentry-go version", Version)
+		os.Exit(0)
+	}
+	// common.LoadConfigFile(&Cfg, path.Join(Cfg.CommandOption.ConfigPath, "business.public.toml"))
+	// fmt.Printf("Cfg: %+v\n", Cfg.Server.ServerHost)
+}
+`))
+
+	_ = writeScaffoldFileIfAbsent("basic/const.go", []byte(`package basic
+
+const (
+	SUCCESS               = iota //成功
+	SERVER_INTERNAL_ERROR        //服务器内部错误
+	ACCESS_TOKEN_ERROR           //访问令牌错误
+	_
+	INPUT_DATA_ERROR     //输入数据错误
+	NO_RECORD_FOUND      // 数据不存在
+	RECORD_ALREADY_EXIST // 数据已存在
+	_
+	_
+	CLIENT_VERSION_OLD // 客户版本太老
+	FORMAT_ERROR       // 格式错误
+)
+`))
+
+	_ = writeScaffoldFileIfAbsent("basic/message.go", []byte(`package basic
+
 type Error struct {
 	Code    int    "json:\"code\""
 	Message string "json:\"message\""
@@ -107,7 +187,35 @@ func New(code int, msg string) error {
 func (error *Error) GetErrorCode() int {
 	return error.Code
 }
-	`), 0660)
+`))
+}
+
+func (mp *MainProject) genProjectPublicToml() {
+	toml := `[Generation]
+TraceKey="TraceIdstruct"
+TraceKeyMod="github.com/wanjm/common"
+ResponseKey="ResponseData"
+ResponseMod="filter"
+RpcLoggerKey="RpcLogger"
+RpcLoggerMod="github.com/wanjm/common"
+CommonMod="github.com/wanjm/common"
+FlutterPath="../lang_client/lib/data/http"
+ParseProjects = ["github.com/wanjm/common"]
+## DBConfig配置（切片类型，使用[[ ]]表示数组元素）
+##[[DBConfig]]
+#DSN="user:passwd@tcp(dbhost:3306)/dbplaso in private file"
+#DBName = "mysqlDB"
+#DBType = "mysql"
+#[[ DBConfig.DbGenCfgs ]]
+#OutPath = "business/basic"
+#Tables = [
+#  { Name = "admin_org" },
+#]
+#[[DBConfig]]
+#DBName = "mongoDB"
+#DBType = "mongo"
+`
+	_ = writeScaffoldFileIfAbsent("project.public.toml", []byte(toml))
 }
 
 func (mp *MainProject) genProjectCode() {
@@ -194,10 +302,11 @@ func (mp *MainProject) genBasicCode(file *GenedFile) {
 	var content strings.Builder
 	content.WriteString(`
 	type Response struct {
-		Code    int         "json:\"code\""
-		Message string      "json:\"message,omitempty\""
-		ExtraInfo any       "json:\"extra,omitempty\"" //用于在失败的情况下也返回给前端一些信息；
-		Object  any         "json:\"obj\""
+		Code     int    "json:\"code\""
+		Message  string "json:\"message,omitempty\""
+		ExtraInfo any   "json:\"extra,omitempty\"" //用于在失败的情况下也返回给前端一些信息；
+		Object   any    "json:\"obj\""
+		TraceId  string "json:\"traceId,omitempty\""
 	}
 
 type Config struct {
@@ -311,6 +420,8 @@ type Server struct {
 	filters          []*Function
 	routers          []*Struct
 	manager          *ServerManager
+	UrlList          []string            // all servlet URLs in this server
+	RefFilterNames   map[string]struct{} // filter names explicitly referenced by methods
 	// initRouteFuns []string           //initRoute 调用的init函数； 有package生成，生成路由代码时生成，一个package生成一个路由代码
 	// urlFilters    map[string]*Filter //记录url过滤器函数,key是url, url是原始文件中的url，可能包含引号
 	// initFuncs     []string           //initAll 调用的init函数；
@@ -371,6 +482,44 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 	return name
 }
 
+// collectFromRouter collects filter names and servlet URLs from the router into this server.
+func (s *Server) collectFromRouter(router *Struct) {
+	for _, method := range router.MethodManager.Server {
+		for _, name := range strings.Split(method.Comment.Filter, ",") {
+			name = strings.Trim(name, "\t ")
+			if name != "" {
+				s.RefFilterNames[name] = struct{}{}
+			}
+		}
+		methodUrl := strings.Trim(method.Comment.Url, "\"")
+		if methodUrl != "" {
+			fullUrl := strings.Trim(path.Join(router.Comment.Url, methodUrl), "\"")
+			s.UrlList = append(s.UrlList, fullUrl)
+		}
+	}
+}
+
+// filterNeeded returns true if the filter should be generated for this server.
+func (s *Server) filterNeeded(filter *Function, pkgModPath string) bool {
+	if s.manager.isMainProject(pkgModPath) {
+		return true
+	}
+	if _, has := s.RefFilterNames[filter.Name]; has {
+		return true
+	}
+	// If filterUrl is null/empty, the filter is needed
+	if filter.Comment.Url == "" || filter.Comment.Url == "\"\"" {
+		return true
+	}
+	filterUrl := strings.Trim(filter.Comment.Url, "\"")
+	for _, methodUrl := range s.UrlList {
+		if strings.Contains(methodUrl, filterUrl) {
+			return true
+		}
+	}
+	return false
+}
+
 // 负责对配置的每个server进行初始化，管理其中的filter，servlet；并生成最终代码中的server代码。打通filter和servlet的注册环节
 // 其生成代码分为连个部分；
 // 1. 最终代码的server代码。完成代码的filter和路由的注册；
@@ -401,6 +550,12 @@ func (sm *ServerManager) Prepare() {
 	sm.splitServers()
 }
 
+// isMainProject returns true if the package belongs to the main (current) project.
+func (sm *ServerManager) isMainProject(pkgModPath string) bool {
+	mainMod := GlobalProject.CurrentProject.ModPath
+	return pkgModPath == mainMod || strings.HasPrefix(pkgModPath, mainMod+"/")
+}
+
 // 扫描所有的程序，将服务按照group分为多个server；
 func (sm *ServerManager) splitServers() {
 	project := GlobalProject
@@ -426,13 +581,15 @@ func (sm *ServerManager) splitServers() {
 					continue
 				}
 				server = &Server{
-					Name:    groupName,
-					callGen: gen,
-					manager: sm,
+					Name:           groupName,
+					callGen:        gen,
+					manager:        sm,
+					RefFilterNames: make(map[string]struct{}),
 				}
 				sm.servers[groupName] = server
 			}
 			server.routers = append(server.routers, router)
+			server.collectFromRouter(router)
 		}
 	}
 	for _, pkg := range project.Packages {
@@ -441,7 +598,9 @@ func (sm *ServerManager) splitServers() {
 			var ok bool
 			var groupName = filter.Comment.groupName
 			if server, ok = sm.servers[groupName]; ok {
-				server.filters = append(server.filters, filter)
+				if server.filterNeeded(filter, pkg.ModPath) {
+					server.filters = append(server.filters, filter)
+				}
 			} else {
 				fmt.Printf("failed to found server %s\n", groupName)
 			}
@@ -503,7 +662,7 @@ type ExtraInfo interface {
 	GetExtraInfo() any
 }
 `
-	tmpl, err := template.New("personInfo").Parse(tmplText)
+	tmpl, err := template.New("server_manager").Parse(tmplText)
 	if err != nil {
 		log.Fatalf("解析模板失败: %v", err)
 	}
@@ -582,6 +741,7 @@ func (mp *MainProject) GenerateCode() error {
 	if mp.Cfg.InitMain != "" {
 		mp.genMain()
 		mp.genBasic()
+		mp.genProjectPublicToml()
 	}
 	mp.genProjectCode()
 
@@ -673,9 +833,9 @@ func (mp *MainProject) Parse() error {
 	projectsToParse = append(projectsToParse, p) // CurrentProject always first
 
 	goPath := os.Getenv("GOPATH")
-	parseProjectsSet := make(map[string]struct{})
+	parseProjectsSet := make(map[string]bool)
 	for _, modPath := range cfg.Generation.ParseProjects {
-		parseProjectsSet[modPath] = struct{}{}
+		parseProjectsSet[modPath] = false
 	}
 
 	for _, mod := range p.Require {
@@ -698,6 +858,12 @@ func (mp *MainProject) Parse() error {
 		if _, ok := parseProjectsSet[mod.Mod.Path]; ok {
 			proj.Simple = false // 需要扫描的project都不能simple扫描；
 			projectsToParse = append(projectsToParse, proj)
+			parseProjectsSet[mod.Mod.Path] = true
+		}
+	}
+	for modPath, found := range parseProjectsSet {
+		if !found {
+			fmt.Printf("ParseProjects not found in go.mod require (fix configuration): %s\n", modPath)
 		}
 	}
 	sort.Slice(mp.Projects, func(i, j int) bool {

@@ -143,17 +143,17 @@ func (servlet *RawGen) GenRouterCode(method *astinfo.Method, file *astinfo.Gened
 	//  有request请求，需要解析request，有些情况下，服务端不需要request；
 	// 参数为context.Context, request *schema.Request
 	type CodeParam struct {
-		HttpMethod        string
-		MethodName        string
-		Url               string
-		FilterName        string //自带最后一个逗号
-		RequestConstruct  string
-		UrlParameterStr   string
+		HttpMethod         string
+		MethodName         string
+		Url                string
+		FilterName         string //自带最后一个逗号
+		RequestConstruct   string
+		UrlParameterStr    string
 		HeaderParameterStr string
-		HasRequest        bool
-		HasResponse       bool
-		ResponseNilCode   string
-		DataError         int
+		HasRequest         bool
+		HasResponse        bool
+		ResponseNilCode    string
+		DataError          int
 	}
 	tm := &CodeParam{
 		HttpMethod: method.Comment.Method,
@@ -242,7 +242,7 @@ func (servlet *RawGen) GenRouterCode(method *astinfo.Method, file *astinfo.Gened
 	})
 		`
 
-	tmpl, err := template.New("personInfo").Parse(tmplText)
+	tmpl, err := template.New("raw_router").Parse(tmplText)
 	if err != nil {
 		log.Fatalf("解析模板失败: %v", err)
 	}

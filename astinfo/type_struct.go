@@ -37,6 +37,14 @@ func (comment *structComment) dealValuePair(key, value string) {
 		} else {
 			comment.GroupName = value
 		}
+	case Srpc:
+		comment.AutoGen = true
+		comment.serverType = Srpc
+		if len(value) == 0 {
+			comment.GroupName = Srpc
+		} else {
+			comment.GroupName = value
+		}
 	case Servlet:
 		comment.AutoGen = true
 		comment.serverType = Servlet

@@ -32,6 +32,7 @@ const (
 	//desperate
 	Servlet = "servlet" //用于定义struct是servlet，所以默认groupName是servlets
 	Prpc    = "prpc"    //用于定义struct是prpc，所以默认groupName是prpc
+	Srpc    = "srpc"    //用于定义struct是srpc，server rpc client，调用servlet风格接口
 )
 
 const (

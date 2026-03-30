@@ -1,7 +1,6 @@
 package callable_gen
 
 import (
-	"fmt"
 	"log"
 	"path"
 	"strconv"
@@ -74,9 +73,8 @@ func (prpc *PrpcGen) GenRouterCode(method *astinfo.Method, file *astinfo.GenedFi
 		HasResponse      bool
 		// ResponseNilCode      string
 		// DataError            int
-		InterfaceInit        string
-		ParamString          string
-		TraceIdNameInContext string
+		InterfaceInit string
+		ParamString   string
 	}
 	tm := &CodeParam{
 		HttpMethod: method.Comment.Method,
@@ -97,14 +95,6 @@ func (prpc *PrpcGen) GenRouterCode(method *astinfo.Method, file *astinfo.GenedFi
 	tm.InterfaceInit = strings.Join(args, ",")
 	tm.HasRequest = len(method.Params) > 0
 	tm.HasResponse = len(method.Results) > 1
-	generationCfg := &astinfo.GlobalProject.Cfg.Generation
-	if generationCfg.TraceKey != "" {
-		// prpc的发送请求是，会向http头添加traceId，需要使用该变量
-		oneImport := file.GetImport(astbasic.SimplePackage(generationCfg.TraceKeyMod, "xx"))
-		tm.TraceIdNameInContext = fmt.Sprintf("%s.%s{}", oneImport.Name, generationCfg.TraceKey)
-	} else {
-		tm.TraceIdNameInContext = `"badTraceIdName plase config in Generation TraceKeyMod"`
-	}
 	tmplText := `
 	engine.{{.HttpMethod}} ( "{{.Url}}", {{.FilterName}} func(c *gin.Context) {
 	{{if .HasRequest}}
@@ -125,7 +115,7 @@ func (prpc *PrpcGen) GenRouterCode(method *astinfo.Method, file *astinfo.GenedFi
 	if len(tid) ==0 {
 		tid = xid.New().String()
 	}
-	c.Request = Request.WithContext(context.WithValue(Request.Context(), {{.TraceIdNameInContext}}, tid))
+	c.Request = Request.WithContext(context.WithValue(Request.Context(), TraceIdNameInContext, tid))
 	{{ if .HasResponse }}response,{{end}} err := receiver.{{.MethodName}}(c {{ if .HasRequest }},{{.ParamString}}{{ end }})
 	var code any
 	errorCode,errMessage:=getErrorCode(err)
@@ -142,7 +132,7 @@ func (prpc *PrpcGen) GenRouterCode(method *astinfo.Method, file *astinfo.GenedFi
 	})
 })
 	`
-	tmpl, err := template.New("personInfo").Parse(tmplText)
+	tmpl, err := template.New("prpc_router").Parse(tmplText)
 	if err != nil {
 		log.Fatalf("解析rpc模板失败: %v", err)
 	}

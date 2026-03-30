@@ -275,7 +275,7 @@ func (swagger *Swagger) GenerateCode(cfg *basic.SwaggerCfg) string {
 			fmt.Printf("error:%v\n", err)
 		}
 		content, _ := io.ReadAll(response.Body)
-		fmt.Printf("response:%v\n", string(content))
+		fmt.Printf("swagger response:%v\n", string(content))
 		return (string(data))
 	}
 	return ""

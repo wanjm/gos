@@ -196,7 +196,7 @@ func genColumns(file *astbasic.GenedGoFile, columns []*NamePair) {
 	{{end}}
 	)
 	`
-	tmpl, err := template.New("personInfo").Parse(tmplText)
+	tmpl, err := template.New("columns").Parse(tmplText)
 	if err != nil {
 		log.Fatalf("解析模板失败: %v", err)
 	}

@@ -100,6 +100,8 @@ func (comment *functionComment) dealOldValuePair(key, value string) bool {
 		comment.funcType = Servlet
 	case Prpc:
 		comment.funcType = Prpc
+	case Srpc:
+		comment.funcType = Srpc
 	case Initiator:
 		comment.funcType = Initiator
 	case Websocket:

@@ -20,8 +20,8 @@ type FilterInfo struct {
 type ServletGen struct {
 	filters       []*FilterInfo
 	filterMap     map[string]*FilterInfo
-	InternalError int
-	DataError     int
+	InternalError int // error code number for internal error;
+	DataError     int // error code number for valid param error;
 }
 
 func NewServletGen(dataError, internalError int) *ServletGen {
@@ -45,7 +45,7 @@ const filterTemplate = `func {{.FilterName}}(c *gin.Context) {
 	err := {{.ImportName}}.{{.FunctionName}}(c, &c.Request)
 	errorCode,errMessage:=getErrorCode(err)
 	if errorCode != 0 {
-		cJSON(c, 200, Response{
+		servletJson(c, 200, Response{
 			Code:    errorCode,
 			Message: errMessage,
 		})
@@ -109,17 +109,17 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 	//  有request请求，需要解析request，有些情况下，服务端不需要request；
 	// 参数为context.Context, request *schema.Request
 	type CodeParam struct {
-		HttpMethod        string
-		MethodName        string
-		Url               string
-		FilterName        string //自带最后一个逗号
-		RequestConstruct  string
-		UrlParameterStr   string
+		HttpMethod         string
+		MethodName         string
+		Url                string
+		FilterName         string //自带最后一个逗号
+		RequestConstruct   string
+		UrlParameterStr    string
 		HeaderParameterStr string
-		HasRequest        bool
-		HasResponse       bool
-		ResponseNilCode   string
-		DataError         int
+		HasRequest         bool
+		HasResponse        bool
+		ResponseNilCode    string
+		DataError          int
 	}
 	tm := &CodeParam{
 		HttpMethod: method.Comment.Method,
@@ -186,7 +186,7 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		{{.HeaderParameterStr}}
 		// 利用gin的自动绑定功能，将请求内容绑定到request对象上；兼容get,post等情况
 		if err := c.ShouldBind(request); err != nil {
-			cJSON(c, 200, Response{
+			servletJson(c, 200, Response{
 				Code:    {{.DataError}},
 				Message: "param error",
 			})
@@ -203,14 +203,14 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 				return
 			}
 		}
-		cJSON(c, code, Response{
+		servletJson(c, code, Response{
 			{{ if .HasResponse }}Object:  a,{{ end }}
 		})
 		
 	})
 		`
 
-	tmpl, err := template.New("personInfo").Parse(tmplText)
+	tmpl, err := template.New("servlet_router").Parse(tmplText)
 	if err != nil {
 		log.Fatalf("解析模板失败: %v", err)
 	}
