@@ -125,6 +125,17 @@ func (v *Struct) FlatFields() []*Field {
 	return fields
 }
 
+// FieldsWithTag returns fields that have the specified tag key.
+func (s *Struct) FieldsWithTag(tagKey string) []*Field {
+	var result []*Field
+	for _, f := range s.Fields {
+		if _, ok := f.Tags[tagKey]; ok {
+			result = append(result, f)
+		}
+	}
+	return result
+}
+
 // 某些field需要wire，但是却没有名字，所以需要处理
 func getWireField(field *Field) *Field {
 	// 1. 原始类型，不需要wire；（可以通过default直接构造，或者make构造，或者不写，使用系统的默认0值）
@@ -179,10 +190,6 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 	//)
 	// 1. 有default，则wire；
 	// 2. wire为ture，且不是简单结构体（needWire），则寻找值去绑定；
-	if v.StructName == "AiKnowledgeEditReq" {
-		a := "hll"
-		_ = a
-	}
 	for _, field := range v.Fields {
 		var name = field.wriedName()
 		if name != "" {
@@ -190,7 +197,7 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 			// RawType是原始数据类型；不包含map，chan；
 			// RawType 有default，也写上；不区分是否wire；
 			if rt, ok := field.Type.(*RawType); ok {
-				v, ok := field.Tags["default"]
+				v, ok := field.Tags[DEFAULT]
 				if ok {
 					sb.WriteString(name + ":")
 					if rt.typeName == "string" {

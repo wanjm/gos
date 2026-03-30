@@ -251,6 +251,14 @@ func (field *Field) GetJsonName() string {
 	return name
 }
 
+// GetHeaderName returns the HTTP header name from the header tag if present.
+func (field *Field) GetHeaderName() (string, bool) {
+	if name, ok := field.Tags[HEADER]; ok && name != "" {
+		return name, true
+	}
+	return "", false
+}
+
 func NewField(root *ast.Field, source *Gosourse) *Field {
 	return &Field{
 		FieldBasic: FieldBasic{

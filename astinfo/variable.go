@@ -24,7 +24,10 @@ func (v *Variable) Generate(goGenerated *GenedFile) string {
 	if variableCode != "" {
 		return variableCode
 	}
-
+	// fmt.Printf("failed to init variable %s of type %s\n", v.Name, v.Type.RefName(goGenerated))
+	// return ""
+	// 如果找不到，则自动生成；
+	// 其实只有request才会走这种情况，其他都必须存在；
 	variableCode = v.Type.GenConstructCode(goGenerated, v.Wire)
 	return variableCode
 }

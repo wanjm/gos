@@ -14,6 +14,7 @@ import (
 
 	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/basic"
+	"golang.org/x/mod/modfile"
 )
 
 type MainProject struct {
@@ -33,7 +34,12 @@ type MainProject struct {
 func (mp *MainProject) genGoMod() {
 	_, err := os.Stat("go.mod")
 	if os.IsNotExist(err) {
-		var content = "module " + mp.Cfg.InitMain + "\n" + strings.Replace(runtime.Version(), "go", "go ", 1) + "\n"
+		version := runtime.Version()
+		parts := strings.Split(version, " ")
+		//仅要版本号，去除
+		version = parts[0]
+		version = strings.Replace(version, "go", "go ", 1)
+		var content = "module " + mp.Cfg.InitMain + "\n" + version + "\n"
 		os.WriteFile("go.mod", []byte(content), 0660)
 	}
 }
@@ -608,6 +614,42 @@ func escapeModulePath(s string) string {
 	}
 	return result.String()
 }
+
+// resolveModulePath returns the filesystem path for a required module.
+// It checks replace directives in the current project's go.mod; if a replace
+// applies and points to a local path (New.Version == ""), that path is used.
+// Otherwise falls back to GOPATH/pkg/mod.
+func (mp *MainProject) resolveModulePath(mod *modfile.Require, goPath string) string {
+	current := &mp.CurrentProject
+	modPath := mod.Mod.Path
+	version := mod.Mod.Version
+	// Find longest matching replace (most specific wins)
+	var best *modfile.Replace
+	for _, r := range current.Replace {
+		oldPath := r.Old.Path
+		if modPath == oldPath || strings.HasPrefix(modPath, oldPath+"/") {
+			if best == nil || len(oldPath) > len(best.Old.Path) {
+				best = r
+			}
+		}
+	}
+	if best != nil && best.New.Version == "" {
+		// Local path replacement
+		replacePath := best.New.Path
+		if filepath.IsAbs(replacePath) {
+			return filepath.Clean(replacePath)
+		}
+		resolved := filepath.Join(current.FilePath, replacePath)
+		abs, err := filepath.Abs(resolved)
+		if err != nil {
+			return filepath.Clean(resolved)
+		}
+		return abs
+	}
+	// Fallback to GOPATH
+	return path.Join(goPath, "pkg/mod", escapeModulePath(modPath)+"@"+version)
+}
+
 func (mp *MainProject) ParseModule() error {
 	return mp.CurrentProject.ParseModule()
 }
@@ -626,30 +668,46 @@ func (mp *MainProject) Parse() error {
 		cfg.Generation.ResponseMod = p.ModPath + "/" + responseMod
 	}
 	mp.Projects = append(mp.Projects, p)
+
+	var projectsToParse []*Project
+	projectsToParse = append(projectsToParse, p) // CurrentProject always first
+
 	goPath := os.Getenv("GOPATH")
+	parseProjectsSet := make(map[string]struct{})
+	for _, modPath := range cfg.Generation.ParseProjects {
+		parseProjectsSet[modPath] = struct{}{}
+	}
+
 	for _, mod := range p.Require {
 		// if mod.Indirect {
 		// 	continue
 		// }
 
-		p := Project{
+		filePath := mp.resolveModulePath(mod, goPath)
+		proj := &Project{
 			PkgBasic: astbasic.PkgBasic{
-				FilePath: path.Join(goPath, "pkg/mod", escapeModulePath(mod.Mod.Path)+"@"+mod.Mod.Version),
+				FilePath: filePath,
 			},
 			Simple: true,
 		}
-		p.ParseModule()
-		if p.ModPath == "" {
-			p.ModPath = mod.Mod.Path
+		proj.ParseModule()
+		if proj.ModPath == "" {
+			proj.ModPath = mod.Mod.Path
 		}
-		mp.Projects = append(mp.Projects, &p)
+		mp.Projects = append(mp.Projects, proj)
+		if _, ok := parseProjectsSet[mod.Mod.Path]; ok {
+			proj.Simple = false // 需要扫描的project都不能simple扫描；
+			projectsToParse = append(projectsToParse, proj)
+		}
 	}
 	sort.Slice(mp.Projects, func(i, j int) bool {
 		return mp.Projects[i].ModPath > mp.Projects[j].ModPath
 	})
-	err := p.ParseCode()
-	if err != nil {
-		return err
+
+	for _, proj := range projectsToParse {
+		if err := proj.ParseCode(); err != nil {
+			return err
+		}
 	}
 	mp.FinishedParse()
 	return nil

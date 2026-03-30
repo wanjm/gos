@@ -15,12 +15,13 @@ import (
 
 // Project 表示一个Go项目的基本信息
 type Project struct {
-	Simple bool
+	Simple bool // 该project是简单扫描，则其中的每个package都是简单扫描；
 	astbasic.PkgBasic
 	// Name     string // 项目名称
 	// ModPath  string // 项目模块名称（从go.mod解析）
 	// FilePath string // 项目根目录的绝对路径
 	Require []*modfile.Require
+	Replace []*modfile.Replace // replace directives from go.mod
 }
 
 func (p *Project) ParseModule() error {
@@ -30,14 +31,13 @@ func (p *Project) ParseModule() error {
 		return fmt.Errorf("error reading go.mod: %w", err)
 	}
 
-	modfile, err := modfile.Parse("go.mod", data, nil)
+	mf, err := modfile.Parse("go.mod", data, nil)
 	if err != nil {
 		return fmt.Errorf("error parsing go.mod: %w", err)
 	}
-	p.ModPath = modfile.Module.Mod.Path
-	p.Require = modfile.Require
-	// TODO
-	// fmt.Printf("Module: %s\n", p.Module)
+	p.ModPath = mf.Module.Mod.Path
+	p.Require = mf.Require
+	p.Replace = mf.Replace
 	return nil
 }
 

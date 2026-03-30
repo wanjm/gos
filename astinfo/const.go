@@ -39,5 +39,9 @@ const (
 	Id         = "id"
 	GORM       = "gorm"
 	BSON       = "bson"
+	JSON       = "json"
+	HEADER     = "header"
+	DEFAULT    = "default"
+	VALID      = "valid"
 	Column     = "column"
 )

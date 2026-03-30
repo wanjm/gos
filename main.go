@@ -15,6 +15,8 @@ import (
 	"github.com/wanjm/gos/db"
 )
 
+const Version = "0.5.2"
+
 func parseArgument() {
 	flag.StringVar(&basic.Argument.SourcePath, "p", ".", "需要生成代码工程的根目录")
 	flag.StringVar(&basic.Argument.ModName, "modname", "all", "指定模块名称")
@@ -25,8 +27,8 @@ func parseArgument() {
 	flag.Parse()
 
 	if *v { // 检查是否指定了-v参数
-		fmt.Println("gos version 0.5.1") // 打印版本号
-		os.Exit(0)                        // 退出程序
+		fmt.Println("gos version", Version) // 打印版本号
+		os.Exit(0)                          // 退出程序
 	}
 
 	if *h {
@@ -49,6 +51,7 @@ func main() {
 	cfg.InitMain = basic.Argument.GoMod
 	var project = astinfo.CreateProject(basic.Argument.SourcePath, cfg)
 	if err := project.CurrentProject.ParseModule(); err != nil {
+		fmt.Printf("parse module failed with %s", err.Error())
 		return
 	}
 	// 产生db数据；
