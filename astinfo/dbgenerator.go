@@ -1,11 +1,11 @@
 package astinfo
 
 import (
-	"html/template"
 	"log"
 	"path/filepath"
 	"slices"
 	"strings"
+	"text/template"
 
 	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/basic"
@@ -157,6 +157,7 @@ type tbInfo struct {
 type NamePair struct {
 	VarName string
 	ColName string
+	Comment string
 }
 
 // DeduplicateNamePairs takes a map and a slice of NamePair pointers,
@@ -192,6 +193,7 @@ func genColumns(file *astbasic.GenedGoFile, columns []*NamePair) {
 	tmplText := `
 	const (
 	{{range .}}
+	// {{.Comment}}
 	{{.VarName}} = "{{.ColName}}"
 	{{end}}
 	)
@@ -240,6 +242,7 @@ func getNamePair(class *Struct) []*NamePair {
 			columns = append(columns, &NamePair{
 				VarName: "C_" + field.Name,
 				ColName: colname,
+				Comment: field.Comment.CommentText,
 			})
 		}
 	}
