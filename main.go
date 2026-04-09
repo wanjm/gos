@@ -99,7 +99,11 @@ func genDbData(dbnames string) {
 			case "mysql":
 				db.GenTableFromMySQL(config, moduleMap)
 			case "mongo":
-				db.GenTableFromMongo(config, moduleMap)
+				err := db.GenTableFromMongo(config, moduleMap)
+				if err != nil {
+					fmt.Printf("gen mongo table failed with %s", err.Error())
+					return
+				}
 				// db.GenTableFromMongo(config)
 			default:
 				fmt.Printf("db %s type %s not supported", dbName, config.DBType)

@@ -12,3 +12,4 @@ CREATE TABLE `table_constant_config` (
   UNIQUE KEY `uk_table_column_constname` (`table_name`, `column_name`, `const_name`) COMMENT 'Unique constraint: table + column + const name cannot repeat',
   KEY `idx_table_column` (`table_name`, `column_name`) COMMENT 'Index for fast query by table + column'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Database table constant type configuration table';
+
