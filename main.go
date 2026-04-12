@@ -15,7 +15,7 @@ import (
 	"github.com/wanjm/gos/db"
 )
 
-const Version = "0.5.3"
+const Version = "0.5.4"
 
 func parseArgument() {
 	flag.StringVar(&basic.Argument.SourcePath, "p", ".", "需要生成代码工程的根目录")
@@ -99,7 +99,11 @@ func genDbData(dbnames string) {
 			case "mysql":
 				db.GenTableFromMySQL(config, moduleMap)
 			case "mongo":
-				db.GenTableFromMongo(config, moduleMap)
+				err := db.GenTableFromMongo(config, moduleMap)
+				if err != nil {
+					fmt.Printf("gen mongo table failed with %s", err.Error())
+					return
+				}
 				// db.GenTableFromMongo(config)
 			default:
 				fmt.Printf("db %s type %s not supported", dbName, config.DBType)

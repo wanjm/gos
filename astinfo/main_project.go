@@ -547,7 +547,7 @@ func (sm *ServerManager) Prepare() {
 	for _, callGen := range callableGens {
 		sm.register(callGen)
 	}
-	sm.splitServers()
+	sm.splitServers(GlobalProject)
 }
 
 // isMainProject returns true if the package belongs to the main (current) project.
@@ -557,8 +557,7 @@ func (sm *ServerManager) isMainProject(pkgModPath string) bool {
 }
 
 // 扫描所有的程序，将服务按照group分为多个server；
-func (sm *ServerManager) splitServers() {
-	project := GlobalProject
+func (sm *ServerManager) splitServers(project *MainProject) {
 	for _, pkgModuleName := range project.SortedPacakgeNames {
 		pkg := project.Packages[pkgModuleName]
 		// 结构体会定义group和type，所以先扫描struct

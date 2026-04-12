@@ -45,11 +45,13 @@ func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
 		// 3. Parse DDL and generate struct
 		tablepkg := entityPkg.NewPkgBasic(tableName, "mysql/"+tableName)
 		file.GetImport(tablepkg)
-		structName, err := GenerateStructFromDDL(tableName, ddl, tablepkg, tableCfg.DBName, t)
+		tableFile := tablepkg.NewFile("table")
+		structName, err := GenerateStructFromDDL(tableName, ddl, tableFile, tableCfg.DBName, t)
 		if err != nil {
 			fmt.Printf("生成结构体代码失败: %v\n", err)
 			return err
 		}
+		tableFile.Save()
 		aliasStringBuilder.WriteString("type " + structName + " = " + tableName + "." + structName + "\n")
 	}
 	file.AddBuilder(&aliasStringBuilder)
@@ -71,10 +73,9 @@ func getTableDDL(db *sql.DB, tableName string) (string, error) {
 	return ddl, err
 }
 
-// GenerateStructFromDDL parses the DDL and generates a Go struct definition
-// return Struct Name;
-func GenerateStructFromDDL(tableName, ddl string, tablepkg *astbasic.PkgBasic, dbVariable string, t basic.TableCfg) (string, error) {
-	tableFile := tablepkg.NewFile("table")
+// GenerateStructFromDDL parses the DDL and appends the generated struct to tableFile (caller creates the file with NewFile and calls Save).
+// Returns the struct name.
+func GenerateStructFromDDL(tableName, ddl string, tableFile *astbasic.GenedGoFile, dbVariable string, tbCfg basic.TableCfg) (string, error) {
 	// Simple parser: extract column lines from DDL
 	lines := strings.Split(ddl, "\n")
 	type fieldInfo struct {
@@ -144,8 +145,8 @@ type {{.StructName}} struct {
 	}
 	var sb strings.Builder
 
-	arraysStr := strings.Join(t.Arrays, ",")
-	mapsStr := strings.Join(t.Maps, ",")
+	arraysStr := strings.Join(tbCfg.Arrays, ",")
+	mapsStr := strings.Join(tbCfg.Maps, ",")
 
 	err = tpl.Execute(&sb, map[string]interface{}{
 		"StructComment": structComment,
@@ -160,7 +161,6 @@ type {{.StructName}} struct {
 		return "", err
 	}
 	tableFile.AddBuilder(&sb)
-	tableFile.Save()
 	return structName, nil
 }
 

@@ -80,30 +80,24 @@ func (eg *EntityGen) generateFromEntityToFile(schemaStruct *Struct, genFile *Gen
 		entityFieldMap[field.Name] = field
 	}
 
+	hasFormatEntity := eg.hasFormatEntityMethod(schemaStruct)
+
 	for _, schemaField := range schemaStruct.Fields {
 		entityField, exists := entityFieldMap[schemaField.Name]
 		if !exists {
-			continue // Skip fields that don't exist in entity
-		}
-
-		// Validate types match
-		schemaType := GetBasicType(schemaField.Type)
-		entityType := GetBasicType(entityField.Type)
-
-		// Compare types
-		if !eg.typesMatch(schemaType, entityType) {
-			fmt.Printf("ERROR: type mismatch for field %s in %s.%s: schema has %s, entity has %s\n",
-				schemaField.Name, schemaStruct.GoSource.Pkg.ModPath, schemaStruct.StructName,
-				schemaType.IDName(), entityType.IDName())
+			if !hasFormatEntity {
+				fmt.Printf("WARNING: FromEntity: field %q on schema %s.%s is not populated (no matching field on entity %s); add the field to the entity or implement FormatEntity()\n",
+					schemaField.Name, schemaStruct.GoSource.Pkg.ModPath, schemaStruct.StructName, entityName)
+			}
 			continue
 		}
 
-		// Generate field assignment
+		// Always emit assignment when names match; if types differ, the Go compiler/IDE will report it.
 		sb.WriteString(fmt.Sprintf("\ts.%s = e.%s\n", schemaField.Name, entityField.Name))
 	}
 
 	// Check if FormatEntity method exists
-	if eg.hasFormatEntityMethod(schemaStruct) {
+	if hasFormatEntity {
 		sb.WriteString("\ts.FormatEntity()\n")
 	}
 
@@ -117,39 +111,6 @@ func (eg *EntityGen) findEntityStruct(schemaStruct *Struct, entityName string) *
 		return entityStruct
 	}
 	return nil
-}
-
-func (eg *EntityGen) typesMatch(schemaType, entityType Typer) bool {
-	// Compare by IDName for exact match
-	if schemaType.IDName() == entityType.IDName() {
-		return true
-	}
-
-	// Handle pointer types - compare underlying types
-	if schemaPtr, ok := schemaType.(*PointerType); ok {
-		if entityPtr, ok := entityType.(*PointerType); ok {
-			return eg.typesMatch(schemaPtr.Typer, entityPtr.Typer)
-		}
-		// Schema is pointer but entity is not - might be okay for assignment
-		return eg.typesMatch(schemaPtr.Typer, entityType)
-	}
-
-	// Handle aliases
-	if schemaAlias, ok := schemaType.(*Alias); ok {
-		return eg.typesMatch(schemaAlias.Typer, entityType)
-	}
-	if entityAlias, ok := entityType.(*Alias); ok {
-		return eg.typesMatch(schemaType, entityAlias.Typer)
-	}
-
-	// For raw types, compare by name
-	if schemaRaw, ok := schemaType.(*RawType); ok {
-		if entityRaw, ok := entityType.(*RawType); ok {
-			return schemaRaw.typeName == entityRaw.typeName
-		}
-	}
-
-	return false
 }
 
 func (eg *EntityGen) hasFormatEntityMethod(schemaStruct *Struct) bool {

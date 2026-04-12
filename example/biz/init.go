@@ -27,3 +27,8 @@ func Filter(ctx context.Context, req **http.Request) (res *basic.Error) {
 func Filter2(ctx context.Context, req **http.Request) (res *basic.Error) {
 	return
 }
+
+// @gos type=filter; group=servlet; url="/hello"; header="X-Example-Header"
+func SwaggerHelloHeaderFilter(ctx context.Context, req **http.Request) (res *basic.Error) {
+	return
+}

@@ -14,6 +14,117 @@ import (
 	"github.com/wanjm/gos/basic"
 )
 
+// swaggerApplicableRouteFilters matches callable_gen/servlet.go GenRouterCode: explicit filters= then URL containment on method path.
+func swaggerApplicableRouteFilters(serverFilters []*Function, servlet *Method) []*Function {
+	if len(serverFilters) == 0 || servlet == nil {
+		return nil
+	}
+	methodURL := strings.Trim(servlet.Comment.Url, "\"")
+	filterByName := make(map[string]*Function)
+	var urlOrdered []*Function
+	for _, f := range serverFilters {
+		u := strings.Trim(f.Comment.Url, "\"")
+		if u != "" && f.Comment.Url != "\"\"" {
+			filterByName[f.Name] = f
+			urlOrdered = append(urlOrdered, f)
+		}
+	}
+	seen := make(map[*Function]struct{})
+	var out []*Function
+	add := func(f *Function) {
+		if f == nil {
+			return
+		}
+		if _, ok := seen[f]; ok {
+			return
+		}
+		seen[f] = struct{}{}
+		out = append(out, f)
+	}
+	for filter := range strings.SplitSeq(servlet.Comment.Filter, ",") {
+		filter = strings.Trim(filter, "\t ")
+		if filter != "" {
+			add(filterByName[filter])
+		}
+	}
+	for _, f := range urlOrdered {
+		fu := strings.Trim(f.Comment.Url, "\"")
+		if fu != "" && strings.Contains(methodURL, fu) {
+			add(f)
+		}
+	}
+	return out
+}
+
+// computeServerFiltersByGroup mirrors ServerManager.splitServers filter attachment (same group / filterNeeded).
+func computeServerFiltersByGroup(project *MainProject) map[string][]*Function {
+	sm := CreateServerManager()
+	for _, callGen := range callableGens {
+		sm.register(callGen)
+	}
+	sm.splitServers(project)
+	out := make(map[string][]*Function, len(sm.servers))
+	for k, s := range sm.servers {
+		out[k] = append(out[k], s.filters...)
+	}
+	return out
+}
+
+// collectServletSwaggerHeaderNames merges @gos header=... from applicable filters (see swaggerApplicableRouteFilters) with struct `header` tags on the request type; dedupes case-insensitively. Order: filter headers in route-filter order, then struct tags.
+func collectServletSwaggerHeaderNames(servlet *Method, serverFiltersByGroup map[string][]*Function) []string {
+	seen := make(map[string]struct{})
+	var names []string
+	add := func(h string) {
+		h = strings.TrimSpace(h)
+		if h == "" {
+			return
+		}
+		key := strings.ToLower(h)
+		if _, ok := seen[key]; ok {
+			return
+		}
+		seen[key] = struct{}{}
+		names = append(names, h)
+	}
+	var group string
+	if servlet.Receiver != nil {
+		group = servlet.Receiver.Comment.GroupName
+	}
+	for _, f := range swaggerApplicableRouteFilters(serverFiltersByGroup[group], servlet) {
+		for _, h := range f.Comment.RequiredHeaders {
+			add(h)
+		}
+	}
+	if len(servlet.Params) > 1 && servlet.Params[1].Type != nil {
+		t := GetBasicType(servlet.Params[1].Type)
+		if st, ok := t.(*Struct); ok {
+			for _, f := range st.FieldsWithTag(HEADER) {
+				if n, ok := f.GetHeaderName(); ok {
+					add(n)
+				}
+			}
+		}
+	}
+	return names
+}
+
+func swaggerHeaderParameters(names []string) []spec.Parameter {
+	out := make([]spec.Parameter, 0, len(names))
+	for _, name := range names {
+		out = append(out, spec.Parameter{
+			SimpleSchema: spec.SimpleSchema{
+				Type: "string",
+			},
+			ParamProps: spec.ParamProps{
+				Name:     name,
+				In:       "header",
+				Required: true,
+			},
+		})
+	}
+	return out
+}
+
 type SchemaType interface {
 	InitSchema(*spec.Schema, *Swagger)
 }
@@ -156,7 +267,7 @@ func initOperation(title string) *spec.Operation {
 		},
 	}
 }
-func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager) {
+func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager, serverFiltersByGroup map[string][]*Function) {
 	paths := swagger.swag.Paths.Paths
 	for _, servlet := range pkg.Server {
 		comment := servlet.Comment
@@ -167,7 +278,7 @@ func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager) {
 		}
 		pathItem := spec.PathItem{}
 		operation := initOperation(comment.Title)
-		var parameter []spec.Parameter
+		parameter := swaggerHeaderParameters(collectServletSwaggerHeaderNames(servlet, serverFiltersByGroup))
 		switch comment.Method {
 		case POST, "":
 			pathItem.Post = operation
@@ -237,9 +348,10 @@ func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager) {
 //	}
 func (swagger *Swagger) GenerateCode(cfg *basic.SwaggerCfg) string {
 	project := swagger.project
+	serverFiltersByGroup := computeServerFiltersByGroup(project)
 	for name, pkg := range project.Packages {
 		_ = name
-		swagger.addServletFromPackage(pkg)
+		swagger.addServletFromPackage(pkg, serverFiltersByGroup)
 	}
 	swaggerJson, err := swagger.swag.MarshalJSON()
 	if err != nil {
@@ -281,11 +393,11 @@ func (swagger *Swagger) GenerateCode(cfg *basic.SwaggerCfg) string {
 	return ""
 	// fmt.Printf("swagger:%s\n", cmdMap["input"])
 }
-func (swagger *Swagger) addServletFromPackage(pkg *Package) {
+func (swagger *Swagger) addServletFromPackage(pkg *Package, serverFiltersByGroup map[string][]*Function) {
 	// swagger.addServletFromFunctionManager(&pkg.FunctionManager)
 	for _, class := range pkg.Structs {
 		if class.Comment.serverType == Servlet {
-			swagger.addServletFromFunctionManager(&class.MethodManager)
+			swagger.addServletFromFunctionManager(&class.MethodManager, serverFiltersByGroup)
 		}
 	}
 }

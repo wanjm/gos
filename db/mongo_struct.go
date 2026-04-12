@@ -27,6 +27,11 @@ func GenTableFromMongo(config *basic.DBConfig, moduleMap map[string]struct{}) er
 		return fmt.Errorf("当前仅支持 'mongo' 数据库类型, 您提供的是 '%s'", config.DBType)
 	}
 
+	if strings.TrimSpace(config.DSN) == "" {
+		log.Printf("skip mongo genTable: DSN is empty (db=%s)", config.DBName)
+		return nil
+	}
+
 	// 1. 建立数据库连接
 	client, err := connectToMongo(config.DSN)
 	if err != nil {

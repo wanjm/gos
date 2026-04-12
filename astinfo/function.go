@@ -7,15 +7,16 @@ import (
 )
 
 type functionComment struct {
-	Url          string // url
-	Title        string // 函数描述，供swagger使用
-	Method       string // http方法，GET,POST，默认是POST
-	isDeprecated bool
-	funcType     string //函数类型，filter，servlet，websocket，prpc，initiator,creator
-	security     []string
-	groupName    string
-	Filter       string
-	owner        *Function
+	Url             string // url
+	Title           string // 函数描述，供swagger使用
+	Method          string // http方法，GET,POST，默认是POST
+	isDeprecated    bool
+	funcType        string //函数类型，filter，servlet，websocket，prpc，initiator,creator
+	security        []string
+	RequiredHeaders []string // @gos header=... — names for Swagger in: header parameters
+	groupName       string
+	Filter          string
+	owner           *Function
 }
 
 const (
@@ -78,6 +79,14 @@ func (comment *functionComment) dealValuePair(key, value string) {
 		comment.funcType = FilterConst
 	case UserFilter:
 		comment.Filter = value
+	case HEADER:
+		for _, part := range strings.Split(value, ",") {
+			part = strings.TrimSpace(part)
+			part = strings.Trim(part, "\"")
+			if part != "" {
+				comment.RequiredHeaders = append(comment.RequiredHeaders, part)
+			}
+		}
 	default:
 		if !comment.dealOldValuePair(key, value) {
 			fmt.Printf("unknown key '%s' in function comment %s in %s\n", key, comment.owner.Name, comment.owner.GoSource.Path)
