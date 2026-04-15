@@ -15,7 +15,7 @@ import (
 	"github.com/wanjm/gos/db"
 )
 
-const Version = "0.5.4"
+const Version = "0.5.5"
 
 func parseArgument() {
 	flag.StringVar(&basic.Argument.SourcePath, "p", ".", "需要生成代码工程的根目录")

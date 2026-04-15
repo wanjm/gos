@@ -13,7 +13,9 @@ type functionComment struct {
 	isDeprecated    bool
 	funcType        string //函数类型，filter，servlet，websocket，prpc，initiator,creator
 	security        []string
-	RequiredHeaders []string // @gos header=... — names for Swagger in: header parameters
+	// RequiredHeaders from @gos header=... — comma-separated entries; each entry is
+	// "HeaderName" or "HeaderName:description" for Swagger header parameters.
+	RequiredHeaders []FieldBasic
 	groupName       string
 	Filter          string
 	owner           *Function
@@ -83,8 +85,18 @@ func (comment *functionComment) dealValuePair(key, value string) {
 		for _, part := range strings.Split(value, ",") {
 			part = strings.TrimSpace(part)
 			part = strings.Trim(part, "\"")
-			if part != "" {
-				comment.RequiredHeaders = append(comment.RequiredHeaders, part)
+			if part == "" {
+				continue
+			}
+			var fb FieldBasic
+			if i := strings.Index(part, ":"); i >= 0 {
+				fb.Name = strings.TrimSpace(part[:i])
+				fb.Comment.CommentText = strings.TrimSpace(part[i+1:])
+			} else {
+				fb.Name = part
+			}
+			if fb.Name != "" {
+				comment.RequiredHeaders = append(comment.RequiredHeaders, fb)
 			}
 		}
 	default:

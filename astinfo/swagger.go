@@ -70,21 +70,22 @@ func computeServerFiltersByGroup(project *MainProject) map[string][]*Function {
 	return out
 }
 
-// collectServletSwaggerHeaderNames merges @gos header=... from applicable filters (see swaggerApplicableRouteFilters) with struct `header` tags on the request type; dedupes case-insensitively. Order: filter headers in route-filter order, then struct tags.
-func collectServletSwaggerHeaderNames(servlet *Method, serverFiltersByGroup map[string][]*Function) []string {
+// collectServletSwaggerHeaders merges @gos header=... from applicable filters (see swaggerApplicableRouteFilters) with struct `header` tags on the request type; dedupes case-insensitively by header name. Order: filter headers in route-filter order, then struct tags.
+func collectServletSwaggerHeaders(servlet *Method, serverFiltersByGroup map[string][]*Function) []FieldBasic {
 	seen := make(map[string]struct{})
-	var names []string
-	add := func(h string) {
-		h = strings.TrimSpace(h)
-		if h == "" {
+	var out []FieldBasic
+	add := func(h FieldBasic) {
+		name := strings.TrimSpace(h.Name)
+		if name == "" {
 			return
 		}
-		key := strings.ToLower(h)
+		key := strings.ToLower(name)
 		if _, ok := seen[key]; ok {
 			return
 		}
 		seen[key] = struct{}{}
-		names = append(names, h)
+		h.Name = name
+		out = append(out, h)
 	}
 	var group string
 	if servlet.Receiver != nil {
@@ -100,26 +101,30 @@ func collectServletSwaggerHeaderNames(servlet *Method, serverFiltersByGroup map[
 		if st, ok := t.(*Struct); ok {
 			for _, f := range st.FieldsWithTag(HEADER) {
 				if n, ok := f.GetHeaderName(); ok {
-					add(n)
+					add(FieldBasic{Name: n})
 				}
 			}
 		}
 	}
-	return names
+	return out
 }
 
-func swaggerHeaderParameters(names []string) []spec.Parameter {
-	out := make([]spec.Parameter, 0, len(names))
-	for _, name := range names {
+func swaggerHeaderParameters(headers []FieldBasic) []spec.Parameter {
+	out := make([]spec.Parameter, 0, len(headers))
+	for _, h := range headers {
+		pp := spec.ParamProps{
+			Name:     h.Name,
+			In:       "header",
+			Required: true,
+		}
+		if desc := strings.TrimSpace(h.Comment.CommentText); desc != "" {
+			pp.Description = desc
+		}
 		out = append(out, spec.Parameter{
 			SimpleSchema: spec.SimpleSchema{
 				Type: "string",
 			},
-			ParamProps: spec.ParamProps{
-				Name:     name,
-				In:       "header",
-				Required: true,
-			},
+			ParamProps: pp,
 		})
 	}
 	return out
@@ -278,7 +283,7 @@ func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager, server
 		}
 		pathItem := spec.PathItem{}
 		operation := initOperation(comment.Title)
-		parameter := swaggerHeaderParameters(collectServletSwaggerHeaderNames(servlet, serverFiltersByGroup))
+		parameter := swaggerHeaderParameters(collectServletSwaggerHeaders(servlet, serverFiltersByGroup))
 		switch comment.Method {
 		case POST, "":
 			pathItem.Post = operation

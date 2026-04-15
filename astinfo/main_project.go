@@ -194,8 +194,8 @@ func (mp *MainProject) genProjectPublicToml() {
 	toml := `[Generation]
 TraceKey="TraceIdstruct"
 TraceKeyMod="github.com/wanjm/common"
-ResponseKey="ResponseData"
-ResponseMod="filter"
+#ResponseKey="ResponseData"
+#ResponseMod="filter"
 RpcLoggerKey="RpcLogger"
 RpcLoggerMod="github.com/wanjm/common"
 CommonMod="github.com/wanjm/common"

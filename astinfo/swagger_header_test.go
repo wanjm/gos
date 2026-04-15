@@ -6,7 +6,7 @@ import (
 )
 
 func TestSwaggerHeaderParameters_marshalsOpenAPI2Header(t *testing.T) {
-	ps := swaggerHeaderParameters([]string{"X-Test-Id"})
+	ps := swaggerHeaderParameters([]FieldBasic{{Name: "X-Test-Id"}})
 	if len(ps) != 1 {
 		t.Fatalf("len=%d", len(ps))
 	}
@@ -20,6 +20,16 @@ func TestSwaggerHeaderParameters_marshalsOpenAPI2Header(t *testing.T) {
 	}
 	if m["in"] != "header" || m["name"] != "X-Test-Id" || m["type"] != "string" || m["required"] != true {
 		t.Fatalf("unexpected JSON: %s", string(raw))
+	}
+}
+
+func TestSwaggerHeaderParameters_descriptionFromComment(t *testing.T) {
+	ps := swaggerHeaderParameters([]FieldBasic{{
+		Name:    "X-Trace",
+		Comment: FieldComment{CommentText: "  correlation id  "},
+	}})
+	if len(ps) != 1 || ps[0].Description != "correlation id" {
+		t.Fatalf("got %#v", ps[0])
 	}
 }
 
@@ -51,12 +61,16 @@ func TestSwaggerApplicableRouteFilters_explicitAndURL(t *testing.T) {
 	}
 }
 
-func TestCollectServletSwaggerHeaderNames_fromFiltersDedupes(t *testing.T) {
+func TestCollectServletSwaggerHeaders_fromFiltersDedupes(t *testing.T) {
 	flt := &Function{
 		FunctionField: FunctionField{Name: "F"},
 		Comment: functionComment{
-			Url:             "/hello",
-			RequiredHeaders: []string{"X-A", "x-a", "X-B"},
+			Url: "/hello",
+			RequiredHeaders: []FieldBasic{
+				{Name: "X-A"},
+				{Name: "x-a"},
+				{Name: "X-B", Comment: FieldComment{CommentText: "second"}},
+			},
 		},
 	}
 	servlet := &Method{
@@ -69,8 +83,8 @@ func TestCollectServletSwaggerHeaderNames_fromFiltersDedupes(t *testing.T) {
 		},
 	}
 	byGroup := map[string][]*Function{"g": {flt}}
-	got := collectServletSwaggerHeaderNames(servlet, byGroup)
-	if len(got) != 2 || got[0] != "X-A" || got[1] != "X-B" {
+	got := collectServletSwaggerHeaders(servlet, byGroup)
+	if len(got) != 2 || got[0].Name != "X-A" || got[1].Name != "X-B" || got[1].Comment.CommentText != "second" {
 		t.Fatalf("got %#v", got)
 	}
 }
