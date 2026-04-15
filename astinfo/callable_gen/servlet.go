@@ -188,7 +188,7 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		if err := c.ShouldBind(request); err != nil {
 			servletJson(c, 200, Response{
 				Code:    {{.DataError}},
-				Message: "param error",
+				Message: err.Error(),
 			})
 			return
 		}

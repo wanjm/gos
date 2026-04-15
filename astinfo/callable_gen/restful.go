@@ -186,7 +186,7 @@ func (restful *RestfulGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		{{.HeaderParameterStr}}
 		// 利用gin的自动绑定功能，将请求内容绑定到request对象上；兼容get,post等情况
 		if err := c.ShouldBind(request); err != nil {
-			c.JSON(400, gin.H{"error": "param error"})
+			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
 		{{ end }}

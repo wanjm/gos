@@ -140,7 +140,7 @@ func (client *SrpcClient) SendRequest(ctx context.Context, name string, paramete
 	resp.Body.Close()
 	var res struct {
 		Code    int    ` + "`json:\"code\"`" + `
-		Message string ` + "`json:\"message\"`" + `
+		Message string ` + "`json:\"msg\"`" + `
 		Object  any    ` + "`json:\"obj\"`" + `
 	}
 	res.Object = result
