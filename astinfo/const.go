@@ -41,6 +41,7 @@ const (
 	GORM       = "gorm"
 	BSON       = "bson"
 	JSON       = "json"
+	VALIDATE   = "validate"
 	HEADER     = "header"
 	DEFAULT    = "default"
 	VALID      = "valid"

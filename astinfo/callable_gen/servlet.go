@@ -192,6 +192,13 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 			})
 			return
 		}
+		if err := validate.Struct(request); err != nil {
+			servletJson(c, 200, Response{
+				Code:    {{.DataError}},
+				Message: err.Error(),
+			})
+			return
+		}
 		{{ end }}
 		{{ if .HasResponse }}a,{{end}} err := receiver.{{.MethodName}}(c {{ if .HasRequest }},request{{ end }})
 		{{.ResponseNilCode}}

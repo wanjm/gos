@@ -446,9 +446,20 @@ func (swagger *Swagger) getStructRef(class *Struct) *spec.Ref {
 	ref, _ := spec.NewRef("#/definitions/" + class.StructName)
 	class.ref = &ref
 	schemas := swagger.genSchema(class)
+	var required []string
+	for _, field := range class.FlatFields() {
+		name := field.GetJsonName()
+		if name == "-" || name == "" {
+			continue
+		}
+		if field.SwaggerSchemaRequired() {
+			required = append(required, name)
+		}
+	}
 	result := spec.SchemaProps{
 		Type:       []string{"object"},
 		Properties: schemas,
+		Required:   required,
 	}
 	swagger.swag.Definitions[class.StructName] = spec.Schema{
 		SchemaProps: result,

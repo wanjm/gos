@@ -189,6 +189,10 @@ func (restful *RestfulGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
+		if err := validate.Struct(request); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		{{ end }}
 		{{ if .HasResponse }}a,{{end}} err := receiver.{{.MethodName}}(c {{ if .HasRequest }},request{{ end }})
 		{{.ResponseNilCode}}

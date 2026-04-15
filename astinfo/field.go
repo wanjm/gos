@@ -84,6 +84,8 @@ func (field *Field) parseTag(fieldType *ast.BasicLit) {
 					if field.DbColumnName == "" {
 						field.DbColumnName = val
 					}
+				case VALIDATE:
+					field.Tags[VALIDATE] = value
 				default:
 					field.Tags[kv[0]] = strings.Split(value, ",")[0]
 				}
@@ -257,6 +259,30 @@ func (field *Field) GetHeaderName() (string, bool) {
 		return name, true
 	}
 	return "", false
+}
+
+// SwaggerSchemaRequired reports whether this field should appear in OpenAPI/Swagger schema `required`
+// for its parent object when the field uses go-playground/validator-style `validate:"..."` and includes
+// the `required` rule (e.g. `validate:"required"`, `validate:"required,min=1"`).
+func (field *Field) SwaggerSchemaRequired() bool {
+	v, ok := field.Tags[VALIDATE]
+	if !ok || v == "" {
+		return false
+	}
+	for _, p := range strings.Split(v, ",") {
+		rule := strings.TrimSpace(p)
+		if rule == "" {
+			continue
+		}
+		// Match rule name only (before '=' for keyed rules like required_if=...)
+		if idx := strings.IndexByte(rule, '='); idx >= 0 {
+			rule = strings.TrimSpace(rule[:idx])
+		}
+		if rule == "required" {
+			return true
+		}
+	}
+	return false
 }
 
 func NewField(root *ast.Field, source *Gosourse) *Field {
