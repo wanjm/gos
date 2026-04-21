@@ -315,6 +315,7 @@ type VarFieldHelper struct {
 
 type VarField = FieldBasic
 
+// var abc string
 func NewVarFieldHelper(root *ast.ValueSpec, source *Gosourse) *VarFieldHelper {
 	return &VarFieldHelper{
 		astRoot:  root,
@@ -341,6 +342,7 @@ func (v *VarFieldHelper) Parse() error {
 		for _, name := range root.Names {
 			field1 := field
 			field1.Name = name.Name
+			// 目前仅支持全局Var的解析， 当前仅用于rpc client的定义；
 			v.goSource.Pkg.GlobalVar[name.Name] = &field1
 		}
 	}

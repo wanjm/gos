@@ -1,6 +1,9 @@
 package astinfo
 
-import "strings"
+import (
+	"sort"
+	"strings"
+)
 
 type RpcClientManager struct {
 	ClientGen map[string]ClientGen
@@ -34,6 +37,7 @@ func (manager *RpcClientManager) Generate(file *GenedFile) error {
 		// 	}
 		// 	clients[iface.Comment.Type] = append(clients[iface.Comment.Type], iface)
 		// }
+		// for 循环rpc client的变量定义；
 		for _, varField := range pkg.GlobalVar {
 			if iface, ok := varField.Type.(*Interface); ok {
 				if iface.Comment.Type != "" {
@@ -43,7 +47,18 @@ func (manager *RpcClientManager) Generate(file *GenedFile) error {
 			}
 		}
 	}
+	clientTypes := make([]string, 0, len(clients))
 	for clientType, ifaces := range clients {
+		sort.Slice(ifaces, func(i, j int) bool {
+			return ifaces[i].InterfaceName < ifaces[j].InterfaceName
+		})
+		clientTypes = append(clientTypes, clientType)
+	}
+	sort.Strings(clientTypes)
+
+	// type=prpc，srpc；
+	for _, clientType := range clientTypes {
+		ifaces := clients[clientType]
 		gen, ok := manager.ClientGen[clientType]
 		if !ok {
 			continue
