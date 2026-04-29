@@ -832,6 +832,12 @@ func (mp *MainProject) Parse() error {
 	projectsToParse = append(projectsToParse, p) // CurrentProject always first
 
 	goPath := os.Getenv("GOPATH")
+
+	vendorPath := filepath.Join(p.FilePath, "vendor", filepath.FromSlash(p.ModPath))
+	if st, err := os.Stat(vendorPath); err == nil && st.IsDir() {
+		goPath = vendorPath
+	}
+
 	parseProjectsSet := make(map[string]bool)
 	for _, modPath := range cfg.Generation.ParseProjects {
 		parseProjectsSet[modPath] = false
