@@ -778,7 +778,7 @@ func escapeModulePath(s string) string {
 // It checks replace directives in the current project's go.mod; if a replace
 // applies and points to a local path (New.Version == ""), that path is used.
 // Otherwise falls back to GOPATH/pkg/mod.
-func (mp *MainProject) resolveModulePath(mod *modfile.Require, goPath string) string {
+func (mp *MainProject) resolveModulePath(mod *modfile.Require, goModPath string) string {
 	current := &mp.CurrentProject
 	modPath := mod.Mod.Path
 	version := mod.Mod.Version
@@ -806,7 +806,11 @@ func (mp *MainProject) resolveModulePath(mod *modfile.Require, goPath string) st
 		return abs
 	}
 	// Fallback to GOPATH
-	return path.Join(goPath, "pkg/mod", escapeModulePath(modPath)+"@"+version)
+	if strings.HasSuffix(goModPath, "vendor") {
+		return path.Join(goModPath, modPath)
+	} else {
+		return path.Join(goModPath, "pkg/mod", escapeModulePath(modPath)+"@"+version)
+	}
 }
 
 func (mp *MainProject) ParseModule() error {
@@ -833,7 +837,7 @@ func (mp *MainProject) Parse() error {
 
 	goPath := os.Getenv("GOPATH")
 
-	vendorPath := filepath.Join(p.FilePath, "vendor", filepath.FromSlash(p.ModPath))
+	vendorPath := filepath.Join(p.FilePath, "vendor")
 	if st, err := os.Stat(vendorPath); err == nil && st.IsDir() {
 		goPath = vendorPath
 	}
