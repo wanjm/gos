@@ -22,8 +22,9 @@ func NewFlutterGen() *FlutterGen {
 
 // DTOField represents a field in a DTO struct
 type DTOField struct {
-	Name         string
-	Comment      string
+	Name    string // Dart field / constructor name (e.g. "id", never "_id" — private in Dart)
+	JsonKey string // JSON map key from API/Mongo (e.g. "_id"); empty means same as Name
+	Comment string
 	DartType     string
 	DefaultValue string //构造函数中 this.xxx=${DefaultValue};
 	// 在template中使用, 用于生成构造函数时，是否添加requred 关键字； requried this.XXX
@@ -59,7 +60,7 @@ class {{.StructName}} extends JSONParameter {
   @override
   Map<String, dynamic> toJson() {
     return {
-{{range .Fields}}      "{{.Name}}": {{.Name}},
+{{range .Fields}}      "{{.JsonKey}}": {{.Name}},
 {{end}}    };
   }
 }
@@ -237,23 +238,29 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 	var fields []DTOField
 
 	for _, field := range flatFields {
-		name := field.GetJsonName()
-		if name == "" || name == "-" {
+		jsonKey := field.GetJsonName()
+		if jsonKey == "" || jsonKey == "-" {
 			fmt.Printf("WARNING: field %s::%s %T is not a JSONParameter\n", field.Type.IDName(), field.Name, field.Type)
 			continue
+		}
+		dartName := jsonKey
+		// Mongo _id is not a valid public Dart identifier; map JSON "_id" to field "id".
+		if jsonKey == "_id" {
+			dartName = "id"
 		}
 		dartType := f.mapType(field.Type)
 		var defaultValue string
 		var parseString string
-		if (name == "updateTime" || name == "createTime" || name == "endTime" || name == "expireTime") && dartType == "int" {
+		if (jsonKey == "updateTime" || jsonKey == "createTime" || jsonKey == "endTime" || jsonKey == "expireTime") && dartType == "int" {
 			dartType = "DateTime"
 			defaultValue = "DateTime.fromMillisecondsSinceEpoch(0)"
-			parseString = "DateTime.fromMillisecondsSinceEpoch((json['" + name + "'] as num? ?? 0).toInt())"
+			parseString = "DateTime.fromMillisecondsSinceEpoch((json['" + jsonKey + "'] as num? ?? 0).toInt())"
 		} else {
-			defaultValue, parseString = f.defaultValue(field.Type, name)
+			defaultValue, parseString = f.defaultValue(field.Type, jsonKey)
 		}
 		fields = append(fields, DTOField{
-			Name:         name,
+			Name:         dartName,
+			JsonKey:      jsonKey,
 			Comment:      field.Comment.CommentText,
 			DartType:     dartType,
 			DefaultValue: defaultValue,
