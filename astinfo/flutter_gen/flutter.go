@@ -251,7 +251,7 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 		dartType := f.mapType(field.Type)
 		var defaultValue string
 		var parseString string
-		if (jsonKey == "updateTime" || jsonKey == "createTime" || jsonKey == "endTime" || jsonKey == "expireTime") && dartType == "int" {
+		if dartType == "int" && jsonKeyEpochMillisTime(jsonKey) {
 			dartType = "DateTime"
 			defaultValue = "DateTime.fromMillisecondsSinceEpoch(0)"
 			parseString = "DateTime.fromMillisecondsSinceEpoch((json['" + jsonKey + "'] as num? ?? 0).toInt())"
@@ -286,6 +286,12 @@ func (f *FlutterGen) genDTO(s *astinfo.Struct) string {
 	}
 
 	return sb.String()
+}
+
+// jsonKeyEpochMillisTime is true when the JSON key names a Unix-ms epoch field
+// (Go int*); those map to Dart DateTime via fromMillisecondsSinceEpoch.
+func jsonKeyEpochMillisTime(jsonKey string) bool {
+	return strings.HasSuffix(jsonKey, "At") || strings.HasSuffix(jsonKey, "Time")
 }
 
 func (f *FlutterGen) mapType(t astinfo.Typer) string {
