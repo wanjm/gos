@@ -22,7 +22,7 @@ import (
 // --- 程序主逻辑 ---
 // GenTable4Mongo 是代码生成器的主入口函数
 // 它接受 DBConfig 参数，并根据配置循环生成所有表的结构体
-func GenTableFromMongo(config *basic.DBConfig, moduleMap map[string]struct{}) error {
+func GenTableFromMongo(config *basic.DBConfig, moduleMap map[string]struct{}, tableConstRows []tableConstantRow) error {
 	if strings.ToLower(config.DBType) != "mongo" {
 		return fmt.Errorf("当前仅支持 'mongo' 数据库类型, 您提供的是 '%s'", config.DBType)
 	}
@@ -61,7 +61,7 @@ func GenTableFromMongo(config *basic.DBConfig, moduleMap map[string]struct{}) er
 			if err != nil {
 				return fmt.Errorf("获取文档失败: %w", err)
 			}
-			err = genTableForMongo(doc, pkg, config.DBName, t)
+			err = genTableForMongo(doc, pkg, config.DBName, t, tableConstRows)
 			if err != nil {
 				log.Printf("为集合 '%s' 生成结构体失败: %v", tableName, err)
 				continue
@@ -128,7 +128,7 @@ const structTpl = `type {{.Name}} struct {
 }
 `
 
-func genTableForMongo(doc bson.M, pkg *astbasic.PkgBasic, dbVariable string, t basic.TableCfg) error {
+func genTableForMongo(doc bson.M, pkg *astbasic.PkgBasic, dbVariable string, t basic.TableCfg, tableConstRows []tableConstantRow) error {
 	tableName := t.Name
 	structName := astbasic.ToCamelCase(tableName, true)
 	tablepkg := pkg.NewPkgBasic(tableName, "entity/mongo/"+tableName)
@@ -151,6 +151,9 @@ func genTableForMongo(doc bson.M, pkg *astbasic.PkgBasic, dbVariable string, t b
 	fields, err := generateStruct(structName, doc, tableFile)
 	if err != nil {
 		return err
+	}
+	if len(tableConstRows) > 0 {
+		genTableConstantFile(tablepkg, mongoFieldsColumnTypeMap(fields), filterTableConstantRows(tableConstRows, tableName))
 	}
 	var methods []string
 	for _, a := range t.Arrays {

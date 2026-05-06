@@ -19,17 +19,61 @@ func GenTableFromMySQL(config *basic.DBConfig, moduleMap map[string]struct{}) er
 		return fmt.Errorf("无法连接到 MySQL: %w", err)
 	}
 	defer db.Close()
+
+	// table_constant_config rows (used only for MySQL table codegen with -dbname)
+	allConstCfg, err := fetchAllTableConstantConfig(db)
+	if err != nil {
+		fmt.Printf("跳过 table_constant_config（读取失败，将不生成 const.gen.go）: %v\n", err)
+		allConstCfg = nil
+	}
+
 	for _, cfg := range config.DbGenCfgs {
 		cfg.DBName = config.DBName
 		if _, ok := moduleMap[cfg.ModulePath]; ok {
-			genTable(cfg, db)
+			genTable(cfg, db, allConstCfg)
 		}
 	}
 	return nil
 }
 
-// GenTableFromMySQL connects to MySQL, gets the DDL of a table, and generates a Go struct definition.
-func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
+// tableConstantRow mirrors table_constant_config for code generation.
+type tableConstantRow struct {
+	TableName  string
+	ColumnName string
+	ConstName  string
+	Value      int32
+	ValueType  int8
+	Meaning    string
+}
+
+func fetchAllTableConstantConfig(db *sql.DB) ([]tableConstantRow, error) {
+	rows, err := db.Query(`SELECT table_name, column_name, const_name, value, value_type, meaning FROM table_constant_config ORDER BY table_name, column_name, const_name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []tableConstantRow
+	for rows.Next() {
+		var r tableConstantRow
+		if err := rows.Scan(&r.TableName, &r.ColumnName, &r.ConstName, &r.Value, &r.ValueType, &r.Meaning); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+func filterTableConstantRows(rows []tableConstantRow, tableName string) []tableConstantRow {
+	var out []tableConstantRow
+	for _, r := range rows {
+		if r.TableName == tableName {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+func genTable(tableCfg *basic.TableGenCfg, db *sql.DB, allConstCfg []tableConstantRow) error {
 	pkg := astinfo.GlobalProject.CurrentProject.NewPkgBasic("", tableCfg.ModulePath)
 	entityPkg := pkg.NewPkgBasic("entity", "entity")
 	file := entityPkg.NewFile("mysql.alias")
@@ -46,12 +90,17 @@ func genTable(tableCfg *basic.TableGenCfg, db *sql.DB) error {
 		tablepkg := entityPkg.NewPkgBasic(tableName, "mysql/"+tableName)
 		file.GetImport(tablepkg)
 		tableFile := tablepkg.NewFile("table")
-		structName, err := GenerateStructFromDDL(tableName, ddl, tableFile, tableCfg.DBName, t)
+		structName, columnGoTypes, err := GenerateStructFromDDL(tableName, ddl, tableFile, tableCfg.DBName, t)
 		if err != nil {
 			fmt.Printf("生成结构体代码失败: %v\n", err)
 			return err
 		}
 		tableFile.Save()
+
+		if len(allConstCfg) > 0 {
+			genTableConstantFile(tablepkg, columnGoTypes, filterTableConstantRows(allConstCfg, tableName))
+		}
+
 		aliasStringBuilder.WriteString("type " + structName + " = " + tableName + "." + structName + "\n")
 	}
 	file.AddBuilder(&aliasStringBuilder)
@@ -74,8 +123,8 @@ func getTableDDL(db *sql.DB, tableName string) (string, error) {
 }
 
 // GenerateStructFromDDL parses the DDL and appends the generated struct to tableFile (caller creates the file with NewFile and calls Save).
-// Returns the struct name.
-func GenerateStructFromDDL(tableName, ddl string, tableFile *astbasic.GenedGoFile, dbVariable string, tbCfg basic.TableCfg) (string, error) {
+// Returns the struct name and a map from SQL column name (gorm column) to the Go type written on the struct field.
+func GenerateStructFromDDL(tableName, ddl string, tableFile *astbasic.GenedGoFile, dbVariable string, tbCfg basic.TableCfg) (string, map[string]string, error) {
 	// Simple parser: extract column lines from DDL
 	lines := strings.Split(ddl, "\n")
 	type fieldInfo struct {
@@ -141,7 +190,7 @@ type {{.StructName}} struct {
 
 	tpl, err := template.New("struct").Parse(structTpl)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	var sb strings.Builder
 
@@ -158,10 +207,14 @@ type {{.StructName}} struct {
 		"Maps":          mapsStr,
 	})
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	tableFile.AddBuilder(&sb)
-	return structName, nil
+	columnGoTypes := make(map[string]string, len(fields))
+	for _, f := range fields {
+		columnGoTypes[f.GormTag] = f.Type
+	}
+	return structName, columnGoTypes, nil
 }
 
 // mysqlTypeToGoType maps MySQL types to Go types (basic mapping)

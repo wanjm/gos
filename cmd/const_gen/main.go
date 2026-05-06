@@ -22,7 +22,7 @@ func main() {
 	pkg := astbasic.SimplePackage("github.com/wanjm/gos/db", "db")
 	pkg.FilePath = "db"
 	genFile := pkg.NewFile("const_sql_struct")
-	_, err = db.GenerateStructFromDDL("table_constant_config", string(data), genFile, "db", basic.TableCfg{})
+	_, _, err = db.GenerateStructFromDDL("table_constant_config", string(data), genFile, "db", basic.TableCfg{})
 	if err != nil {
 		log.Fatalf("const_gen: %v", err)
 	}

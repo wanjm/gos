@@ -80,6 +80,8 @@ func genDbData(dbnames string) {
 		// 否则用逗号分隔的db；
 		targetDbs = strings.Split(dbnames, ",")
 	}
+	// table_constant_config：供 Mongo 实体生成 const.gen.go（从首个可连的 MySQL 配置读取）
+	mongoTableConst := db.TryFetchTableConstantFromMySQLConfigs(basic.Cfg.DBConfig)
 	for _, dbName := range targetDbs {
 		if config, ok := dbMap[dbName]; ok {
 			var moduleMap = make(map[string]struct{})
@@ -99,7 +101,7 @@ func genDbData(dbnames string) {
 			case "mysql":
 				db.GenTableFromMySQL(config, moduleMap)
 			case "mongo":
-				err := db.GenTableFromMongo(config, moduleMap)
+				err := db.GenTableFromMongo(config, moduleMap, mongoTableConst)
 				if err != nil {
 					fmt.Printf("gen mongo table failed with %s", err.Error())
 					return
