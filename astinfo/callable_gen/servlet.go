@@ -162,16 +162,12 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 			}
 		}
 	}
-	userFilters := strings.SplitSeq(method.Comment.Filter, ",")
-	for filter := range userFilters {
-		filter = strings.Trim(filter, "\t ")
-		if filter != "" {
-			filterInfo := servlet.filterMap[filter]
-			if filterInfo == nil {
-				fmt.Printf("filter %s not found in file %s for %s \n", filter, method.GoSource.Path, method.Name)
-			} else {
-				tm.FilterName += filterInfo.FilterName + ","
-			}
+	for _, filter := range method.Comment.Filters {
+		filterInfo := servlet.filterMap[filter]
+		if filterInfo == nil {
+			fmt.Printf("filter %s not found in file %s for %s \n", filter, method.GoSource.Path, method.Name)
+		} else {
+			tm.FilterName += filterInfo.FilterName + ","
 		}
 	}
 	for _, filter := range servlet.filters {

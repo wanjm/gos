@@ -485,11 +485,8 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 // collectFromRouter collects filter names and servlet URLs from the router into this server.
 func (s *Server) collectFromRouter(router *Struct) {
 	for _, method := range router.MethodManager.Server {
-		for _, name := range strings.Split(method.Comment.Filter, ",") {
-			name = strings.Trim(name, "\t ")
-			if name != "" {
-				s.RefFilterNames[name] = struct{}{}
-			}
+		for _, name := range method.Comment.Filters {
+			s.RefFilterNames[name] = struct{}{}
 		}
 		methodUrl := strings.Trim(method.Comment.Url, "\"")
 		if methodUrl != "" {

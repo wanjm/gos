@@ -41,11 +41,8 @@ func swaggerApplicableRouteFilters(serverFilters []*Function, servlet *Method) [
 		seen[f] = struct{}{}
 		out = append(out, f)
 	}
-	for filter := range strings.SplitSeq(servlet.Comment.Filter, ",") {
-		filter = strings.Trim(filter, "\t ")
-		if filter != "" {
-			add(filterByName[filter])
-		}
+	for _, filter := range servlet.Comment.Filters {
+		add(filterByName[filter])
 	}
 	for _, f := range urlOrdered {
 		fu := strings.Trim(f.Comment.Url, "\"")

@@ -17,7 +17,7 @@ type functionComment struct {
 	// "HeaderName" or "HeaderName:description" for Swagger header parameters.
 	RequiredHeaders []FieldBasic
 	groupName       string
-	Filter          string
+	Filters         []string
 	owner           *Function
 }
 
@@ -80,7 +80,12 @@ func (comment *functionComment) dealValuePair(key, value string) {
 		comment.groupName = value
 		comment.funcType = FilterConst
 	case UserFilter:
-		comment.Filter = value
+		for _, part := range strings.Split(value, ",") {
+			part = strings.Trim(part, "\t ")
+			if part != "" {
+				comment.Filters = append(comment.Filters, part)
+			}
+		}
 	case HEADER:
 		for _, part := range strings.Split(value, ",") {
 			part = strings.TrimSpace(part)

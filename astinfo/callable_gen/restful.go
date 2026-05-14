@@ -158,20 +158,16 @@ func (restful *RestfulGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 			}
 		}
 	}
-	userFilters := strings.SplitSeq(method.Comment.Filter, ",")
-	for filter := range userFilters {
-		filter = strings.Trim(filter, "\t ")
-		if filter != "" {
-			if restful.filterMap != nil {
-				filterInfo := restful.filterMap[filter]
-				if filterInfo == nil {
-					fmt.Printf("filter %s not found in file %s for %s \n", filter, method.GoSource.Path, method.Name)
-				} else {
-					tm.FilterName += filterInfo.FilterName + ","
-				}
-			} else {
+	for _, filter := range method.Comment.Filters {
+		if restful.filterMap != nil {
+			filterInfo := restful.filterMap[filter]
+			if filterInfo == nil {
 				fmt.Printf("filter %s not found in file %s for %s \n", filter, method.GoSource.Path, method.Name)
+			} else {
+				tm.FilterName += filterInfo.FilterName + ","
 			}
+		} else {
+			fmt.Printf("filter %s not found in file %s for %s \n", filter, method.GoSource.Path, method.Name)
 		}
 	}
 	for _, filter := range restful.filters {
