@@ -22,9 +22,9 @@ func NewFlutterGen() *FlutterGen {
 
 // DTOField represents a field in a DTO struct
 type DTOField struct {
-	Name    string // Dart field / constructor name (e.g. "id", never "_id" — private in Dart)
-	JsonKey string // JSON map key from API/Mongo (e.g. "_id"); empty means same as Name
-	Comment string
+	Name         string // Dart field / constructor name (e.g. "id", never "_id" — private in Dart)
+	JsonKey      string // JSON map key from API/Mongo (e.g. "_id"); empty means same as Name
+	Comment      string
 	DartType     string
 	DefaultValue string //构造函数中 this.xxx=${DefaultValue};
 	// 在template中使用, 用于生成构造函数时，是否添加requred 关键字； requried this.XXX
@@ -46,10 +46,14 @@ class {{.StructName}} extends JSONParameter {
 {{range .Fields}} /// {{.Comment}}
  {{.DartType}} {{.Name}};
 {{end}}
+{{if .Fields}}
   {{.StructName}}({
 {{range .Fields}} {{if .Required}} required this.{{.Name}} {{else}} this.{{.Name}} = {{.DefaultValue}}{{end}},
 {{end}}
   });
+{{else}}
+  {{.StructName}}();
+{{end}}
 
   factory {{.StructName}}.fromJson(Map<String, dynamic> json) {
     return {{.StructName}}(
