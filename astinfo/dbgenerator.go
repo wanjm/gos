@@ -311,6 +311,14 @@ func (a *{{.TableName}}Dal) GetLimitAllWithStart(ctx context.Context, options []
 			QueryFields: options,
 			Offset:      start,
 			Limit:       count,
+			{{if .OrderField}}
+			OrderFields: []common.OrderByParam{
+				{
+					Field:     "{{.OrderField}}",
+					Direction: {{.OrderDirection}},
+				},
+			},
+			{{end}}
 			SelectFields: colNames,
 		},
 		&item,
