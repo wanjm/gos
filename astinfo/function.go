@@ -7,17 +7,17 @@ import (
 )
 
 type functionComment struct {
-	Url             string // url
-	Title           string // 函数描述，供swagger使用
-	Method          string // http方法，GET,POST，默认是POST
-	isDeprecated    bool
-	funcType        string //函数类型，filter，servlet，websocket，prpc，initiator,creator
-	security        []string
+	Url          string // url
+	Title        string // 函数描述，供swagger使用
+	Method       string // http方法，GET,POST，默认是POST
+	isDeprecated bool
+	funcType     string //函数类型，filter，servlet，websocket，prpc，initiator,目前仅用来控制解析；
+	security     []string
 	// RequiredHeaders from @gos header=... — comma-separated entries; each entry is
 	// "HeaderName" or "HeaderName:description" for Swagger header parameters.
 	RequiredHeaders []FieldBasic
 	groupName       string
-	Filter          string
+	Filters         []string
 	owner           *Function
 }
 
@@ -79,8 +79,14 @@ func (comment *functionComment) dealValuePair(key, value string) {
 	case FilterConst:
 		comment.groupName = value
 		comment.funcType = FilterConst
+		fmt.Printf("filter=%s is deprecated, use type=filter group=%s instead in %s\n", value, value, comment.owner.GoSource.Path)
 	case UserFilter:
-		comment.Filter = value
+		for _, part := range strings.Split(value, ",") {
+			part = strings.Trim(part, "\t ")
+			if part != "" {
+				comment.Filters = append(comment.Filters, part)
+			}
+		}
 	case HEADER:
 		for _, part := range strings.Split(value, ",") {
 			part = strings.TrimSpace(part)
@@ -109,14 +115,6 @@ func (comment *functionComment) dealOldValuePair(key, value string) bool {
 	switch key {
 	case Creator:
 		comment.funcType = ConstMethod
-	case UrlFilter:
-		comment.Url = value
-		comment.funcType = FilterConst
-	case FilterConst:
-		if len(value) == 0 {
-			value = Servlet
-		}
-		comment.funcType = FilterConst
 	case Servlet:
 		comment.funcType = Servlet
 	case Prpc:

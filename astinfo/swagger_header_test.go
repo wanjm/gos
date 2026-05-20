@@ -50,8 +50,8 @@ func TestSwaggerApplicableRouteFilters_explicitAndURL(t *testing.T) {
 		Function: Function{
 			FunctionField: FunctionField{Name: "M"},
 			Comment: functionComment{
-				Url:    "/api/foo",
-				Filter: "Named",
+				Url:     "/api/foo",
+				Filters: []string{"Named"},
 			},
 		},
 	}

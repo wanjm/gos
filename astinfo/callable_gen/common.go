@@ -21,6 +21,8 @@ func GenerateBuildInCommon() {
 const cJsonTemplate = `
 var TraceIdNameInContext = {{.TraceIdNameInContextValue}}
 
+var validate = validator.New()
+
 
 func dealErrorResult(err error, c *gin.Context, code int, errorCode int, errMessage string) {
 	var extraInfo any
@@ -110,6 +112,7 @@ func generateCommon() {
 	var file *astinfo.GenedFile
 	file = astinfo.CreateGenedFile("build_in_common")
 	file.GetImport(astbasic.SimplePackage("github.com/gin-gonic/gin", "gin"))
+	file.GetImport(astbasic.SimplePackage("github.com/go-playground/validator/v10", "validator"))
 	commongened = true
 	var content strings.Builder
 	Project := astinfo.GlobalProject

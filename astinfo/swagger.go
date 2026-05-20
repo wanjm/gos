@@ -41,11 +41,8 @@ func swaggerApplicableRouteFilters(serverFilters []*Function, servlet *Method) [
 		seen[f] = struct{}{}
 		out = append(out, f)
 	}
-	for filter := range strings.SplitSeq(servlet.Comment.Filter, ",") {
-		filter = strings.Trim(filter, "\t ")
-		if filter != "" {
-			add(filterByName[filter])
-		}
+	for _, filter := range servlet.Comment.Filters {
+		add(filterByName[filter])
 	}
 	for _, f := range urlOrdered {
 		fu := strings.Trim(f.Comment.Url, "\"")
@@ -446,9 +443,20 @@ func (swagger *Swagger) getStructRef(class *Struct) *spec.Ref {
 	ref, _ := spec.NewRef("#/definitions/" + class.StructName)
 	class.ref = &ref
 	schemas := swagger.genSchema(class)
+	var required []string
+	for _, field := range class.FlatFields() {
+		name := field.GetJsonName()
+		if name == "-" || name == "" {
+			continue
+		}
+		if field.SwaggerSchemaRequired() {
+			required = append(required, name)
+		}
+	}
 	result := spec.SchemaProps{
 		Type:       []string{"object"},
 		Properties: schemas,
+		Required:   required,
 	}
 	swagger.swag.Definitions[class.StructName] = spec.Schema{
 		SchemaProps: result,

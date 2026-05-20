@@ -21,7 +21,7 @@ func NewMethod(funcDecl *ast.FuncDecl, goSource *Gosourse) *Method {
 // 首先解析receiver；找到自己所属的Struct；
 func (m *Method) Parse() error {
 	m.Function.Parse()
-	// 如果function类型为空，则不继续解析
+	// 如果function类型为空，则不继续解析,提升性能
 	if m.Comment.funcType != "" {
 		return m.parseReceiver()
 	}

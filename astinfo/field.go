@@ -84,6 +84,8 @@ func (field *Field) parseTag(fieldType *ast.BasicLit) {
 					if field.DbColumnName == "" {
 						field.DbColumnName = val
 					}
+				case VALIDATE:
+					field.Tags[VALIDATE] = value
 				default:
 					field.Tags[kv[0]] = strings.Split(value, ",")[0]
 				}
@@ -259,6 +261,30 @@ func (field *Field) GetHeaderName() (string, bool) {
 	return "", false
 }
 
+// SwaggerSchemaRequired reports whether this field should appear in OpenAPI/Swagger schema `required`
+// for its parent object when the field uses go-playground/validator-style `validate:"..."` and includes
+// the `required` rule (e.g. `validate:"required"`, `validate:"required,min=1"`).
+func (field *Field) SwaggerSchemaRequired() bool {
+	v, ok := field.Tags[VALIDATE]
+	if !ok || v == "" {
+		return false
+	}
+	for _, p := range strings.Split(v, ",") {
+		rule := strings.TrimSpace(p)
+		if rule == "" {
+			continue
+		}
+		// Match rule name only (before '=' for keyed rules like required_if=...)
+		if idx := strings.IndexByte(rule, '='); idx >= 0 {
+			rule = strings.TrimSpace(rule[:idx])
+		}
+		if rule == "required" {
+			return true
+		}
+	}
+	return false
+}
+
 func NewField(root *ast.Field, source *Gosourse) *Field {
 	return &Field{
 		FieldBasic: FieldBasic{
@@ -289,6 +315,7 @@ type VarFieldHelper struct {
 
 type VarField = FieldBasic
 
+// var abc string
 func NewVarFieldHelper(root *ast.ValueSpec, source *Gosourse) *VarFieldHelper {
 	return &VarFieldHelper{
 		astRoot:  root,
@@ -315,6 +342,7 @@ func (v *VarFieldHelper) Parse() error {
 		for _, name := range root.Names {
 			field1 := field
 			field1.Name = name.Name
+			// 目前仅支持全局Var的解析， 当前仅用于rpc client的定义；
 			v.goSource.Pkg.GlobalVar[name.Name] = &field1
 		}
 	}

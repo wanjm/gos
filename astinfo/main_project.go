@@ -485,11 +485,8 @@ func (sm *Server) generateBegin(class *Struct, file *GenedFile) string {
 // collectFromRouter collects filter names and servlet URLs from the router into this server.
 func (s *Server) collectFromRouter(router *Struct) {
 	for _, method := range router.MethodManager.Server {
-		for _, name := range strings.Split(method.Comment.Filter, ",") {
-			name = strings.Trim(name, "\t ")
-			if name != "" {
-				s.RefFilterNames[name] = struct{}{}
-			}
+		for _, name := range method.Comment.Filters {
+			s.RefFilterNames[name] = struct{}{}
 		}
 		methodUrl := strings.Trim(method.Comment.Url, "\"")
 		if methodUrl != "" {
@@ -778,7 +775,7 @@ func escapeModulePath(s string) string {
 // It checks replace directives in the current project's go.mod; if a replace
 // applies and points to a local path (New.Version == ""), that path is used.
 // Otherwise falls back to GOPATH/pkg/mod.
-func (mp *MainProject) resolveModulePath(mod *modfile.Require, goPath string) string {
+func (mp *MainProject) resolveModulePath(mod *modfile.Require, goModPath string) string {
 	current := &mp.CurrentProject
 	modPath := mod.Mod.Path
 	version := mod.Mod.Version
@@ -806,7 +803,11 @@ func (mp *MainProject) resolveModulePath(mod *modfile.Require, goPath string) st
 		return abs
 	}
 	// Fallback to GOPATH
-	return path.Join(goPath, "pkg/mod", escapeModulePath(modPath)+"@"+version)
+	if strings.HasSuffix(goModPath, "vendor") {
+		return path.Join(goModPath, modPath)
+	} else {
+		return path.Join(goModPath, "pkg/mod", escapeModulePath(modPath)+"@"+version)
+	}
 }
 
 func (mp *MainProject) ParseModule() error {
@@ -832,6 +833,12 @@ func (mp *MainProject) Parse() error {
 	projectsToParse = append(projectsToParse, p) // CurrentProject always first
 
 	goPath := os.Getenv("GOPATH")
+
+	vendorPath := filepath.Join(p.FilePath, "vendor")
+	if st, err := os.Stat(vendorPath); err == nil && st.IsDir() {
+		goPath = vendorPath
+	}
+
 	parseProjectsSet := make(map[string]bool)
 	for _, modPath := range cfg.Generation.ParseProjects {
 		parseProjectsSet[modPath] = false

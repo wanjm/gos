@@ -82,10 +82,10 @@ func (p *Project) ParseCode() error {
 		if err != nil {
 			return err
 		}
-		// Skip .git and gen directories
+		// Skip non-source directories
 		if d.IsDir() {
 			dirName := filepath.Base(path)
-			skipdirs := []string{".git", "gen"}
+			skipdirs := []string{".git", "gen", "vendor"}
 			for _, skipdir := range skipdirs {
 				if dirName == skipdir {
 					return filepath.SkipDir

@@ -200,16 +200,12 @@ func (servlet *RawGen) GenRouterCode(method *astinfo.Method, file *astinfo.Gened
 			}
 		}
 	}
-	userFilters := strings.Split(method.Comment.Filter, ",")
-	for _, filter := range userFilters {
-		filter = strings.Trim(filter, "\t ")
-		if filter != "" {
-			RawFilterInfo := servlet.filterMap[filter]
-			if RawFilterInfo == nil {
-				fmt.Printf("filter %s not found in file %s for %s \n", filter, method.GoSource.Path, method.Name)
-			} else {
-				tm.FilterName += RawFilterInfo.FilterName + ","
-			}
+	for _, filter := range method.Comment.Filters {
+		RawFilterInfo := servlet.filterMap[filter]
+		if RawFilterInfo == nil {
+			fmt.Printf("filter %s not found in file %s for %s \n", filter, method.GoSource.Path, method.Name)
+		} else {
+			tm.FilterName += RawFilterInfo.FilterName + ","
 		}
 	}
 	for _, filter := range servlet.filters {

@@ -158,20 +158,16 @@ func (restful *RestfulGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 			}
 		}
 	}
-	userFilters := strings.SplitSeq(method.Comment.Filter, ",")
-	for filter := range userFilters {
-		filter = strings.Trim(filter, "\t ")
-		if filter != "" {
-			if restful.filterMap != nil {
-				filterInfo := restful.filterMap[filter]
-				if filterInfo == nil {
-					fmt.Printf("filter %s not found in file %s for %s \n", filter, method.GoSource.Path, method.Name)
-				} else {
-					tm.FilterName += filterInfo.FilterName + ","
-				}
-			} else {
+	for _, filter := range method.Comment.Filters {
+		if restful.filterMap != nil {
+			filterInfo := restful.filterMap[filter]
+			if filterInfo == nil {
 				fmt.Printf("filter %s not found in file %s for %s \n", filter, method.GoSource.Path, method.Name)
+			} else {
+				tm.FilterName += filterInfo.FilterName + ","
 			}
+		} else {
+			fmt.Printf("filter %s not found in file %s for %s \n", filter, method.GoSource.Path, method.Name)
 		}
 	}
 	for _, filter := range restful.filters {
@@ -186,18 +182,19 @@ func (restful *RestfulGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		{{.HeaderParameterStr}}
 		// 利用gin的自动绑定功能，将请求内容绑定到request对象上；兼容get,post等情况
 		if err := c.ShouldBind(request); err != nil {
-			c.JSON(400, gin.H{"error": "param error"})
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		if err := validate.Struct(request); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
 		{{ end }}
 		{{ if .HasResponse }}a,{{end}} err := receiver.{{.MethodName}}(c {{ if .HasRequest }},request{{ end }})
 		{{.ResponseNilCode}}
 		if err != nil {
-			errorCode, errMessage := getErrorCode(err)
-			if errorCode == 0 {
-				errorCode = 500
-			}
-			c.JSON(errorCode, gin.H{"error": errMessage})
+			errorCode, _ := getErrorCode(err)
+			c.JSON(errorCode, err)
 			return
 		}
 		{{ if .HasResponse }}
