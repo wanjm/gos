@@ -28,6 +28,9 @@ const (
 	Host        = "host" //rpcclient 使用
 	tblName     = "tblName"
 	dbVarible   = "dbVariable"
+	entityKey   = "entity"
+	arraysKey   = "arrays"
+	mapsKey     = "maps"
 	Macro       = "macro"
 	//desperate
 	Servlet = "servlet" //用于定义struct是servlet，所以默认groupName是servlets

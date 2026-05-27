@@ -75,11 +75,11 @@ func (comment *structComment) dealValuePair(key, value string) {
 		}
 	case dbVarible:
 		comment.DbVarible = astbasic.Capitalize(value)
-	case "entity":
+	case entityKey:
 		comment.EntityName = value
-	case "arrays":
+	case arraysKey:
 		comment.Arrays = strings.Split(value, ",")
-	case "maps":
+	case mapsKey:
 		comment.Maps = strings.Split(value, ",")
 	}
 }
