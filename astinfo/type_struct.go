@@ -114,6 +114,15 @@ func (v *Struct) IDName() string {
 	return v.GoSource.Pkg.ModPath + "." + v.StructName
 }
 
+// FlatFields returns a flattened list of struct fields for JSON/OpenAPI/DTO generation.
+// 返回结构体的扁平化字段列表，用于 JSON、OpenAPI、DTO 等代码生成。
+//
+// Unlike Struct.Fields, embedded anonymous struct fields are expanded recursively so
+// their inner fields appear at the top level (Go embedding promotion for serialization).
+// 与 Struct.Fields 不同，匿名的嵌入结构体字段会被递归展开，内层字段会提升到顶层（类似序列化时的字段提升）。
+//
+// Fields tagged with json:"-" are skipped.
+// 带有 json:"-" 标签的字段会被跳过。
 func (v *Struct) FlatFields() []*Field {
 	var fields []*Field
 	for _, field := range v.Fields {
@@ -121,7 +130,8 @@ func (v *Struct) FlatFields() []*Field {
 		if jsonName == "-" {
 			continue
 		}
-		// If it's an anonymous field and doesn't have a JSON tag, it should be flattened.
+		// Anonymous embedded struct: recurse into inner fields.
+		// 匿名嵌入结构体：递归收集其内部字段。
 		if field.Name == "" {
 			if st, ok := GetBasicType(field.Type).(*Struct); ok {
 				fields = append(fields, st.FlatFields()...)
