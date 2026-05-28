@@ -30,3 +30,13 @@
 
 ## filters
 逗号分隔的函数名。直接是filter函数的名字。 系统会自动从filter中去找；
+
+## FromEntity autogen
+为 schema 结构体添加 `@gos entity=EntityName` 注解时，系统会自动为其在当前包下的 `schema.gen.go` 文件中生成：
+1. `FromEntity(e *EntityName)` 方法。
+2. `FromEntitys(entitys []*EntityName)` （针对当前 schema 结构体的数组类型）。
+
+字段匹配规则：
+- 生成器会自动遍历 entity 结构体（支持嵌套结构体，最多向内搜索5层），查找与 schema 中字段名相同的字段。
+- 如果找到名称匹配的嵌套字段（例如 schema 中的 `ID` 匹配到了 entity 中 `BaseInfo.ID`），也会自动生成对应的赋值代码 `s.ID = e.BaseInfo.ID`。
+- 如果 schema 中某些字段在 entity 内找不到同名字段，编译器会提示 WARNING，此时可以在 schema 结构体上实现 `FormatEntity()` 方法，生成器检测到该方法后，会在生成的 `FromEntity` 内部进行调用，以便补充其他自定义逻辑。

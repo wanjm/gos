@@ -74,26 +74,23 @@ func (eg *EntityGen) generateFromEntityToFile(schemaStruct *Struct, genFile *Gen
 		sb.WriteString("\tif e == nil {\n\t\treturn\n\t}\n")
 	}
 
-	// Match fields by name and copy
-	entityFieldMap := make(map[string]*Field)
-	for _, field := range entityStruct.Fields {
-		entityFieldMap[field.Name] = field
-	}
-
 	hasFormatEntity := eg.hasFormatEntityMethod(schemaStruct)
 
 	for _, schemaField := range schemaStruct.Fields {
-		entityField, exists := entityFieldMap[schemaField.Name]
-		if !exists {
+		visited := make(map[string]bool)
+		path := eg.findFieldPath(entityStruct, schemaField.Name, visited, 1)
+
+		if len(path) == 0 {
 			if !hasFormatEntity {
-				fmt.Printf("WARNING: FromEntity: field %q on schema %s.%s is not populated (no matching field on entity %s); add the field to the entity or implement FormatEntity()\n",
+				fmt.Printf("WARNING: FromEntity: field %q on schema %s.%s is not populated (no matching field found in entity %s up to n levels); add the field to the entity or implement FormatEntity()\n",
 					schemaField.Name, schemaStruct.GoSource.Pkg.ModPath, schemaStruct.StructName, entityName)
 			}
 			continue
 		}
 
 		// Always emit assignment when names match; if types differ, the Go compiler/IDE will report it.
-		sb.WriteString(fmt.Sprintf("\ts.%s = e.%s\n", schemaField.Name, entityField.Name))
+		entityAccess := "e." + strings.Join(path, ".")
+		sb.WriteString(fmt.Sprintf("\ts.%s = %s\n", schemaField.Name, entityAccess))
 	}
 
 	// Check if FormatEntity method exists
@@ -226,3 +223,62 @@ func (eg *EntityGen) generateFromEntitysForArrayToFile(arrayAlias *Alias, elemSt
 
 	genFile.AddBuilder(&sb)
 }
+
+func (eg *EntityGen) findFieldPath(currentStruct *Struct, targetName string, visited map[string]bool, depth int) []string {
+	if depth > 5 {
+		fmt.Printf("WARNING: struct %s is too deep or complicated to search for field %s (depth > 5)\n", currentStruct.StructName, targetName)
+		return nil
+	}
+	id := currentStruct.IDName()
+	if visited[id] {
+		fmt.Printf("WARNING: cyclic dependency detected at struct %s when searching for field %s\n", currentStruct.StructName, targetName)
+		return nil
+	}
+	visited[id] = true
+	defer func() { visited[id] = false }()
+
+	// Level 1: exact match
+	for _, field := range currentStruct.Fields {
+		fieldName := field.Name
+		if fieldName == "" {
+			if st, ok := GetBasicType(field.Type).(*Struct); ok {
+				fieldName = st.StructName
+			}
+		}
+		if fieldName == targetName {
+			return []string{fieldName}
+		}
+	}
+
+	// Next levels
+	for _, field := range currentStruct.Fields {
+		var nextStruct *Struct
+
+		t := field.Type
+		if ptr, isPtr := t.(*PointerType); isPtr {
+			t = ptr.Typer
+		}
+
+		if alias, isAlias := t.(*Alias); isAlias {
+			t = GetBasicType(alias)
+		}
+
+		if st, isStruct := t.(*Struct); isStruct {
+			nextStruct = st
+		}
+
+		if nextStruct != nil {
+			subPath := eg.findFieldPath(nextStruct, targetName, visited, depth+1)
+			if len(subPath) > 0 {
+				fieldName := field.Name
+				if fieldName == "" {
+					fieldName = nextStruct.StructName
+				}
+				return append([]string{fieldName}, subPath...)
+			}
+		}
+	}
+
+	return nil
+}
+
