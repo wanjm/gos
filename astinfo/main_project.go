@@ -104,6 +104,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/wanjm/common"
 )
@@ -145,7 +146,7 @@ func ParseArgument() {
 		fmt.Println("dataentry-go version", Version)
 		os.Exit(0)
 	}
-	// common.LoadConfigFile(&Cfg, path.Join(Cfg.CommandOption.ConfigPath, "business.public.toml"))
+	common.LoadConfigFile(&Cfg, path.Join(Cfg.CommandOption.ConfigPath, "business.public.toml"))
 	// fmt.Printf("Cfg: %+v\n", Cfg.Server.ServerHost)
 }
 `))
@@ -216,6 +217,21 @@ ParseProjects = ["github.com/wanjm/common"]
 #DBType = "mongo"
 `
 	_ = writeScaffoldFileIfAbsent("project.public.toml", []byte(toml))
+}
+
+func (mp *MainProject) genBusinessPublicToml() {
+	toml := `[Server]
+ServerHost=":8080"
+
+## DBConfig（也可放在 business.private.toml）
+#[DBConfig.MySqlConfig]
+#DSN="user:passwd@tcp(127.0.0.1:3306)/demo?charset=utf8mb4&parseTime=True&loc=Local"
+#[DBConfig.MongoConfig]
+#Debug = true
+#Uri = "mongodb://localhost:27017"
+#Database = "app"
+`
+	_ = writeScaffoldFileIfAbsent("configs/business.public.toml", []byte(toml))
 }
 
 func (mp *MainProject) genProjectCode() {
@@ -738,6 +754,7 @@ func (mp *MainProject) GenerateCode() error {
 		mp.genMain()
 		mp.genBasic()
 		mp.genProjectPublicToml()
+		mp.genBusinessPublicToml()
 	}
 	mp.genProjectCode()
 

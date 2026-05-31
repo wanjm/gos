@@ -20,7 +20,7 @@ const Version = "0.5.7"
 func parseArgument() {
 	flag.StringVar(&basic.Argument.SourcePath, "p", ".", "需要生成代码工程的根目录")
 	flag.StringVar(&basic.Argument.ModName, "modname", "all", "指定模块名称")
-	flag.StringVar(&basic.Argument.GoMod, "i", "", "本项目的 module 路径；非空时生成 go.mod 及默认 main.go、basic/*.go、project.public.toml（已存在则跳过）")
+	flag.StringVar(&basic.Argument.GoMod, "i", "", "本项目的 module 路径；非空时生成 go.mod 及默认 main.go、basic/*.go、project.public.toml、configs/business.public.toml（已存在则跳过）")
 	flag.StringVar(&basic.Argument.DBName, "dbname", "", "指定数据库名称")
 	h := flag.Bool("h", false, "显示帮助文件")
 	v := flag.Bool("v", false, "显示版本信息") // 添加-v参数
