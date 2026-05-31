@@ -204,7 +204,7 @@ FlutterPath="../lang_client/lib/data/http"
 ParseProjects = ["github.com/wanjm/common"]
 ## DBConfig配置（切片类型，使用[[ ]]表示数组元素）
 ##[[DBConfig]]
-#DSN="user:passwd@tcp(dbhost:3306)/dbplaso in private file"
+#DSN="user:passwd@tcp(dbhost:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local" in private file"
 #DBName = "mysqlDB"
 #DBType = "mysql"
 #[[ DBConfig.DbGenCfgs ]]
@@ -225,7 +225,7 @@ ServerHost=":8080"
 
 ## DBConfig（也可放在 business.private.toml）
 #[DBConfig.MySqlConfig]
-#DSN="user:passwd@tcp(127.0.0.1:3306)/demo?charset=utf8mb4&parseTime=True&loc=Local"
+#DSN="user:passwd@tcp(dbhost:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local"
 #[DBConfig.MongoConfig]
 #Debug = true
 #Uri = "mongodb://localhost:27017"
