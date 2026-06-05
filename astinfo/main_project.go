@@ -201,6 +201,7 @@ RpcLoggerKey="RpcLogger"
 RpcLoggerMod="github.com/wanjm/common"
 CommonMod="github.com/wanjm/common"
 #FlutterPath="../client/lib/data/http"
+#JsPath="../client/src/api"
 ParseProjects = ["github.com/wanjm/common"]
 ## DBConfig配置（切片类型，使用[[ ]]表示数组元素）
 ##[[DBConfig]]
