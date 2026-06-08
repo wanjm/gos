@@ -273,14 +273,14 @@ type {{.TableName}}Dal struct {
 }
 
 func (a *{{.TableName}}Dal) getDB(ctx context.Context) *gorm.DB {
-	return a.{{.DBVariable}}.WithContext(ctx).Table("{{.RawTableName}}")
+	return a.{{.DBVariable}}.WithContext(ctx).Model(&{{.Pkg.Name}}.{{.TableName}}{})
 }
 	
 func (c *{{.TableName}}Dal) getDBOperation(context context.Context) common.DbOperation {
 	return common.DbOperation{
-		Db:        c.{{.DBVariable}},
-		TableName: "{{.RawTableName}}",
-		Context:   context,
+		Db:      c.{{.DBVariable}},
+		Module:  &{{.Pkg.Name}}.{{.TableName}}{},
+		Context: context,
 	}
 }
 
@@ -311,6 +311,14 @@ func (a *{{.TableName}}Dal) GetLimitAllWithStart(ctx context.Context, options []
 			QueryFields: options,
 			Offset:      start,
 			Limit:       count,
+			{{if .OrderField}}
+			OrderFields: []common.OrderByParam{
+				{
+					Field:     "{{.OrderField}}",
+					Direction: {{.OrderDirection}},
+				},
+			},
+			{{end}}
 			SelectFields: colNames,
 		},
 		&item,

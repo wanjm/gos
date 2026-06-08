@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -128,6 +129,9 @@ func GenerateStructFromDDL(tableName, ddl string, tableFile *astbasic.GenedGoFil
 	if tableComment != "" {
 		structComment = fmt.Sprintf("// %s %s\n", structName, tableComment)
 	}
+
+	// structTpl writes @gos metadata, the entity struct, and TableName() for GORM (schema.Tabler).
+	// QuotedTableName is strconv.Quote(tableName): emit a valid Go string literal even if the DB name contained " or \ (rare).
 	const structTpl = `
 	{{.StructComment}}
 	// @gos tblName={{.TableName}} dbVariable={{.DbVariable}}{{if .Arrays}} arrays={{.Arrays}}{{end}}{{if .Maps}} maps={{.Maps}}{{end}}
@@ -135,6 +139,11 @@ type {{.StructName}} struct {
 {{range .Fields}}
 	{{.Name}} {{.Type}} "json:\"{{.JsonTag}}\" gorm:\"column:{{.GormTag}}\"" // {{.Comment}}
 {{end}}
+}
+
+// TableName implements GORM's physical table name for Model()/schema.Tabler.
+func ({{.StructName}}) TableName() string {
+	return {{.QuotedTableName}}
 }
 
 `
@@ -149,13 +158,14 @@ type {{.StructName}} struct {
 	mapsStr := strings.Join(tbCfg.Maps, ",")
 
 	err = tpl.Execute(&sb, map[string]interface{}{
-		"StructComment": structComment,
-		"StructName":    structName,
-		"Fields":        fields,
-		"TableName":     tableName,
-		"DbVariable":    dbVariable,
-		"Arrays":        arraysStr,
-		"Maps":          mapsStr,
+		"StructComment":   structComment,
+		"StructName":      structName,
+		"Fields":          fields,
+		"TableName":       tableName,
+		"QuotedTableName": strconv.Quote(tableName),
+		"DbVariable":      dbVariable,
+		"Arrays":          arraysStr,
+		"Maps":            mapsStr,
 	})
 	if err != nil {
 		return "", err

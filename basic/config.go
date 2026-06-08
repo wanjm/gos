@@ -16,6 +16,8 @@ type Generation struct {
 	CommonMod     string // github.com/wanjm/common 的别名
 	AutoGen       bool
 	FlutterPath   string   // 自动生成前端的flutter路径
+	JsPath        string   // 自动生成前端的javascript路径
+	TsPath        string   // 自动生成前端的typescript路径
 	Jsonv2        bool     // 是否使用jsonv2
 	ParseProjects []string // Additional modPaths to parse (from go.mod require)
 }

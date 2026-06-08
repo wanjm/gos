@@ -9,22 +9,22 @@ import (
 )
 
 type FieldComment struct {
-	defaultValue string //记录该属性的默认值，在struct的field中有使用；
-	// isRequired   bool   //记录该字段是否必须赋值，区别于gin的默认处理方法，必传表示在报文中必须存在
-	validString string //校验变量是否符合要求的代码； $>10 && $<11
+	// defaultValue string //记录该属性的默认值，在struct的field中有使用；
+	// // isRequired   bool   //记录该字段是否必须赋值，区别于gin的默认处理方法，必传表示在报文中必须存在
+	// validString string //校验变量是否符合要求的代码； $>10 && $<11
 	CommentText string
 }
 
-func (comment *FieldComment) dealValuePair(key, value string) {
-	switch key {
-	case "default":
-		comment.defaultValue = value
-	case "valid":
-		comment.validString = value
-	default:
-		comment.CommentText = key
-	}
-}
+// func (comment *FieldComment) dealValuePair(key, value string) {
+// 	switch key {
+// 	case "default":
+// 		comment.defaultValue = value
+// 	case "valid":
+// 		comment.validString = value
+// 	default:
+// 		comment.CommentText = key
+// 	}
+// }
 
 // 变量名和变量类型的定义
 // 用于函数的参数和返回值，struct的属性；
@@ -107,7 +107,8 @@ func (field *FieldBasic) parseComment(fieldType *ast.CommentGroup) {
 		return
 	}
 	content := strings.Trim(fieldType.List[0].Text, " /")
-	parseValidComment(content, &field.Comment)
+	field.Comment.CommentText = content
+	// parseValidComment(content, &field.Comment)
 }
 
 // Parse() error
