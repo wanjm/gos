@@ -12,6 +12,7 @@
 11. type // 类型；
 12. method //方法；
 13. filters //过滤器函数名；
+14. heaer； // function支持header="X-AppId:appId,X-Timestamp:时间戳秒,X-Nonce:随机字符串,X-Sign:签名"； 结构体变量支持header；
 
 ## type
 表示struct，method，function的类型；
