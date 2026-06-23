@@ -74,7 +74,7 @@ func (db *DbManager) Gen() {
 							data.OrderDirection = "common.DESCStr"
 						} else if hasId {
 							data.OrderField = Id
-							data.OrderDirection = "common.ASCStr"
+							data.OrderDirection = "common.DESCStr"
 						}
 						// else keep OrderField empty
 						mysqlInfo = append(mysqlInfo, &data)
