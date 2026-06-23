@@ -12,7 +12,8 @@
 11. type // 类型；
 12. method //方法；
 13. filters //过滤器函数名；
-14. heaer； // function支持header="X-AppId:appId,X-Timestamp:时间戳秒,X-Nonce:随机字符串,X-Sign:签名"； 结构体变量支持header；
+14. header； // function支持header="X-AppId:appId,X-Timestamp:时间戳秒,X-Nonce:随机字符串,X-Sign:签名"； 结构体变量支持header；
+15. swagger // swagger=false 时不生成 OpenAPI/Swagger 文档；可在 struct 或 method 上使用
 
 ## type
 表示struct，method，function的类型；

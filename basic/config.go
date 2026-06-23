@@ -55,12 +55,13 @@ type TableGenCfg struct {
 }
 
 type SwaggerCfg struct {
-	ProjectId     int    // 项目id
-	ServletFolder int    // 生成的servlet文件夹
-	SchemaFolder  int    // 生成的schema文件夹
-	UrlPrefix     string // url前缀, 正式环境和本地的路径不一样
+	ProjectId     int      // 项目id
+	ServletFolder int      // 生成的servlet文件夹
+	SchemaFolder  int      // 生成的schema文件夹
+	UrlPrefix     string   // url前缀, 正式环境和本地的路径不一样
 	Token         string
 	JsonName      string
+	ExcludePaths  []string // 全局排除的 servlet url，支持 /health/* 前缀通配
 }
 
 var Cfg Config

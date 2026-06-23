@@ -21,8 +21,9 @@ const (
 	UserFilter  = "filters"
 	Security    = "security"
 	ConstMethod = "method"
-	Title       = "title" //定义函数的描述描述，供swagger使用
-	Type        = "type"
+	Title          = "title"   //定义函数的描述描述，供swagger使用
+	SwaggerKey     = "swagger" // swagger=false 时不生成 OpenAPI 文档
+	Type           = "type"
 	Group       = "group"
 	AutoGen     = "autogen"
 	Host        = "host" //rpcclient 使用
