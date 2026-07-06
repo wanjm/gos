@@ -24,6 +24,7 @@ type MainProject struct {
 	SortedPacakgeNames []string
 	Cfg                *basic.Config
 	EntityMap          map[string]*Struct // entity structs by name (key: struct name, value: struct)
+	EnumMap            map[string]*EnumDef
 
 	*InitManager
 	InitFuncs4All    []string   // 启动服务器和启动test都是用的方法；
@@ -917,6 +918,7 @@ func CreateProject(path string, cfg *basic.Config) *MainProject {
 		Cfg:       cfg,
 		Packages:  make(map[string]*Package),
 		EntityMap: make(map[string]*Struct),
+		EnumMap:   make(map[string]*EnumDef),
 		// initiatorMap: make(map[*Struct]*Initiators),
 		// servers:      make(map[string]*server),
 		// creators: make(map[*Struct]*Initiator),

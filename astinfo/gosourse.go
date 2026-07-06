@@ -51,6 +51,9 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 			typeSpec := spec.(*ast.TypeSpec)
 			g.parseType(typeSpec)
 		}
+	case token.CONST:
+		parser = NewConstBlockParser(genDecl, g)
+		g.Pkg.AddParser(parser)
 	}
 	return
 }
