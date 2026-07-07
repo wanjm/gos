@@ -31,8 +31,8 @@ type DTOField struct {
 	// 主要原因是不想在结构中有null，但是对于需要调用函数构造的，构造函数可能不支持const，所以不能卸载this.XXx= DeaultValue；
 	// 目前只要是结构体，都添加required关键字；同时在fromJson中初始化
 	Required    bool
-	ParseString string
-	ToJsonExpr  string
+	ParseString string //
+	ToJsonExpr  string // 用于生成toJson()方法中的表达式；由变量本身和 enum.value两种写法；
 }
 
 // DTOTemplateData holds the data for DTO template generation
@@ -252,52 +252,83 @@ func (f *FlutterGen) collectStructs(t astinfo.Typer, seen map[string]*astinfo.St
 }
 
 func (f *FlutterGen) genDTO(s *astinfo.Struct, mp *astinfo.MainProject) string {
-	// Collect fields for template
-	flatFields := s.FlatFields()
-	var fields []DTOField
+	return renderDTOTemplate(DTOTemplateData{
+		StructName: s.StructName,
+		Fields:     f.buildDTOFields(s, mp),
+	})
+}
 
-	for _, field := range flatFields {
-		jsonKey := field.GetJsonName()
-		if jsonKey == "" || jsonKey == "-" {
-			fmt.Printf("WARNING: field %s::%s %T is not a JSONParameter\n", field.Type.IDName(), field.Name, field.Type)
+func (f *FlutterGen) buildDTOFields(s *astinfo.Struct, mp *astinfo.MainProject) []DTOField {
+	var fields []DTOField
+	for _, field := range s.FlatFields() {
+		dto, ok := f.newDTOField(field, mp)
+		if !ok {
 			continue
 		}
-		dartName := jsonKey
-		// Mongo _id is not a valid public Dart identifier; map JSON "_id" to field "id".
-		if jsonKey == "_id" {
-			dartName = "id"
-		}
-		dartType := mapFieldType(field, mp, f.mapType)
-		var defaultValue string
-		var parseString string
-		var toJsonExpr string
-		if dartType == "int" && jsonKeyEpochMillisTime(jsonKey) {
-			dartType = "DateTime"
-			defaultValue = "DateTime.fromMillisecondsSinceEpoch(0)"
-			parseString = "DateTime.fromMillisecondsSinceEpoch((json['" + jsonKey + "'] as num? ?? 0).toInt())"
-			toJsonExpr = dartName
-		} else {
-			defaultValue, parseString, toJsonExpr = fieldDefaultAndParse(field, jsonKey, mp, f)
-		}
-		fields = append(fields, DTOField{
-			Name:         dartName,
-			JsonKey:      jsonKey,
-			Comment:      field.Comment.CommentText,
-			DartType:     dartType,
-			DefaultValue: defaultValue,
-			ParseString:  parseString,
-			ToJsonExpr:   toJsonExpr,
-			Required:     strings.HasSuffix(defaultValue, ")"), //defaultValu以")"结尾表示这是结构体；
-		})
+		fields = append(fields, dto)
+	}
+	return fields
+}
+
+func (f *FlutterGen) newDTOField(field *astinfo.Field, mp *astinfo.MainProject) (DTOField, bool) {
+	jsonKey := field.GetJsonName()
+	if jsonKey == "" || jsonKey == "-" {
+		fmt.Printf("WARNING: field %s::%s %T is not a JSONParameter\n", field.Type.IDName(), field.Name, field.Type)
+		return DTOField{}, false
 	}
 
-	// Prepare template data
-	data := DTOTemplateData{
-		StructName: s.StructName,
-		Fields:     fields,
+	defaultValue, parseString := f.defaultValue(field.Type, jsonKey)
+	dto := DTOField{
+		Name:         jsonKey,
+		JsonKey:      jsonKey,
+		Comment:      field.Comment.CommentText,
+		DartType:     f.mapFieldType(field, mp),
+		DefaultValue: defaultValue,
+		ParseString:  parseString,
+		ToJsonExpr:   jsonKey,
 	}
 
-	// Parse and execute template
+	f.applyMongoIDCase(&dto)
+	f.applyEpochMillisTimeCase(&dto)
+	f.applyEnumCase(&dto, field, mp)
+	dto.Required = strings.HasSuffix(dto.DefaultValue, ")") // defaultValue以")"结尾表示这是结构体；
+	return dto, true
+}
+
+func (f *FlutterGen) applyMongoIDCase(dto *DTOField) {
+	if dto.JsonKey != "_id" {
+		return
+	}
+	dto.Name = "id"
+	dto.ToJsonExpr = "id"
+}
+
+func (f *FlutterGen) applyEpochMillisTimeCase(dto *DTOField) {
+	if dto.DartType != "int" || !jsonKeyEpochMillisTime(dto.JsonKey) {
+		return
+	}
+	dto.DartType = "DateTime"
+	dto.DefaultValue = "DateTime.fromMillisecondsSinceEpoch(0)"
+	dto.ParseString = "DateTime.fromMillisecondsSinceEpoch((json['" + dto.JsonKey + "'] as num? ?? 0).toInt())"
+	dto.ToJsonExpr = dto.Name
+}
+
+func (f *FlutterGen) applyEnumCase(dto *DTOField, field *astinfo.Field, mp *astinfo.MainProject) {
+	if field.Comment.EnumName == "" {
+		return
+	}
+	enumDef := mp.LookupEnum(field.Comment.EnumName)
+	if enumDef == nil {
+		return
+	}
+	defaultValue := enumDef.DartDefaultValue()
+	dto.DartType = field.Comment.EnumName
+	dto.DefaultValue = defaultValue
+	dto.ParseString = enumDef.DartParseExpr(dto.JsonKey) + " ?? " + defaultValue
+	dto.ToJsonExpr = enumDef.DartToJSONExpr(dto.Name)
+}
+
+func renderDTOTemplate(data DTOTemplateData) string {
 	var sb strings.Builder
 	tpl, err := template.New("dto").Parse(dtoTemplate)
 	if err != nil {
@@ -401,7 +432,7 @@ func (f *FlutterGen) genTypeParse(t astinfo.Typer, expr string) string {
 	}
 }
 
-func (f *FlutterGen) genTypeDefault(t astinfo.Typer) string {
+func (_ *FlutterGen) genTypeDefault(t astinfo.Typer) string {
 	bt := astinfo.GetBasicType(t)
 	switch v := bt.(type) {
 	case *astinfo.RawType:

@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	EnumKey       = "enum"
+	EnumKey        = "enum"
 	DisplayWordKey = "displayWord"
 )
 
@@ -17,6 +17,7 @@ type EnumMember struct {
 	GoName      string
 	MemberName  string
 	Value       string // codegen literal snippet, e.g. "2", "\"hello\"", "true"
+	Comment     string // inline line comment on the const member
 	DisplayWord string
 }
 
@@ -69,6 +70,33 @@ func (e *EnumDef) DartValueType() string {
 		return "bool"
 	default:
 		return "int"
+	}
+}
+
+func (e *EnumDef) DartDefaultValue() string {
+	if len(e.Members) == 0 {
+		return "null"
+	}
+	return e.Name + "." + e.Members[0].DartMemberName()
+}
+
+func (e *EnumDef) DartParseExpr(jsonKey string) string {
+	expr := dartJSONExprForKind(e.ValueKind, jsonKey)
+	return e.Name + ".fromValue(" + expr + ")"
+}
+
+func (e *EnumDef) DartToJSONExpr(fieldName string) string {
+	return fieldName + ".value"
+}
+
+func dartJSONExprForKind(kind, jsonKey string) string {
+	switch kind {
+	case "string":
+		return "json['" + jsonKey + "'] as String?"
+	case "bool":
+		return "json['" + jsonKey + "'] as bool?"
+	default:
+		return "(json['" + jsonKey + "'] as num?)?.toInt()"
 	}
 }
 

@@ -69,34 +69,6 @@ func nullableFromParam(kind string) string {
 	}
 }
 
-func enumDefaultValue(enum *astinfo.EnumDef) string {
-	if len(enum.Members) == 0 {
-		return "null"
-	}
-	return enum.Name + "." + enum.Members[0].DartMemberName()
-}
-
-func enumParseExpr(enum *astinfo.EnumDef, jsonKey string) string {
-	expr := jsonExprForKind(enum.ValueKind, jsonKey)
-	return enum.Name + ".fromValue(" + expr + ")"
-}
-
-func jsonExprForKind(kind, jsonKey string) string {
-	switch kind {
-	case "string":
-		return "json['" + jsonKey + "'] as String?"
-	case "bool":
-		return "json['" + jsonKey + "'] as bool?"
-	default:
-		return "(json['" + jsonKey + "'] as num?)?.toInt()"
-	}
-}
-
-func enumToJsonExpr(fieldName string, enum *astinfo.EnumDef) string {
-	_ = enum
-	return fieldName + ".value"
-}
-
 func escapeDartString(s string) string {
 	return strings.ReplaceAll(s, "'", "\\'")
 }
@@ -127,30 +99,11 @@ func sortedEnumNames(enums map[string]*astinfo.EnumDef) []string {
 	return names
 }
 
-func mapFieldType(field *astinfo.Field, mp *astinfo.MainProject, fallback func(astinfo.Typer) string) string {
+func (f *FlutterGen) mapFieldType(field *astinfo.Field, mp *astinfo.MainProject) string {
 	if field.Comment.EnumName != "" {
 		if mp.LookupEnum(field.Comment.EnumName) != nil {
 			return field.Comment.EnumName
 		}
 	}
-	return fallback(field.Type)
-}
-
-func fieldDefaultAndParse(field *astinfo.Field, jsonKey string, mp *astinfo.MainProject, gen *FlutterGen) (defaultValue, parseString, toJsonExpr string) {
-	if field.Comment.EnumName != "" {
-		enumDef := mp.LookupEnum(field.Comment.EnumName)
-		if enumDef != nil {
-			dartName := jsonKey
-			if jsonKey == "_id" {
-				dartName = "id"
-			}
-			return enumDefaultValue(enumDef), enumParseExpr(enumDef, jsonKey) + " ?? " + enumDefaultValue(enumDef), enumToJsonExpr(dartName, enumDef)
-		}
-	}
-	dv, ps := gen.defaultValue(field.Type, jsonKey)
-	dartName := jsonKey
-	if jsonKey == "_id" {
-		dartName = "id"
-	}
-	return dv, ps, dartName
+	return f.mapType(field.Type)
 }

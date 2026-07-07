@@ -63,8 +63,14 @@ const (
 	if enum.Members[0].DisplayWord != "普通课程" {
 		t.Fatalf("displayWord = %q", enum.Members[0].DisplayWord)
 	}
+	if enum.Members[0].Comment != "普通课程" {
+		t.Fatalf("Comment = %q, want 普通课程", enum.Members[0].Comment)
+	}
 	if enum.Members[1].DisplayWord != "组合课程" {
 		t.Fatalf("displayWord fallback = %q", enum.Members[1].DisplayWord)
+	}
+	if enum.Members[1].Comment != "组合课程" {
+		t.Fatalf("Comment = %q, want 组合课程", enum.Members[1].Comment)
 	}
 }
 
@@ -82,6 +88,12 @@ const (
 	}
 	if enum.Members[0].Value != "1" || enum.Members[1].Value != "2" {
 		t.Fatalf("iota values = %q, %q", enum.Members[0].Value, enum.Members[1].Value)
+	}
+	if enum.Members[0].Comment != "启用" {
+		t.Fatalf("Comment = %q, want 启用", enum.Members[0].Comment)
+	}
+	if enum.Members[1].Comment != "停用" {
+		t.Fatalf("Comment = %q, want 停用", enum.Members[1].Comment)
 	}
 }
 

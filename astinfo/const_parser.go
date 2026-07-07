@@ -130,14 +130,16 @@ func (p *ConstBlockParser) Parse() error {
 			}
 			memberComment := &constMemberComment{}
 			parseComment(vs.Doc, memberComment)
+			inlineComment := enumMemberInlineComment(vs.Comment)
 			displayWord := memberComment.displayWord
 			if displayWord == "" {
-				displayWord = strings.TrimSpace(strings.TrimLeft(lineCommentText(vs.Comment), "/ "))
+				displayWord = inlineComment
 			}
 			members = append(members, EnumMember{
 				GoName:      name.Name,
 				MemberName:  enumMemberName(name.Name),
 				Value:       valueSnippet,
+				Comment:     inlineComment,
 				DisplayWord: displayWord,
 			})
 		}
@@ -323,9 +325,13 @@ func evalIntExpr(expr ast.Expr, iotaVal int64) (int64, bool) {
 	return 0, false
 }
 
-func lineCommentText(group *ast.CommentGroup) string {
+func enumMemberInlineComment(group *ast.CommentGroup) string {
 	if group == nil || len(group.List) == 0 {
 		return ""
 	}
-	return strings.TrimSpace(strings.TrimLeft(group.List[0].Text, "/ "))
+	text := strings.TrimSpace(strings.TrimLeft(group.List[0].Text, "/ \t"))
+	if text == "" || strings.HasPrefix(text, TagPrefix) {
+		return ""
+	}
+	return text
 }
