@@ -16,7 +16,7 @@ type constBlockComment struct {
 func (c *constBlockComment) dealValuePair(key, value string) {
 	value = strings.Trim(value, "\"")
 	switch key {
-	case EnumKey, Group:
+	case EnumKey:
 		c.hasEnum = true
 		if value != "" {
 			c.enumName = value

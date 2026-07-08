@@ -13,6 +13,7 @@ type Typer interface {
 	IDName() string
 	Constructor
 	Parser
+	FlutterHelper
 }
 type Constructor interface {
 	GenConstructCode(genFile *GenedFile, wire bool) string

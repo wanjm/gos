@@ -348,129 +348,14 @@ func jsonKeyEpochMillisTime(jsonKey string) bool {
 }
 
 func (f *FlutterGen) mapType(t astinfo.Typer) string {
-	// t = astinfo.GetBasicType(t)
-	switch v := t.(type) {
-	case *astinfo.RawType:
-		switch v.IDName() {
-		case "string":
-			return "String"
-		case "byte", "int", "int8", "int16", "int32", "int64", "uint", "uint32", "uint64", "uint8", "uint16":
-			return "int"
-		case "float32", "float64":
-			return "double"
-		case "bool":
-			return "bool"
-		default:
-			return "dynamic"
-		}
-	case *astinfo.ArrayType:
-		// Check for []byte or []uint8
-		elem := astinfo.GetBasicType(v.Typer)
-		if raw, ok := elem.(*astinfo.RawType); ok {
-			if id := raw.IDName(); id == "byte" || id == "uint8" {
-				return "String"
-			}
-		}
-		subName := f.mapType(v.Typer)
-		return "List<" + subName + ">"
-	case *astinfo.Struct:
-		if v.StructName == "Time" && v.GoSource.Pkg.ModPath == "time" {
-			return "DateTime"
-		}
-		return v.StructName
-	case *astinfo.PointerType:
-		return f.mapType(v.Typer)
-	case *astinfo.Alias:
-		return f.mapType(v.Typer)
-	default:
-		return "dynamic"
-	}
-}
-
-func isBasicType(t string) bool {
-	switch t {
-	case "String", "int", "double", "bool", "dynamic":
-		return true
-	}
-	return false
-}
-
-func (f *FlutterGen) genTypeParse(t astinfo.Typer, expr string) string {
-	bt := astinfo.GetBasicType(t)
-	switch v := bt.(type) {
-	case *astinfo.RawType:
-		switch v.IDName() {
-		case "string":
-			return expr + " as String? ?? \"\""
-		case "int", "int8", "int16", "int32", "int64", "uint", "uint32", "uint64", "uint8", "uint16", "byte":
-			return "(" + expr + " as num? ?? 0).toInt()"
-		case "float32", "float64":
-			return "(" + expr + " as num? ?? 0.0).toDouble()"
-		case "bool":
-			return expr + " ?? false"
-		default:
-			return expr
-		}
-	case *astinfo.ArrayType:
-		// Check for []byte or []uint8
-		elem := astinfo.GetBasicType(v.Typer)
-		if raw, ok := elem.(*astinfo.RawType); ok {
-			if id := raw.IDName(); id == "byte" || id == "uint8" {
-				return expr + "?.toString() ?? \"\""
-			}
-		}
-		elemType := v.Typer
-		elemParse := f.genTypeParse(elemType, "e")
-		return "(" + expr + " as List? ?? []).map((e) => " + elemParse + ").toList()"
-	case *astinfo.Struct:
-		if v.StructName == "Time" && v.GoSource.Pkg.ModPath == "time" {
-			return expr + " != null && " + expr + ".toString().isNotEmpty ? DateTime.parse(" + expr + ".toString()) : DateTime.fromMillisecondsSinceEpoch(0)"
-		}
-		return v.StructName + ".fromJson(" + expr + " ?? {})"
-	default:
-		return expr
-	}
-}
-
-func (_ *FlutterGen) genTypeDefault(t astinfo.Typer) string {
-	bt := astinfo.GetBasicType(t)
-	switch v := bt.(type) {
-	case *astinfo.RawType:
-		switch v.IDName() {
-		case "string":
-			return "\"\""
-		case "int", "int8", "int16", "int32", "int64", "uint", "uint32", "uint64", "uint8", "uint16", "byte":
-			return "0"
-		case "float32", "float64":
-			return "0.0"
-		case "bool":
-			return "false"
-		default:
-			return "null"
-		}
-	case *astinfo.ArrayType:
-		// Check for []byte or []uint8
-		elem := astinfo.GetBasicType(v.Typer)
-		if raw, ok := elem.(*astinfo.RawType); ok {
-			if id := raw.IDName(); id == "byte" || id == "uint8" {
-				return "\"\""
-			}
-		}
-		return "const []"
-	case *astinfo.Struct:
-		if v.StructName == "Time" && v.GoSource.Pkg.ModPath == "time" {
-			return "DateTime.fromMillisecondsSinceEpoch(0)"
-		}
-		return v.StructName + ".fromJson({})"
-	default:
-		return "null"
-	}
+	return astinfo.GetBasicType(t).GenDartType()
 }
 
 // defaultValue 是默认值；
 // parseString 是解析字符串；FromJson重的字符串 (json['status'] as num? ?? 0).toInt()
 func (f *FlutterGen) defaultValue(t astinfo.Typer, fieldName string) (defaultValue string, parseString string) {
-	defaultValue = f.genTypeDefault(t)
-	parseString = f.genTypeParse(t, "json['"+fieldName+"']")
+	typer := astinfo.GetBasicType(t)
+	defaultValue = typer.GenDefaultValue()
+	parseString = typer.GenTypeParse("json['" + fieldName + "']")
 	return
 }

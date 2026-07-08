@@ -14,6 +14,9 @@
 13. filters //过滤器函数名；
 14. header； // function支持header="X-AppId:appId,X-Timestamp:时间戳秒,X-Nonce:随机字符串,X-Sign:签名"； 结构体变量支持header；
 15. swagger // swagger=false 时不生成 OpenAPI/Swagger 文档；可在 struct 或 method 上使用
+16. enum //添加在const的后面， 表示这是一组取值， 会被编译为enum到前端；
+17. dispalyWord 对于const的每个常量，前端的显示值；如果不存在则为变量后面的注释；
+18. displayKey 对于const常量，前端多语言时使用的key，默认规则就是名字；
 
 ## type
 表示struct，method，function的类型；
