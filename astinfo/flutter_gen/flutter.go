@@ -234,6 +234,7 @@ func (f *FlutterGen) collectStructs(t astinfo.Typer, seen map[string]*astinfo.St
 	switch v := t.(type) {
 	case *astinfo.Struct:
 		if _, ok := seen[v.StructName]; !ok {
+			// skip time.Time;跳过系统结构体；
 			if v.StructName == "Time" && v.GoSource.Pkg.ModPath == "time" {
 				return
 			}
@@ -241,6 +242,10 @@ func (f *FlutterGen) collectStructs(t astinfo.Typer, seen map[string]*astinfo.St
 			collectReferencedEnums(v, mp, referencedEnums)
 			// Recursively collect fields
 			for _, field := range v.Fields {
+				// 一个field在url函数的请求或者返回中，但是其json tag是-， 表示其不会与前后端同步，所以跳过；
+				if field.Tags[astinfo.JSON] == "-" {
+					continue
+				}
 				f.collectStructs(field.Type, seen, mp, referencedEnums)
 			}
 		}
@@ -271,6 +276,10 @@ func (f *FlutterGen) buildDTOFields(s *astinfo.Struct, mp *astinfo.MainProject) 
 }
 
 func (f *FlutterGen) newDTOField(field *astinfo.Field, mp *astinfo.MainProject) (DTOField, bool) {
+	if field.Type == nil {
+		fmt.Printf("WARNING: newDTOField: field.Type is nil, field: %s", field.Name)
+		return DTOField{}, false
+	}
 	jsonKey := field.GetJsonName()
 	if jsonKey == "" || jsonKey == "-" {
 		fmt.Printf("WARNING: field %s::%s %T is not a JSONParameter\n", field.Type.IDName(), field.Name, field.Type)
