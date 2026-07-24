@@ -301,28 +301,32 @@ func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, options []common.Op
 	return a.GetLimitAllWithStart(ctx, options, 0, count, cols...)
 }
 func (a *{{.TableName}}Dal) GetLimitAllWithStart(ctx context.Context, options []common.Optioner,start, count int, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
+	{{if .OrderField -}}
+	return a.GetLimitAllWithOrder(ctx, options, start, count, common.OrderByParams{
+		{Field: "{{.OrderField}}", Direction: {{.OrderDirection}}},
+	}, cols...)
+	{{- else -}}
+	return a.GetLimitAllWithOrder(ctx, options, start, count, nil, cols...)
+	{{- end}}
+}
+
+func (a *{{.TableName}}Dal) GetLimitAllWithOrder(ctx context.Context, options []common.Optioner, start, count int, order common.OrderByParams, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	var colNames []string
 	if len(cols) > 0 {
 		colNames = cols[0]
 	}
+	return a.GetLimitAllWithOptions(ctx, &common.SqlQueryOptions{
+		QueryFields:  options,
+		Offset:       start,
+		Limit:        count,
+		OrderFields:  order,
+		SelectFields: colNames,
+	})
+}
+
+func (a *{{.TableName}}Dal) GetLimitAllWithOptions(ctx context.Context, opt *common.SqlQueryOptions) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	dbOperation := a.getDBOperation(ctx)
-	err = dbOperation.Query(
-		&common.SqlQueryOptions{
-			QueryFields: options,
-			Offset:      start,
-			Limit:       count,
-			{{if .OrderField}}
-			OrderFields: []common.OrderByParam{
-				{
-					Field:     "{{.OrderField}}",
-					Direction: {{.OrderDirection}},
-				},
-			},
-			{{end}}
-			SelectFields: colNames,
-		},
-		&item,
-	)
+	err = dbOperation.Query(opt, &item)
 	if err != nil {
 		//添加log，打印错误日志；
 		common.Error(ctx, "GetAll DB record from {{.RawTableName}} failed", common.Err(err))
@@ -346,29 +350,32 @@ func (a *{{.TableName}}Dal) GetOneById(ctx context.Context, id int32, cols ...[]
 }
 
 func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, pageNo, pageSize int, cols ...[]string) (list {{.Pkg.Name}}.{{.TableName}}List, total int64, err error) {
+	{{if .OrderField -}}
+	return a.ListWithOrder(ctx, option, pageNo, pageSize, common.OrderByParams{
+		{Field: "{{.OrderField}}", Direction: {{.OrderDirection}}},
+	}, cols...)
+	{{- else -}}
+	return a.ListWithOrder(ctx, option, pageNo, pageSize, nil, cols...)
+	{{- end}}
+}
+
+func (a *{{.TableName}}Dal) ListWithOrder(ctx context.Context, option []common.Optioner, pageNo, pageSize int, order common.OrderByParams, cols ...[]string) (list {{.Pkg.Name}}.{{.TableName}}List, total int64, err error) {
 	var colNames []string
 	if len(cols) > 0 {
 		colNames = cols[0]
-	}	
-    dbop := a.getDBOperation(ctx)
-	err = dbop.QueryCV(
-		&common.SqlQueryOptions{
-			QueryFields: option,
-			Offset:      int(pageNo * pageSize),
-			Limit:       int(pageSize),
-			{{if .OrderField}}
-			OrderFields: []common.OrderByParam{
-				{
-					Field:     "{{.OrderField}}",
-					Direction: {{.OrderDirection}},
-				},
-			},
-			{{end}}
-			SelectFields: colNames,
-		},
-		&total,
-		&list,
-	)
+	}
+	return a.ListWithOptions(ctx, &common.SqlQueryOptions{
+		QueryFields:  option,
+		Offset:       pageNo * pageSize,
+		Limit:        pageSize,
+		OrderFields:  order,
+		SelectFields: colNames,
+	})
+}
+
+func (a *{{.TableName}}Dal) ListWithOptions(ctx context.Context, opt *common.SqlQueryOptions) (list {{.Pkg.Name}}.{{.TableName}}List, total int64, err error) {
+	dbop := a.getDBOperation(ctx)
+	err = dbop.QueryCV(opt, &total, &list)
 	if err != nil {
 		//添加log，打印错误日志；
 		common.Error(ctx, "List record of {{.RawTableName}} failed", common.Err(err))
