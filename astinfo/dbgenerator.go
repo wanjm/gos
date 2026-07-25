@@ -53,30 +53,17 @@ func (db *DbManager) Gen() {
 					DBVariable:   class.Comment.DbVarible,
 					Pkg:          &pkg.PkgBasic,
 				}
-				hasCreateTime := false
-				hasId := false
+				colNames := map[string]bool{}
 				for _, field := range class.Fields {
-					// 此处已经进行了column的处理
-					colName := field.DbColumnName
-					if colName == CreateTime {
-						hasCreateTime = true
-					}
-					if colName == Id {
-						hasId = true
+					if field.DbColumnName != "" && field.DbColumnName != "-" {
+						colNames[field.DbColumnName] = true
 					}
 				}
 				for _, field := range class.Fields {
 					if field.Tags[GORM] != "" {
 						// Collect NamePairs instead of immediately generating columns
 						allColumns = append(allColumns, getNamePair(class)...)
-						if hasCreateTime {
-							data.OrderField = CreateTime
-							data.OrderDirection = "common.DESCStr"
-						} else if hasId {
-							data.OrderField = Id
-							data.OrderDirection = "common.DESCStr"
-						}
-						// else keep OrderField empty
+						data.OrderField, data.OrderDirection = pickDefaultOrder(colNames, basic.Cfg.Generation.DefaultOrders)
 						mysqlInfo = append(mysqlInfo, &data)
 						break
 					} else if field.Tags[BSON] != "" {
@@ -257,6 +244,38 @@ type info struct {
 	OrderField     string
 	OrderDirection string
 	IDName         string // mongo中如果_id不是系统默认类型，则插入语句要少生成代码, 否则使用正确的类型；
+}
+
+// pickDefaultOrder walks DefaultOrders and returns the first Field present in colNames
+// with its Go direction constant (common.ASCStr / common.DESCStr).
+// Empty Direction on index >= 1 reuses DefaultOrders[0].Direction (DESC if that is also empty).
+func pickDefaultOrder(colNames map[string]bool, orders []basic.OrderFieldCfg) (field, direction string) {
+	if len(orders) == 0 {
+		return "", ""
+	}
+	baseDir := strings.TrimSpace(orders[0].Direction)
+	if baseDir == "" {
+		baseDir = "DESC"
+	}
+	for _, order := range orders {
+		col := strings.TrimSpace(order.Field)
+		if col == "" || !colNames[col] {
+			continue
+		}
+		dir := strings.TrimSpace(order.Direction)
+		if dir == "" {
+			dir = baseDir
+		}
+		return col, orderDirectionCode(dir)
+	}
+	return "", ""
+}
+
+func orderDirectionCode(dir string) string {
+	if strings.EqualFold(dir, "ASC") {
+		return "common.ASCStr"
+	}
+	return "common.DESCStr"
 }
 
 func compareInfo(a, b *info) int {

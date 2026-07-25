@@ -6,6 +6,13 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+// OrderFieldCfg is one candidate default sort column for generated DAL List/GetLimitAll.
+// Field is the DB column name; Direction is "ASC" or "DESC".
+type OrderFieldCfg struct {
+	Field     string
+	Direction string
+}
+
 type Generation struct {
 	TraceKey      string // 用于定义traceKy的结构体名字；用于context中记录traceId
 	TraceKeyMod   string // 用于定义traceKy的结构体所在的包名；
@@ -20,6 +27,10 @@ type Generation struct {
 	TsPath        string   // 自动生成前端的typescript路径
 	Jsonv2        bool     // 是否使用jsonv2
 	ParseProjects []string // Additional modPaths to parse (from go.mod require)
+	// DefaultOrders: priority list of default sort columns for MySQL DAL generation.
+	// For each table, the first Field that exists on the entity is used.
+	// If Direction is empty on index >= 1, index 0's Direction is reused.
+	DefaultOrders []OrderFieldCfg
 }
 type Config struct {
 	InitMain   string // 改为字符串类型，存储模块名称
@@ -90,5 +101,11 @@ func (config *Config) Load() {
 	}
 	if generation.ResponseKey != "" && generation.ResponseMod == "" {
 		generation.ResponseMod = "github.com/wanjm/common/response"
+	}
+	if len(generation.DefaultOrders) == 0 {
+		generation.DefaultOrders = []OrderFieldCfg{
+			{Field: "create_time", Direction: "DESC"},
+			{Field: "id", Direction: "DESC"},
+		}
 	}
 }
