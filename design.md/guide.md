@@ -18,6 +18,9 @@
 17. dispalyWord 对于const的每个常量，前端的显示值；如果不存在则为变量后面的注释；
 18. displayKey 对于const常量，前端多语言时使用的key，默认规则就是名字；
 
+## Generation paths
+- `FlutterPath` / `JsPath` / `TsPath` / `GoPath`：从 servlet 生成各语言客户端代码；`GoPath` 输出 `package schema`，每个 servlet 结构体一个文件（`{snake_struct}.gen.go`），内含请求/响应类型、相关 const，以及 `@gos type=srpc` 的 `{StructName}ClientInterface`。
+
 ## type
 表示struct，method，function的类型；
 1. servlet; （类是servlet）；

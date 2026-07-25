@@ -111,11 +111,17 @@ func (field *FieldBasic) parseFieldDoc() {
 	if field.astDoc == nil {
 		return
 	}
+	var texts []string
 	for _, comment := range field.astDoc.List {
 		text := strings.TrimLeft(comment.Text, "/ \t")
 		if strings.HasPrefix(text, TagPrefix) {
 			parseValidComment(text[len(TagPrefix):], &field.Comment)
+		} else if text != "" {
+			texts = append(texts, text)
 		}
+	}
+	if field.Comment.CommentText == "" && len(texts) > 0 {
+		field.Comment.CommentText = strings.Join(texts, " ")
 	}
 }
 
@@ -242,6 +248,14 @@ func (field *Field) genNilCode(nt Typer, file *GenedFile) string {
 	default:
 		return ""
 	}
+}
+
+// OriginalTag returns the raw struct tag literal from source (including backticks), or empty.
+func (field *Field) OriginalTag() string {
+	if field.astTag == nil {
+		return ""
+	}
+	return field.astTag.Value
 }
 
 // GetJsonName returns the JSON field name from the json tag if present,

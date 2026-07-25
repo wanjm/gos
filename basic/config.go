@@ -25,6 +25,7 @@ type Generation struct {
 	FlutterPath   string   // 自动生成前端的flutter路径
 	JsPath        string   // 自动生成前端的javascript路径
 	TsPath        string   // 自动生成前端的typescript路径
+	GoPath        string   // 自动生成 golang srpc client schema 路径
 	Jsonv2        bool     // 是否使用jsonv2
 	ParseProjects []string // Additional modPaths to parse (from go.mod require)
 	// DefaultOrders: priority list of default sort columns for MySQL DAL generation.

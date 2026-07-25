@@ -10,9 +10,10 @@ import (
 	"github.com/wanjm/gos/astinfo"
 	"github.com/wanjm/gos/astinfo/callable_gen"
 	"github.com/wanjm/gos/astinfo/flutter_gen"
+	"github.com/wanjm/gos/astinfo/go_gen"
 	"github.com/wanjm/gos/astinfo/js_gen"
-	"github.com/wanjm/gos/astinfo/ts_gen"
 	rpcgen "github.com/wanjm/gos/astinfo/rpc_gen"
+	"github.com/wanjm/gos/astinfo/ts_gen"
 	"github.com/wanjm/gos/basic"
 	"github.com/wanjm/gos/db"
 )
@@ -133,6 +134,7 @@ func genServlet(project *astinfo.MainProject) {
 	astinfo.RegisterProjectGenerator(flutter_gen.NewFlutterGen())
 	astinfo.RegisterProjectGenerator(js_gen.NewJsGen())
 	astinfo.RegisterProjectGenerator(ts_gen.NewTsGen())
+	astinfo.RegisterProjectGenerator(go_gen.NewGoGen())
 	astinfo.RegisterClientGen(&rpcgen.PrpcGen{}, &rpcgen.SrpcGen{})
 
 	// 移除原来的判断，因为现在InitMain直接存储模块名称
