@@ -286,7 +286,7 @@ func genMysqlDal(data *info, file *astbasic.GenedGoFile) {
 	codeTemplate := `
 // {{.RawTableName}}
 //
-// @gos autogen
+// @gos auto
 type {{.TableName}}Dal struct {
 	{{.DBVariable}} *gorm.DB
 }
@@ -451,7 +451,7 @@ func genMongoDal(data *info, file *astbasic.GenedGoFile) {
 	codeTemplate := `
 // {{.RawTableName}}
 //
-// @gos autogen
+// @gos auto
 type {{.TableName}}Dal struct {
 	{{.DBVariable}} *mongo.Database
 	DbName string "default:\"{{.RawTableName}}\""
