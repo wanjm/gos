@@ -32,12 +32,41 @@
 2. prpc；
     - struct prpc服务端
     - interface 表示prpc客户端
-3. srpc； （client是srpc客户端）
+3. srpc； （client是srpc客户端，调用对端 servlet 风格接口：POST JSON，响应 `{code,msg,obj}`）
 4. filter； 表示是filter函数；
 5. initiator； 初始化函数，返回值供依赖注入；
-   
 
+## srpc
+定义 **interface + 全局 var**：gos 生成 `XxxStruct` 实现与 `initSrpcClient`，在 init 时把客户端赋给该 var。
 
+1. interface：`type=srpc`，`host` 为 base URL 字符串字面量，或同包内「返回 host 的函数调用」
+2. 每个方法：`url` 为相对路径（会拼到 `host` 后面）；签名为 `(ctx, req) (resp, error)`
+3. 必须声明 `var Xxx InterfaceType`，否则不会生成注入
+
+```go
+// host 函数：返回对端服务前缀（也可直接写 host="http://127.0.0.1:8080"）
+func GetBookHost() string {
+	return "http://book.internal"
+}
+
+// @gos type=srpc; host=GetBookHost()
+type BookClient interface {
+	// @gos url="/book/get"
+	GetBook(ctx context.Context, req *GetBookRequest) (*GetBookResponse, error)
+
+	// @gos url="/book/list"
+	ListBook(ctx context.Context, req *ListBookRequest) (*ListBookResponse, error)
+}
+
+// 全局 var：gos 生成的 initSrpcClient 会赋值
+var BookSvc BookClient
+```
+
+业务侧直接调用即可（无需手写 HTTP）：
+
+```go
+resp, err := BookSvc.GetBook(ctx, &GetBookRequest{Id: 1})
+```
 
 ## method
 供servlet使用；
