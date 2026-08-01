@@ -64,7 +64,9 @@ func (comment *structComment) dealValuePair(key, value string) {
 		}
 	case Url:
 		comment.Url = value
-	case AutoGen:
+	case AutoKey: // @gos auto on struct: generate DI instance
+		comment.AutoGen = true
+	case AutoGen: // deprecated: prefer @gos auto
 		comment.AutoGen = true
 	case tblName:
 		if value == "" {

@@ -25,8 +25,9 @@ const (
 	SwaggerKey     = "swagger" // swagger=false 时不生成 OpenAPI 文档
 	Type           = "type"
 	Group       = "group"
-	AutoGen     = "autogen"
-	Host        = "host" //rpcclient 使用
+	AutoKey = "auto"    // bare key: struct => gen DI instance; global var => fill from DI
+	AutoGen = "autogen" // deprecated alias of auto on struct; remove after next major release
+	Host    = "host"    //rpcclient 使用
 	tblName     = "tblName"
 	dbVarible   = "dbVariable"
 	entityKey   = "entity"

@@ -1,7 +1,7 @@
 # key
 1. url  //定义服务路径
 2. title //定义服务标题；
-3. autogen // 类自动生成对象，供注入；
+3. auto // DI 自动：修饰 struct 则生成注入对象，修饰全局 var 则从 DI 赋值；见下方 `auto`
 4. group // 服务所属的群组，修饰struct，和filter；
 5. tblName // 修饰entity的tableName
 6. dbVariable // 修饰entity的dbVariable， dal中链接驱动的接入；
@@ -18,6 +18,14 @@
 17. dispalyWord 对于const的每个常量，前端的显示值；如果不存在则为变量后面的注释；
 18. displayKey 对于const常量，前端多语言时使用的key，默认规则就是名字；
 
+## auto
+裸 key（无取值）。含义由修饰目标决定：
+1. 修饰 **struct**：自动生成对象供注入（原 `autogen`）
+2. 修饰全局 **var**：在 `initVariable` 末尾将该类型对应的 initiator/`auto` struct 实例赋值给该变量（供 filter 等无法注入的场景使用）
+
+### deprecated（保留到下一个大版本，之后删除）
+1. `autogen` — 等价于 struct 上的 `auto`
+
 ## type
 表示struct，method，function的类型；
 1. servlet; （类是servlet）；
@@ -25,8 +33,11 @@
     - struct prpc服务端
     - interface 表示prpc客户端
 3. srpc； （client是srpc客户端）
-4. filter？ 表示是filter函数；
+4. filter； 表示是filter函数；
+5. initiator； 初始化函数，返回值供依赖注入；
    
+
+
 
 ## method
 供servlet使用；

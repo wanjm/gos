@@ -11,6 +11,7 @@ import (
 type FieldComment struct {
 	CommentText string
 	EnumName    string
+	AutoFill    bool // @gos auto on global var: fill from DI instance
 }
 
 func (comment *FieldComment) dealValuePair(key, value string) {
@@ -18,6 +19,8 @@ func (comment *FieldComment) dealValuePair(key, value string) {
 	switch key {
 	case EnumKey, Group:
 		comment.EnumName = value
+	case AutoKey: // @gos auto on var: assign matching DI instance
+		comment.AutoFill = true
 	}
 }
 
