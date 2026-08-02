@@ -1,0 +1,16 @@
+---
+description: Include and follow global Cursor rules from ~/.cursor/rules
+alwaysApply: true
+---
+
+# Include global Cursor rules
+
+This project depends on the global rules in `/home/wanjm/.cursor/rules`.
+
+At the start of each agent turn (and whenever those files may have changed):
+
+1. **Include** the global rules: read every `.mdc` file under `/home/wanjm/.cursor/rules/` (non-recursive is enough unless subfolders exist; then read those too).
+2. **Follow** them as if they were project rules with the same frontmatter intent (`alwaysApply`, globs, etc.).
+3. If a project rule in `.cursor/rules/` conflicts with a global rule, prefer the **project** rule unless the user says otherwise.
+
+Do not skip this because the files live outside the project tree — expand `~` / `$HOME` and load them explicitly.
