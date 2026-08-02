@@ -38,6 +38,7 @@ const (
 	Servlet = "servlet" //用于定义struct是servlet，所以默认groupName是servlets
 	Prpc    = "prpc"    //用于定义struct是prpc，所以默认groupName是prpc
 	Srpc    = "srpc"    //用于定义struct是srpc，server rpc client，调用servlet风格接口
+	Restrpc = "restrpc" // REST 客户端：JSON 请求，HTTP status 表示成败，失败时返回服务端对象
 )
 
 const (

@@ -12,7 +12,7 @@ var rpcCommonGenerated bool
 
 // GenRpcCommon generates shared rpc infrastructure (rpcLogger, defaultRpcLogger)
 // into rpc_common.gen.go. TraceIdNameInContext is generated in build_in_common.
-// Called by both PrpcGen and SrpcGen to avoid duplication.
+// Called by PrpcGen, SrpcGen and RestrpcGen to avoid duplication.
 func GenRpcCommon() {
 	if rpcCommonGenerated {
 		return

@@ -8,9 +8,9 @@
 7. entity // schema 结构上声明：目标实体类型名（同包或可解析的包），用于生成 `FromEntity` 等转换代码；取值 Go 类型名字符串
 8. arrays // 逗号分隔的 DB 列名,不是结构体的变量名（与字段 `DbColumnName` / gorm column 对齐）。在生成的 `XxxList` 上为每个列生成 `Get<Field>List() []T` 辅助方法
 9. maps // 逗号分隔的 DB 列名。在 `XxxList` 上为每个列生成 `GetMapBy<Field>() map[T]*Entity`（按该字段取值建索引）
-10. host //prpc，srpc客户端，提供获取host的地址函数；
+10. host //prpc，srpc，restrpc 客户端，提供获取host的地址函数；
 11. type // 类型；
-12. method //方法；
+12. method //方法（servlet / restrpc 的 HTTP method）；
 13. filters //过滤器函数名；
 14. header； // function支持header="X-AppId:appId,X-Timestamp:时间戳秒,X-Nonce:随机字符串,X-Sign:签名"； 结构体变量支持header；
 15. swagger // swagger=false 时不生成 OpenAPI/Swagger 文档；可在 struct 或 method 上使用
@@ -33,8 +33,9 @@
     - struct prpc服务端
     - interface 表示prpc客户端
 3. srpc； （client是srpc客户端，调用对端 servlet 风格接口：POST JSON，响应 `{code,msg,obj}`）
-4. filter； 表示是filter函数；
-5. initiator； 初始化函数，返回值供依赖注入；
+4. restrpc； （client是 restrpc 客户端，调用对端 restful 风格接口：JSON 请求，HTTP status 表示成败）
+5. filter； 表示是filter函数；
+6. initiator； 初始化函数，返回值供依赖注入；
 
 ## srpc
 定义 **interface + 全局 var**：gos 生成 `XxxStruct` 实现与 `initSrpcClient`，在 init 时把客户端赋给该 var。
@@ -68,10 +69,51 @@ var BookSvc BookClient
 resp, err := BookSvc.GetBook(ctx, &GetBookRequest{Id: 1})
 ```
 
+## restrpc
+定义 **interface + 全局 var**：gos 生成 `XxxStruct` 实现与 `initRestrpcClient`。
+
+与 srpc 的差异：
+1. 使用 HTTP method（默认 `POST`；方法注释可写 `method=GET|POST|PUT|DELETE|PATCH`）
+2. 成功：HTTP 2xx，响应体直接反序列化为返回对象
+3. 失败：HTTP 非 2xx，将响应体反序列化为 `*RestError` 并作为 `error` 返回；网络/编解码等本地失败则返回本地 `error`
+4. `GET`/`HEAD`：请求参数编码为 query；其他 method：JSON body
+
+```go
+func GetOrderHost() string {
+	return "http://order.internal"
+}
+
+// @gos type=restrpc; host=GetOrderHost()
+type OrderClient interface {
+	// @gos url="/order/get"; method=GET
+	GetOrder(ctx context.Context, req *GetOrderRequest) (*GetOrderResponse, error)
+
+	// @gos url="/order/create"
+	CreateOrder(ctx context.Context, req *CreateOrderRequest) (*CreateOrderResponse, error)
+}
+
+var OrderSvc OrderClient
+```
+
+```go
+resp, err := OrderSvc.GetOrder(ctx, &GetOrderRequest{Id: 1})
+if err != nil {
+	if restErr, ok := err.(*RestError); ok {
+		// HTTP 失败：可用 restErr.StatusCode / restErr.Message / restErr.Raw
+		_ = restErr
+	}
+	// 否则为本地错误（marshal / network 等）
+	return err
+}
+```
+
 ## method
-供servlet使用；
+供 servlet / restrpc 使用；
 1. GET
 2. POST
+3. PUT
+4. DELETE
+5. PATCH
 
 ## filters
 逗号分隔的函数名。直接是filter函数的名字。 系统会自动从filter中去找；

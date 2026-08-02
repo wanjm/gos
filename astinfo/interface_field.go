@@ -3,16 +3,25 @@ package astinfo
 import (
 	"fmt"
 	"go/ast"
+	"strings"
 )
 
 type InterfaceFieldComment struct {
-	Url string
+	Url    string
+	Method string // HTTP method for restrpc; default POST
 }
 
 func (comment *InterfaceFieldComment) dealValuePair(key, value string) {
 	switch key {
 	case Url:
 		comment.Url = value
+	case ConstMethod:
+		comment.Method = strings.ToUpper(strings.Trim(value, "\""))
+		if comment.Method != "" {
+			if _, ok := methodMap[comment.Method]; !ok {
+				fmt.Printf("method '%s' is not supported in interface method comment\n", comment.Method)
+			}
+		}
 	default:
 		fmt.Printf("unkonw key value pair => key=%s,value=%s\n", key, value)
 	}
