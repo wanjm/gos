@@ -18,10 +18,11 @@ type structComment struct {
 	AutoGen    bool
 	TableName  string
 	DbVarible  string
-	EntityName string // entity name for FromEntity generation
-	Arrays     []string
-	Maps       []string
-	class      *Struct
+	EntityName      string // entity name for FromEntity generation
+	Arrays          []string
+	Maps            []string
+	SwaggerExcluded bool // swagger=false 时不生成 OpenAPI 文档
+	class           *Struct
 }
 
 func (comment *structComment) dealValuePair(key, value string) {
@@ -63,7 +64,9 @@ func (comment *structComment) dealValuePair(key, value string) {
 		}
 	case Url:
 		comment.Url = value
-	case AutoGen:
+	case AutoKey: // @gos auto on struct: generate DI instance
+		comment.AutoGen = true
+	case AutoGen: // deprecated: prefer @gos auto
 		comment.AutoGen = true
 	case tblName:
 		if value == "" {
@@ -81,6 +84,10 @@ func (comment *structComment) dealValuePair(key, value string) {
 		comment.Arrays = strings.Split(value, ",")
 	case mapsKey:
 		comment.Maps = strings.Split(value, ",")
+	case SwaggerKey:
+		if excluded, ok := parseSwaggerFlag(value); ok {
+			comment.SwaggerExcluded = excluded
+		}
 	}
 }
 

@@ -53,30 +53,17 @@ func (db *DbManager) Gen() {
 					DBVariable:   class.Comment.DbVarible,
 					Pkg:          &pkg.PkgBasic,
 				}
-				hasCreateTime := false
-				hasId := false
+				colNames := map[string]bool{}
 				for _, field := range class.Fields {
-					// 此处已经进行了column的处理
-					colName := field.DbColumnName
-					if colName == CreateTime {
-						hasCreateTime = true
-					}
-					if colName == Id {
-						hasId = true
+					if field.DbColumnName != "" && field.DbColumnName != "-" {
+						colNames[field.DbColumnName] = true
 					}
 				}
 				for _, field := range class.Fields {
 					if field.Tags[GORM] != "" {
 						// Collect NamePairs instead of immediately generating columns
 						allColumns = append(allColumns, getNamePair(class)...)
-						if hasCreateTime {
-							data.OrderField = CreateTime
-							data.OrderDirection = "common.DESCStr"
-						} else if hasId {
-							data.OrderField = Id
-							data.OrderDirection = "common.ASCStr"
-						}
-						// else keep OrderField empty
+						data.OrderField, data.OrderDirection = pickDefaultOrder(colNames, basic.Cfg.Generation.DefaultOrders)
 						mysqlInfo = append(mysqlInfo, &data)
 						break
 					} else if field.Tags[BSON] != "" {
@@ -259,6 +246,38 @@ type info struct {
 	IDName         string // mongo中如果_id不是系统默认类型，则插入语句要少生成代码, 否则使用正确的类型；
 }
 
+// pickDefaultOrder walks DefaultOrders and returns the first Field present in colNames
+// with its Go direction constant (common.ASCStr / common.DESCStr).
+// Empty Direction on index >= 1 reuses DefaultOrders[0].Direction (DESC if that is also empty).
+func pickDefaultOrder(colNames map[string]bool, orders []basic.OrderFieldCfg) (field, direction string) {
+	if len(orders) == 0 {
+		return "", ""
+	}
+	baseDir := strings.TrimSpace(orders[0].Direction)
+	if baseDir == "" {
+		baseDir = "DESC"
+	}
+	for _, order := range orders {
+		col := strings.TrimSpace(order.Field)
+		if col == "" || !colNames[col] {
+			continue
+		}
+		dir := strings.TrimSpace(order.Direction)
+		if dir == "" {
+			dir = baseDir
+		}
+		return col, orderDirectionCode(dir)
+	}
+	return "", ""
+}
+
+func orderDirectionCode(dir string) string {
+	if strings.EqualFold(dir, "ASC") {
+		return "common.ASCStr"
+	}
+	return "common.DESCStr"
+}
+
 func compareInfo(a, b *info) int {
 	return strings.Compare(a.TableName, b.TableName)
 }
@@ -267,7 +286,7 @@ func genMysqlDal(data *info, file *astbasic.GenedGoFile) {
 	codeTemplate := `
 // {{.RawTableName}}
 //
-// @gos autogen
+// @gos auto
 type {{.TableName}}Dal struct {
 	{{.DBVariable}} *gorm.DB
 }
@@ -301,28 +320,32 @@ func (a *{{.TableName}}Dal) GetLimitAll(ctx context.Context, options []common.Op
 	return a.GetLimitAllWithStart(ctx, options, 0, count, cols...)
 }
 func (a *{{.TableName}}Dal) GetLimitAllWithStart(ctx context.Context, options []common.Optioner,start, count int, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
+	{{if .OrderField -}}
+	return a.GetLimitAllWithOrder(ctx, options, start, count, common.OrderByParams{
+		{Field: "{{.OrderField}}", Direction: {{.OrderDirection}}},
+	}, cols...)
+	{{- else -}}
+	return a.GetLimitAllWithOrder(ctx, options, start, count, nil, cols...)
+	{{- end}}
+}
+
+func (a *{{.TableName}}Dal) GetLimitAllWithOrder(ctx context.Context, options []common.Optioner, start, count int, order common.OrderByParams, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	var colNames []string
 	if len(cols) > 0 {
 		colNames = cols[0]
 	}
+	return a.GetLimitAllWithOptions(ctx, &common.SqlQueryOptions{
+		QueryFields:  options,
+		Offset:       start,
+		Limit:        count,
+		OrderFields:  order,
+		SelectFields: colNames,
+	})
+}
+
+func (a *{{.TableName}}Dal) GetLimitAllWithOptions(ctx context.Context, opt *common.SqlQueryOptions) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	dbOperation := a.getDBOperation(ctx)
-	err = dbOperation.Query(
-		&common.SqlQueryOptions{
-			QueryFields: options,
-			Offset:      start,
-			Limit:       count,
-			{{if .OrderField}}
-			OrderFields: []common.OrderByParam{
-				{
-					Field:     "{{.OrderField}}",
-					Direction: {{.OrderDirection}},
-				},
-			},
-			{{end}}
-			SelectFields: colNames,
-		},
-		&item,
-	)
+	err = dbOperation.Query(opt, &item)
 	if err != nil {
 		//添加log，打印错误日志；
 		common.Error(ctx, "GetAll DB record from {{.RawTableName}} failed", common.Err(err))
@@ -346,29 +369,32 @@ func (a *{{.TableName}}Dal) GetOneById(ctx context.Context, id int32, cols ...[]
 }
 
 func (a *{{.TableName}}Dal) List(ctx context.Context, option []common.Optioner, pageNo, pageSize int, cols ...[]string) (list {{.Pkg.Name}}.{{.TableName}}List, total int64, err error) {
+	{{if .OrderField -}}
+	return a.ListWithOrder(ctx, option, pageNo, pageSize, common.OrderByParams{
+		{Field: "{{.OrderField}}", Direction: {{.OrderDirection}}},
+	}, cols...)
+	{{- else -}}
+	return a.ListWithOrder(ctx, option, pageNo, pageSize, nil, cols...)
+	{{- end}}
+}
+
+func (a *{{.TableName}}Dal) ListWithOrder(ctx context.Context, option []common.Optioner, pageNo, pageSize int, order common.OrderByParams, cols ...[]string) (list {{.Pkg.Name}}.{{.TableName}}List, total int64, err error) {
 	var colNames []string
 	if len(cols) > 0 {
 		colNames = cols[0]
-	}	
-    dbop := a.getDBOperation(ctx)
-	err = dbop.QueryCV(
-		&common.SqlQueryOptions{
-			QueryFields: option,
-			Offset:      int(pageNo * pageSize),
-			Limit:       int(pageSize),
-			{{if .OrderField}}
-			OrderFields: []common.OrderByParam{
-				{
-					Field:     "{{.OrderField}}",
-					Direction: {{.OrderDirection}},
-				},
-			},
-			{{end}}
-			SelectFields: colNames,
-		},
-		&total,
-		&list,
-	)
+	}
+	return a.ListWithOptions(ctx, &common.SqlQueryOptions{
+		QueryFields:  option,
+		Offset:       pageNo * pageSize,
+		Limit:        pageSize,
+		OrderFields:  order,
+		SelectFields: colNames,
+	})
+}
+
+func (a *{{.TableName}}Dal) ListWithOptions(ctx context.Context, opt *common.SqlQueryOptions) (list {{.Pkg.Name}}.{{.TableName}}List, total int64, err error) {
+	dbop := a.getDBOperation(ctx)
+	err = dbop.QueryCV(opt, &total, &list)
 	if err != nil {
 		//添加log，打印错误日志；
 		common.Error(ctx, "List record of {{.RawTableName}} failed", common.Err(err))
@@ -425,7 +451,7 @@ func genMongoDal(data *info, file *astbasic.GenedGoFile) {
 	codeTemplate := `
 // {{.RawTableName}}
 //
-// @gos autogen
+// @gos auto
 type {{.TableName}}Dal struct {
 	{{.DBVariable}} *mongo.Database
 	DbName string "default:\"{{.RawTableName}}\""

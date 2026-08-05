@@ -49,4 +49,10 @@
 3. 因此需要修改现有的代码生成逻辑
 - 所以的依赖先构建依赖关系，然后再生成代码；只要被主工程依赖的都生成代码；
 - fiter，先生成使用代码，再扫描被使用的filter，然后生成filter代码；
-4. 
+
+## auto（全局 var）
+1. 在包级 `var` 上标注 `// @gos auto`（struct 上同为 `// @gos auto`，表示生成 DI 对象）；
+2. gos 按类型匹配 Default initiator/`auto` struct 实例，并将该节点标为 Needed（及其依赖）；
+3. 在生成的 `initVariable` 末尾赋值：`pkg.VarName = __global_xxx`（自动处理指针层级 `&` / `*`）；
+4. 用途：filter 等无法走依赖注入的调用点，仍可使用用户声明的全局变量；
+5. v1 仅支持按类型匹配 Default，不支持 `name=` 多实例选择；

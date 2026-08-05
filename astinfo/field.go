@@ -9,22 +9,20 @@ import (
 )
 
 type FieldComment struct {
-	// defaultValue string //记录该属性的默认值，在struct的field中有使用；
-	// // isRequired   bool   //记录该字段是否必须赋值，区别于gin的默认处理方法，必传表示在报文中必须存在
-	// validString string //校验变量是否符合要求的代码； $>10 && $<11
 	CommentText string
+	EnumName    string
+	AutoFill    bool // @gos auto on global var: fill from DI instance
 }
 
-// func (comment *FieldComment) dealValuePair(key, value string) {
-// 	switch key {
-// 	case "default":
-// 		comment.defaultValue = value
-// 	case "valid":
-// 		comment.validString = value
-// 	default:
-// 		comment.CommentText = key
-// 	}
-// }
+func (comment *FieldComment) dealValuePair(key, value string) {
+	value = strings.Trim(value, "\"")
+	switch key {
+	case EnumKey, Group:
+		comment.EnumName = value
+	case AutoKey: // @gos auto on var: assign matching DI instance
+		comment.AutoFill = true
+	}
+}
 
 // 变量名和变量类型的定义
 // 用于函数的参数和返回值，struct的属性；
@@ -103,12 +101,25 @@ func getColumnName(value string) string {
 	return strings.Split(value, ",")[0]
 }
 func (field *FieldBasic) parseComment(fieldType *ast.CommentGroup) {
-	if fieldType == nil || len(fieldType.List) <= 0 {
+	if fieldType == nil || len(fieldType.List) == 0 {
 		return
 	}
-	content := strings.Trim(fieldType.List[0].Text, " /")
-	field.Comment.CommentText = content
-	// parseValidComment(content, &field.Comment)
+	text := strings.TrimSpace(strings.TrimLeft(fieldType.List[0].Text, "/ \t"))
+	if text != "" && !strings.HasPrefix(text, TagPrefix) {
+		field.Comment.CommentText = text
+	}
+}
+
+func (field *FieldBasic) parseFieldDoc() {
+	if field.astDoc == nil {
+		return
+	}
+	for _, comment := range field.astDoc.List {
+		text := strings.TrimLeft(comment.Text, "/ \t")
+		if strings.HasPrefix(text, TagPrefix) {
+			parseValidComment(text[len(TagPrefix):], &field.Comment)
+		}
+	}
 }
 
 // Parse() error
@@ -120,6 +131,7 @@ func (field *FieldBasic) Parse(typeMap map[string]*Field) error {
 	fieldType := field.astType
 	//field.Name="名字在调用本函数的外面解析，因为一个类型可能有多个名字，需要拆分为多个Field"
 	field.ParseType(fieldType, typeMap)
+	field.parseFieldDoc()
 	field.parseComment(field.astComment)
 
 	return nil

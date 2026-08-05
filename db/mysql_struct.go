@@ -104,7 +104,7 @@ func GenerateStructFromDDL(tableName, ddl string, tableFile *astbasic.GenedGoFil
 					comment = commentPart[:endQuoteIndex]
 				}
 			}
-			goType := mysqlTypeToGoType(colType, tableFile)
+			goType := mysqlTypeToGoType(colName, colType, tableFile)
 			fieldName := astbasic.ToCamelCase(colName, true)
 			jsonTag := astbasic.ToCamelCase(colName, false)
 			gormTag := colName
@@ -174,8 +174,9 @@ func ({{.StructName}}) TableName() string {
 	return structName, nil
 }
 
-// mysqlTypeToGoType maps MySQL types to Go types (basic mapping)
-func mysqlTypeToGoType(mysqlType string, file *astbasic.GenedGoFile) string {
+// mysqlTypeToGoType maps MySQL types to Go types (basic mapping).
+// Soft-delete columns deleted_at with a time type become gorm.DeletedAt.
+func mysqlTypeToGoType(colName, mysqlType string, file *astbasic.GenedGoFile) string {
 	t := strings.ToLower(mysqlType)
 	switch {
 	case strings.HasPrefix(t, "int"):
@@ -193,6 +194,10 @@ func mysqlTypeToGoType(mysqlType string, file *astbasic.GenedGoFile) string {
 	case strings.HasPrefix(t, "varchar"), strings.HasPrefix(t, "char"), strings.HasPrefix(t, "text"), strings.HasSuffix(t, "text"):
 		return "string"
 	case strings.HasPrefix(t, "datetime"), strings.HasPrefix(t, "timestamp"), strings.HasPrefix(t, "date"):
+		if colName == "deleted_at" {
+			file.GetImport(astbasic.SimplePackage("gorm.io/gorm", "gorm"))
+			return "gorm.DeletedAt"
+		}
 		file.GetImport(&astbasic.PkgBasic{
 			ModPath: "time",
 			Name:    "time",

@@ -117,10 +117,11 @@ func (g *InitGroup) addNode(node *DependNode) {
 }
 
 type InitManager struct {
-	variableMap VariableMap //存放已经准备好了变量对象；
-	readyNode   []*DependNode
-	project     *MainProject
-	nameValue   map[string]string // 用于生成nameValue map[string]any代码的map
+	variableMap  VariableMap //存放已经准备好了变量对象；
+	readyNode    []*DependNode
+	project      *MainProject
+	nameValue    map[string]string // 用于生成nameValue map[string]any代码的map
+	autofillVars []*VarField       // global vars annotated with @gos auto
 }
 
 // Generate(goGenerated *GenedFile) error
@@ -155,11 +156,38 @@ func (im *InitManager) Generate(goGenerated *GenedFile) error {
 		call.WriteString(node.Generator.GenerateDependcyCode(goGenerated))
 		call.WriteString("\n")
 	}
+	im.appendAutofillAssignments(&call, goGenerated)
 	call.WriteString("}\n")
 	goGenerated.AddBuilder(&definition)
 	goGenerated.AddBuilder(&call)
 	im.project.InitFuncs4All = append(im.project.InitFuncs4All, "initVariable")
 	return nil
+}
+
+// appendAutofillAssignments writes pkg.Var = __global_xxx for @gos auto globals.
+func (im *InitManager) appendAutofillAssignments(call *strings.Builder, goGenerated *GenedFile) {
+	for _, vf := range im.autofillVars {
+		if vf.Type == nil {
+			fmt.Printf("autofill: skip %s in %s: type is nil\n", vf.Name, vf.GoSource.Path)
+			continue
+		}
+		node := im.variableMap.getVariable(vf.Type, "")
+		if node == nil || node.returnVariableName == "" {
+			fmt.Printf("autofill: can't find ready initiator/autogen for %s (%s) in %s\n",
+				vf.Name, vf.Type.IDName(), vf.GoSource.Path)
+			continue
+		}
+		sourceCode := node.returnVariableName
+		returnField := node.getReturnField()
+		delta := PointerDepth(returnField.Type) - PointerDepth(vf.Type)
+		if delta < 0 {
+			sourceCode = "&" + sourceCode
+		} else if delta > 0 {
+			sourceCode = strings.Repeat("*", delta) + sourceCode
+		}
+		impt := goGenerated.GetImport(&vf.GoSource.Pkg.PkgBasic)
+		call.WriteString(fmt.Sprintf("%s.%s = %s\n", impt.Name, vf.Name, sourceCode))
+	}
 }
 
 // GenterateTestCode 生成测试代码
@@ -278,7 +306,28 @@ func (im *InitManager) isMainProject(modPath string) bool {
 	return mainMod != "" && (modPath == mainMod || strings.HasPrefix(modPath, mainMod+"/"))
 }
 
-// markNeededNodes marks roots (main project + router receivers) and transitively marks all dependencies.
+// collectAutofillVars finds package-level vars annotated with @gos auto.
+func (im *InitManager) collectAutofillVars() []*VarField {
+	p := im.project
+	var result []*VarField
+	for _, pkgName := range p.SortedPacakgeNames {
+		pkg := p.Packages[pkgName]
+		names := make([]string, 0, len(pkg.GlobalVar))
+		for name := range pkg.GlobalVar {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			vf := pkg.GlobalVar[name]
+			if vf.Comment.AutoFill {
+				result = append(result, vf)
+			}
+		}
+	}
+	return result
+}
+
+// markNeededNodes marks roots (main project + router receivers + autofill sources) and transitively marks all dependencies.
 func (im *InitManager) markNeededNodes(functions []*DependNode, waittingVariableMap VariableMap) {
 	p := im.project
 
@@ -309,6 +358,21 @@ func (im *InitManager) markNeededNodes(functions []*DependNode, waittingVariable
 		}
 	}
 
+	// Mark initiator/@gos auto (struct) sources required by @gos auto globals.
+	for _, vf := range im.autofillVars {
+		if vf.Type == nil {
+			fmt.Printf("autofill: skip %s in %s: type is nil\n", vf.Name, vf.GoSource.Path)
+			continue
+		}
+		source := waittingVariableMap.getVariable(vf.Type, "")
+		if source == nil {
+			fmt.Printf("autofill: can't find initiator/autogen for %s (%s) in %s\n",
+				vf.Name, vf.Type.IDName(), vf.GoSource.Path)
+			continue
+		}
+		source.Needed = true
+	}
+
 	// Recursively mark all parents of needed nodes.
 	var markParents func(*DependNode)
 	markParents = func(node *DependNode) {
@@ -330,12 +394,13 @@ func (im *InitManager) markNeededNodes(functions []*DependNode, waittingVariable
 func (im *InitManager) initInitorator() {
 	// waittingVariableMap 是所有返回值的map；
 	functions, waittingVariableMap := im.collect()
+	im.autofillVars = im.collectAutofillVars()
 	//将所有节点连接到父节点，
 	// 通过watittingVariableMap关联；关联好了后，方便取出依赖关系都完成的节点，建成依赖树；
 	for _, node := range functions {
 		im.initParent(node, waittingVariableMap)
 	}
-	// Mark which nodes are needed (main project + router receivers + their dependencies).
+	// Mark which nodes are needed (main project + router receivers + autofill + their dependencies).
 	im.markNeededNodes(functions, waittingVariableMap)
 	// Track used variable names to handle conflicts
 	usedNames := make(map[string]int)

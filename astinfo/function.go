@@ -8,9 +8,10 @@ import (
 
 type functionComment struct {
 	Url          string // url
-	Title        string // 函数描述，供swagger使用
-	Method       string // http方法，GET,POST，默认是POST
-	isDeprecated bool
+	Title            string // 函数描述，供swagger使用
+	SwaggerExcluded  bool   // swagger=false 时不生成 OpenAPI 文档
+	Method           string // http方法，GET,POST，默认是POST
+	isDeprecated     bool
 	funcType     string //函数类型，filter，servlet，websocket，prpc，initiator,目前仅用来控制解析；
 	security     []string
 	// RequiredHeaders from @gos header=... — comma-separated entries; each entry is
@@ -69,6 +70,12 @@ func (comment *functionComment) dealValuePair(key, value string) {
 		}
 	case Title:
 		comment.Title = value
+	case SwaggerKey:
+		if excluded, ok := parseSwaggerFlag(value); ok {
+			comment.SwaggerExcluded = excluded
+		} else {
+			fmt.Printf("unknown swagger value '%s' in function comment %s in %s\n", value, comment.owner.Name, comment.owner.GoSource.Path)
+		}
 	case Type:
 		comment.funcType = value
 		if value == Websocket {

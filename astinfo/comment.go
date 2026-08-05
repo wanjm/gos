@@ -30,6 +30,11 @@ func parseComment(commentGroup *ast.CommentGroup, commentor Comment) {
 	}
 }
 
+// ParseGosTags parses @gos tag body (without the @gos prefix) into commentor.
+func ParseGosTags(validComment string, commentor Comment) {
+	parseValidComment(validComment, commentor)
+}
+
 // 解析有效的comments
 func parseValidComment(validComment string, commentor Comment) {
 	commands := astbasic.Fields(validComment) // 多个参数以;分割
@@ -40,10 +45,6 @@ func parseValidComment(validComment string, commentor Comment) {
 		}
 		valuePair := strings.Split(command, "=") // 参数名和参数值以=分割
 		valuePair[0] = strings.Trim(valuePair[0], " \t")
-		// if len(valuePair) == 2 {
-		// 	//去除前后空格和引号
-		// 	valuePair[1] = strings.Trim(valuePair[1], " \t")
-		// }
 		if len(valuePair) == 2 {
 			commentor.dealValuePair(valuePair[0], valuePair[1])
 		} else {

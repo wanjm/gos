@@ -36,6 +36,13 @@ func (g *Gosourse) parseType(typeSpec *ast.TypeSpec) {
 func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 	switch genDecl.Tok {
 	case token.VAR:
+		// Doc on `// comment\nvar X T` lives on GenDecl; copy like TYPE does.
+		if len(genDecl.Specs) == 1 {
+			valueSpec := genDecl.Specs[0].(*ast.ValueSpec)
+			if valueSpec.Doc == nil {
+				valueSpec.Doc = genDecl.Doc
+			}
+		}
 		for _, spec := range genDecl.Specs {
 			typeSpec := spec.(*ast.ValueSpec)
 			parser = NewVarFieldHelper(typeSpec, g)
@@ -51,6 +58,9 @@ func (g *Gosourse) getGenDeclParser(genDecl *ast.GenDecl) (parser Parser) {
 			typeSpec := spec.(*ast.TypeSpec)
 			g.parseType(typeSpec)
 		}
+	case token.CONST:
+		parser = NewConstBlockParser(genDecl, g)
+		g.Pkg.AddParser(parser)
 	}
 	return
 }

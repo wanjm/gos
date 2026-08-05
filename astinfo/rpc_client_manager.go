@@ -56,7 +56,7 @@ func (manager *RpcClientManager) Generate(file *GenedFile) error {
 	}
 	sort.Strings(clientTypes)
 
-	// type=prpc，srpc；
+	// type=prpc，srpc，restrpc；
 	for _, clientType := range clientTypes {
 		ifaces := clients[clientType]
 		gen, ok := manager.ClientGen[clientType]

@@ -79,7 +79,7 @@ func (gen *MongoGenerator) GenDal(modelName, tableName, dbVariableName string) s
 	codeTemplate := `
 // {{.RawTableName}}
 //
-// @gos autogen
+// @gos auto
 type {{.TableName}}Dal struct {
 	{{.DBVariable}} *mongo.Database
 }

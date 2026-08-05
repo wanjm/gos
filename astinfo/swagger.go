@@ -14,6 +14,61 @@ import (
 	"github.com/wanjm/gos/basic"
 )
 
+// parseSwaggerFlag parses swagger=true/false from @gos annotations.
+func parseSwaggerFlag(value string) (excluded bool, ok bool) {
+	switch strings.ToLower(strings.Trim(strings.TrimSpace(value), "\"")) {
+	case "false":
+		return true, true
+	case "true":
+		return false, true
+	default:
+		return false, false
+	}
+}
+
+func normalizeSwaggerPath(path string) string {
+	path = strings.TrimSpace(strings.Trim(path, "\""))
+	if path == "" {
+		return ""
+	}
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	return path
+}
+
+func swaggerPathMatchesExclude(path string, exclude string) bool {
+	exclude = normalizeSwaggerPath(exclude)
+	path = normalizeSwaggerPath(path)
+	if exclude == "" || path == "" {
+		return false
+	}
+	if exclude == path {
+		return true
+	}
+	if strings.HasSuffix(exclude, "*") {
+		prefix := strings.TrimSuffix(exclude, "*")
+		return strings.HasPrefix(path, prefix)
+	}
+	return false
+}
+
+func swaggerServletExcluded(servlet *Method, excludePaths []string) bool {
+	if servlet.Comment.SwaggerExcluded {
+		return true
+	}
+	if servlet.Receiver != nil && servlet.Receiver.Comment.SwaggerExcluded {
+		return true
+	}
+	url := normalizeSwaggerPath(strings.Trim(servlet.Comment.Url, "\""))
+	for _, exclude := range excludePaths {
+		if swaggerPathMatchesExclude(url, exclude) {
+			return true
+		}
+	}
+	return false
+}
+
 // swaggerApplicableRouteFilters matches callable_gen/servlet.go GenRouterCode: explicit filters= then URL containment on method path.
 func swaggerApplicableRouteFilters(serverFilters []*Function, servlet *Method) []*Function {
 	if len(serverFilters) == 0 || servlet == nil {
@@ -276,6 +331,9 @@ func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager, server
 		var url = strings.Trim(comment.Url, "\"")
 		if len(url) == 0 {
 			fmt.Printf("servlet %s has no url\n", servlet.Name)
+			continue
+		}
+		if swaggerServletExcluded(servlet, swagger.project.Cfg.SwaggerCfg.ExcludePaths) {
 			continue
 		}
 		pathItem := spec.PathItem{}

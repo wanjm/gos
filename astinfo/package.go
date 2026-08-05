@@ -28,6 +28,7 @@ type Package struct {
 	fset      *token.FileSet       // 记录fset，到时可以找到文件
 	Files     map[string]*ast.File // Go source files by filename
 	GlobalVar map[string]*VarField
+	Enums     map[string]*EnumDef
 	WaitTyper map[string][]*Typer // 有些类型先被使用，再定义，此时在此处将内容缓存下载，最后统一解析；
 	FunctionManager
 	finshedParse bool

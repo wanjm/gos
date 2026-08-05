@@ -24,6 +24,7 @@ type MainProject struct {
 	SortedPacakgeNames []string
 	Cfg                *basic.Config
 	EntityMap          map[string]*Struct // entity structs by name (key: struct name, value: struct)
+	EnumMap            map[string]*EnumDef
 
 	*InitManager
 	InitFuncs4All    []string   // 启动服务器和启动test都是用的方法；
@@ -513,6 +514,22 @@ func (s *Server) collectFromRouter(router *Struct) {
 	}
 }
 
+// filterIdentity is name + normalized url, used to prefer main-project filters over external duplicates.
+func filterIdentity(filter *Function) string {
+	return filter.Name + "\x00" + strings.Trim(filter.Comment.Url, "\"")
+}
+
+// hasFilter reports whether a filter with the same name and url is already collected.
+func (s *Server) hasFilter(filter *Function) bool {
+	id := filterIdentity(filter)
+	for _, existing := range s.filters {
+		if filterIdentity(existing) == id {
+			return true
+		}
+	}
+	return false
+}
+
 // filterNeeded returns true if the filter should be generated for this server.
 func (s *Server) filterNeeded(filter *Function, pkgModPath string) bool {
 	if s.manager.isMainProject(pkgModPath) {
@@ -605,20 +622,32 @@ func (sm *ServerManager) splitServers(project *MainProject) {
 			server.collectFromRouter(router)
 		}
 	}
-	for _, pkg := range project.Packages {
-		for _, filter := range pkg.Filter {
-			var server *Server
-			var ok bool
-			var groupName = filter.Comment.groupName
-			if server, ok = sm.servers[groupName]; ok {
-				if server.filterNeeded(filter, pkg.ModPath) {
-					server.filters = append(server.filters, filter)
+	// Collect filters in two passes: main project first, then external.
+	// External filters with the same name+url as a main-project filter are skipped.
+	collectFilters := func(mainOnly bool) {
+		for _, pkg := range project.Packages {
+			isMain := sm.isMainProject(pkg.ModPath)
+			if mainOnly != isMain {
+				continue
+			}
+			for _, filter := range pkg.Filter {
+				server, ok := sm.servers[filter.Comment.groupName]
+				if !ok {
+					fmt.Printf("failed to found server %s\n", filter.Comment.groupName)
+					continue
 				}
-			} else {
-				fmt.Printf("failed to found server %s\n", groupName)
+				if !server.filterNeeded(filter, pkg.ModPath) {
+					continue
+				}
+				if !mainOnly && server.hasFilter(filter) {
+					continue
+				}
+				server.filters = append(server.filters, filter)
 			}
 		}
 	}
+	collectFilters(true)
+	collectFilters(false)
 }
 
 // Generate
@@ -917,6 +946,7 @@ func CreateProject(path string, cfg *basic.Config) *MainProject {
 		Cfg:       cfg,
 		Packages:  make(map[string]*Package),
 		EntityMap: make(map[string]*Struct),
+		EnumMap:   make(map[string]*EnumDef),
 		// initiatorMap: make(map[*Struct]*Initiators),
 		// servers:      make(map[string]*server),
 		// creators: make(map[*Struct]*Initiator),
