@@ -1,3 +1,8 @@
+## 2026-08-05 23:04:10
+
+1. change dosc7 to docs8.md; and according dosc6 and write docs 7, which auto generate ts http client;
+2. Rename desc7.md to desc8.md, and following desc6.md write a new desc7.md about auto-generating the TypeScript HTTP client;
+
 ## 2026-08-03 15:25:59
 
 1. in yxt_data, we find filter in itself, also we have filter in plaso-common-go, they have same name, and same url, so i plan to add code gos, to ignore filter from external package when name and url are the same;
