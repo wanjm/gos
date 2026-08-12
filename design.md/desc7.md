@@ -199,7 +199,7 @@ export interface HelloResponse {
 
 ### 2. network.gen.ts
 ```ts
-import { Business, RespClass } from "component_set/http";
+import { Business, RespClass } from "@wan_jm/component_set/http";
 import { client } from "./platform";
 import type { HelloRequest, HelloResponse } from "./schema.gen";
 

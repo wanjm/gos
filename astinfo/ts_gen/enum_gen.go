@@ -78,6 +78,7 @@ func genEnumTS(enum *astinfo.EnumDef) string {
 	} else {
 		fmt.Fprintf(&sb, "  return %sDisplayWord[v as number] ?? '';\n", enum.Name)
 	}
+	sb.WriteString("}\n")
 	return sb.String()
 }
 

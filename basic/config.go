@@ -1,9 +1,12 @@
 package basic
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/BurntSushi/toml"
+	"golang.org/x/mod/semver"
 )
 
 // OrderFieldCfg is one candidate default sort column for generated DAL List/GetLimitAll.
@@ -14,6 +17,9 @@ type OrderFieldCfg struct {
 }
 
 type Generation struct {
+	// Version is the minimum gos version required by this project (e.g. "0.5.9").
+	// Empty means no check. If greater than the running gos version, gos exits.
+	Version       string
 	TraceKey      string // 用于定义traceKy的结构体名字；用于context中记录traceId
 	TraceKeyMod   string // 用于定义traceKy的结构体所在的包名；
 	ResponseKey   string // 用于定义Response的结构体名字；用于context中记录一个http请求的Response String
@@ -108,4 +114,37 @@ func (config *Config) Load() {
 			{Field: "id", Direction: "DESC"},
 		}
 	}
+}
+
+// CheckMinVersion exits if Generation.Version is set and newer than the running gos version.
+func (config *Config) CheckMinVersion(current string) {
+	required := strings.TrimSpace(config.Generation.Version)
+	if required == "" {
+		return
+	}
+	req := toSemver(required)
+	cur := toSemver(current)
+	if !semver.IsValid(req) {
+		fmt.Printf("invalid Generation.Version %q in project config; use X.Y.Z\n", required)
+		os.Exit(1)
+	}
+	if !semver.IsValid(cur) {
+		fmt.Printf("invalid gos version %q\n", current)
+		os.Exit(1)
+	}
+	if semver.Compare(req, cur) > 0 {
+		fmt.Printf("project requires gos %s, but current is %s; please update gos to the latest version\n", required, current)
+		os.Exit(1)
+	}
+}
+
+func toSemver(v string) string {
+	v = strings.TrimSpace(v)
+	if v != "" && v[0] != 'v' && v[0] != 'V' {
+		return "v" + v
+	}
+	if strings.HasPrefix(v, "V") {
+		return "v" + v[1:]
+	}
+	return v
 }

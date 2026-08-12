@@ -1,19 +1,19 @@
 #!/bin/bash
-# Update version in main.go and commit to git.
+# Update version in basic/version.go and commit to git.
 # Usage:
-#   ./update_version.sh           - increment last section (0.5.1 -> 0.5.2)
-#   ./update_version.sh -v 0.6.0  - set version to 0.6.0
+#   ./uv.sh           - increment last section (0.5.1 -> 0.5.2)
+#   ./uv.sh -v 0.6.0  - set version to 0.6.0
 
 set -e
 
-MAIN_GO="main.go"
-if [ ! -f "$MAIN_GO" ]; then
-	echo "main.go not found in current directory"
+VERSION_GO="basic/version.go"
+if [ ! -f "$VERSION_GO" ]; then
+	echo "$VERSION_GO not found in current directory"
 	exit 1
 fi
 
 get_current_version() {
-	grep -oE 'Version = "[0-9]+\.[0-9]+\.[0-9]+"' "$MAIN_GO" | head -1 | sed 's/Version = "\(.*\)"/\1/'
+	grep -oE 'Version = "[0-9]+\.[0-9]+\.[0-9]+"' "$VERSION_GO" | head -1 | sed 's/Version = "\(.*\)"/\1/'
 }
 
 increment_last_section() {
@@ -34,7 +34,7 @@ done
 if [ -z "$NEW_VERSION" ]; then
 	CURRENT=$(get_current_version)
 	if [ -z "$CURRENT" ]; then
-		echo "Could not find Version const in $MAIN_GO"
+		echo "Could not find Version const in $VERSION_GO"
 		exit 1
 	fi
 	NEW_VERSION=$(increment_last_section "$CURRENT")
@@ -48,9 +48,9 @@ else
 fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
-	sed -i '' "s/Version = \"[0-9]*\.[0-9]*\.[0-9]*\"/Version = \"$NEW_VERSION\"/" "$MAIN_GO"
+	sed -i '' "s/Version = \"[0-9]*\.[0-9]*\.[0-9]*\"/Version = \"$NEW_VERSION\"/" "$VERSION_GO"
 else
-	sed -i "s/Version = \"[0-9]*\.[0-9]*\.[0-9]*\"/Version = \"$NEW_VERSION\"/" "$MAIN_GO"
+	sed -i "s/Version = \"[0-9]*\.[0-9]*\.[0-9]*\"/Version = \"$NEW_VERSION\"/" "$VERSION_GO"
 fi
 
 if ! git rev-parse --git-dir >/dev/null 2>&1; then
@@ -58,7 +58,7 @@ if ! git rev-parse --git-dir >/dev/null 2>&1; then
 	exit 0
 fi
 
-git add "$MAIN_GO"
-git add update_version.sh 2>/dev/null || true
+git add "$VERSION_GO"
+git add uv.sh 2>/dev/null || true
 git commit -m "bump version to $NEW_VERSION"
 echo "Committed: bump version to $NEW_VERSION"
