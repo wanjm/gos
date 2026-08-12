@@ -194,6 +194,7 @@ func (error *Error) GetErrorCode() int {
 
 func (mp *MainProject) genProjectPublicToml() {
 	toml := `[Generation]
+#Version="0.5.9" # minimum gos version required by this project
 TraceKey="TraceIdstruct"
 TraceKeyMod="github.com/wanjm/common"
 #ResponseKey="ResponseData"

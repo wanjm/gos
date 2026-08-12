@@ -1,7 +1,13 @@
+## 2026-08-11 16:25:00
+
+1. add gos version to Generation, so if the version is bigger than version of current program, stop running and print suggestion to update to latest version
+2. Add a `Version` field to `Generation`. If the configured version is greater than the running gos version, stop and suggest updating to the latest version.
+
 ## 2026-08-08 08:12:38
 
 1. please compare guide.md and product.md; i need one md file, which first shows guideline, shor description of what we have, and detailed guideline how to use it;
 2. Compare guide.md and product.md, then merge them into one markdown file: brief overview first, then a short summary of what gos provides, then detailed usage guidelines.
+
 ## 2026-08-07 17:51:11
 
 1. in gos , when generating XXXText, end } missing. please fix it;

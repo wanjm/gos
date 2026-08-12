@@ -50,6 +50,7 @@ func main() {
 	os.Chdir(basic.Argument.SourcePath)
 	cfg := &basic.Cfg
 	cfg.Load()
+	cfg.CheckMinVersion(Version)
 	cfg.InitMain = basic.Argument.GoMod
 	var project = astinfo.CreateProject(basic.Argument.SourcePath, cfg)
 	if err := project.CurrentProject.ParseModule(); err != nil {
