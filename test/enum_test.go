@@ -231,6 +231,9 @@ func TestGenEnumTS(t *testing.T) {
 	if !strings.Contains(out, "function packageTypeText") {
 		t.Fatalf("ts output missing text helper: %s", out)
 	}
+	if !strings.Contains(out, "return PackageTypeDisplayWord[v as number] ?? '';\n}\n") {
+		t.Fatalf("ts text helper missing closing brace: %s", out)
+	}
 
 	strEnum := &astinfo.EnumDef{
 		Name:      "AiAgentType",
@@ -242,5 +245,8 @@ func TestGenEnumTS(t *testing.T) {
 	strOut := ts_gen.GenEnumTS(strEnum)
 	if !strings.Contains(strOut, "HwlNormal: 'hwlnormal'") {
 		t.Fatalf("ts string enum output: %s", strOut)
+	}
+	if !strings.Contains(strOut, "return AiAgentTypeDisplayWord[v] ?? '';\n}\n") {
+		t.Fatalf("ts string text helper missing closing brace: %s", strOut)
 	}
 }
