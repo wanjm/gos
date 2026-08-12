@@ -193,8 +193,8 @@ func (error *Error) GetErrorCode() int {
 }
 
 func (mp *MainProject) genProjectPublicToml() {
-	toml := `[Generation]
-#Version="0.5.9" # minimum gos version required by this project
+	toml := fmt.Sprintf(`[Generation]
+Version=%q
 TraceKey="TraceIdstruct"
 TraceKeyMod="github.com/wanjm/common"
 #ResponseKey="ResponseData"
@@ -218,7 +218,7 @@ ParseProjects = ["github.com/wanjm/common"]
 #[[DBConfig]]
 #DBName = "mongoDB"
 #DBType = "mongo"
-`
+`, basic.Version)
 	_ = writeScaffoldFileIfAbsent("project.public.toml", []byte(toml))
 }
 

@@ -1,3 +1,8 @@
+## 2026-08-11 16:42:41
+
+1. automatically generate Version when publicToml, don't comment it. as keep version the same of that in main
+2. When generating project.public.toml, write Version uncommented and keep it equal to the gos version in main;
+
 ## 2026-08-11 16:25:00
 
 1. add gos version to Generation, so if the version is bigger than version of current program, stop running and print suggestion to update to latest version
