@@ -33,29 +33,15 @@ func genEnumTS(enum *astinfo.EnumDef) string {
 	textHelper := astbasic.FirstLower(enum.Name) + "Text"
 	recordKey := enum.TSValueType()
 
-	switch enum.ValueKind {
-	case "string":
-		fmt.Fprintf(&sb, "export const %s = {\n", enum.Name)
-		for i, m := range enum.Members {
-			comma := ","
-			if i == len(enum.Members)-1 {
-				comma = ""
-			}
-			fmt.Fprintf(&sb, "  %s: %s%s\n", m.TSMemberName(), m.TSValueLiteral(enum.ValueKind), comma)
+	fmt.Fprintf(&sb, "export const enum %s {\n", enum.Name)
+	for i, m := range enum.Members {
+		comma := ","
+		if i == len(enum.Members)-1 {
+			comma = ""
 		}
-		sb.WriteString("} as const;\n")
-		fmt.Fprintf(&sb, "export type %s = typeof %s[keyof typeof %s];\n\n", enum.Name, enum.Name, enum.Name)
-	default:
-		fmt.Fprintf(&sb, "export enum %s {\n", enum.Name)
-		for i, m := range enum.Members {
-			comma := ","
-			if i == len(enum.Members)-1 {
-				comma = ""
-			}
-			fmt.Fprintf(&sb, "  %s = %s%s\n", m.TSMemberName(), m.TSValueLiteral(enum.ValueKind), comma)
-		}
-		sb.WriteString("}\n\n")
+		fmt.Fprintf(&sb, "  %s = %s%s\n", m.TSMemberName(), m.TSValueLiteral(enum.ValueKind), comma)
 	}
+	sb.WriteString("}\n\n")
 
 	sb.WriteString(fmt.Sprintf("const %sDisplayWord: Record<%s, string> = {\n", enum.Name, recordKey))
 	for i, m := range enum.Members {
@@ -63,12 +49,7 @@ func genEnumTS(enum *astinfo.EnumDef) string {
 		if i == len(enum.Members)-1 {
 			comma = ""
 		}
-		var key string
-		if enum.ValueKind == "string" {
-			key = m.TSValueLiteral(enum.ValueKind)
-		} else {
-			key = enum.Name + "." + m.TSMemberName()
-		}
+		key := enum.Name + "." + m.TSMemberName()
 		fmt.Fprintf(&sb, "  [%s]: '%s'%s\n", key, escapeTSString(m.DisplayWord), comma)
 	}
 	sb.WriteString("};\n\n")

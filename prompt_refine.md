@@ -1,3 +1,28 @@
+## 2026-08-21 09:56:00
+
+1. let string generate the same code as int;
+2. Make string enums generate the same code as int enums;
+
+## 2026-08-21 08:57:00
+
+1. doesn't vite emit code using tsc? how does it emit code , it emit itself?;
+2. Doesn't Vite emit code using tsc? How does it emit code — does it emit itself?;
+
+## 2026-08-21 08:55:00
+
+1. show me example of ts code and the generated js code, to make me more clear;
+2. Show examples of TypeScript source and the generated JavaScript to make this clearer;
+
+## 2026-08-21 08:51:00
+
+1. what will happen if keep string the same as int?;
+2. What happens if string enums are generated the same way as int enums?;
+
+## 2026-08-21 08:47:00
+
+1. please review last commit of gos ,what string different from the others;
+2. Please review the last gos commit and explain how string enums differ from the others;
+
 ## 2026-08-11 16:42:41
 
 1. automatically generate Version when publicToml, don't comment it. as keep version the same of that in main
