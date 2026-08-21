@@ -313,6 +313,19 @@ func (a *{{.TableName}}Dal) Create(ctx context.Context, item *{{.Pkg.Name}}.{{.T
 	return err
 }
 
+// CreateItems 批量创建
+func (a *{{.TableName}}Dal) CreateItems(ctx context.Context, items {{.Pkg.Name}}.{{.TableName}}List) error {
+	if len(items) == 0 {
+		return nil
+	}
+	dbOperation := a.getDBOperation(ctx)
+	err := dbOperation.Create(items)
+	if err != nil {
+		common.Error(ctx, "batch insert data to {{.RawTableName}} failed", common.Err(err))
+	}
+	return err
+}
+
 func (a *{{.TableName}}Dal) GetAll(ctx context.Context, options []common.Optioner, cols ...[]string) (item {{.Pkg.Name}}.{{.TableName}}List, err error) {
 	return a.GetLimitAll(ctx, options, 0, cols...)
 }
@@ -479,6 +492,32 @@ func (a *{{.TableName}}Dal) Create(ctx context.Context, item *{{.Pkg.Name}}.{{.T
 		item.{{.IDName}} = oid
 	} else {
 		common.Error(ctx, "insert record to mongo {{.TableName}} failed as inserted_id is not objectid")
+	}
+	{{else}}
+		_ = result
+	{{end}}
+	return nil
+}
+
+// CreateItems 批量创建
+func (a *{{.TableName}}Dal) CreateItems(ctx context.Context, items {{.Pkg.Name}}.{{.TableName}}List) error {
+	if len(items) == 0 {
+		return nil
+	}
+	documents := make([]any, len(items))
+	for i, item := range items {
+		documents[i] = item
+	}
+	result, err := a.getDB().InsertMany(ctx, documents)
+	if err != nil {
+		common.Error(ctx, "batch insert records to mongo {{.RawTableName}} failed", common.Err(err))
+		return err
+	}
+	{{if not (eq .IDName "")}}
+	for i, id := range result.InsertedIDs {
+		if objectID, ok := id.(primitive.ObjectID); ok && items[i] != nil {
+			items[i].{{.IDName}} = objectID
+		}
 	}
 	{{else}}
 		_ = result
