@@ -1,4 +1,15 @@
+## 2026-09-02 15:56:00
+
+1. 1. permissionCheckCall should return true if has permission, and false if not; 2. yes, only const ;
+2. 1. Make the generated permission check return true when allowed and false when denied. 2. Resolve @gos permission pkg.Ident only for exported consts;
+
+## 2026-09-02 14:15:00
+
+1. /local-review please review last two commission of gos.;
+2. Please review the last two commits of gos;
+
 ## 2026-08-21 09:56:00
+
 
 1. let string generate the same code as int;
 2. Make string enums generate the same code as int enums;

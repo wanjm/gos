@@ -7,19 +7,21 @@ import (
 )
 
 type functionComment struct {
-	Url          string // url
-	Title            string // 函数描述，供swagger使用
-	SwaggerExcluded  bool   // swagger=false 时不生成 OpenAPI 文档
-	Method           string // http方法，GET,POST，默认是POST
-	isDeprecated     bool
-	funcType     string //函数类型，filter，servlet，websocket，prpc，initiator,目前仅用来控制解析；
-	security     []string
+	Url             string // url
+	Title           string // 函数描述，供swagger使用
+	SwaggerExcluded bool   // swagger=false 时不生成 OpenAPI 文档
+	Method          string // http方法，GET,POST，默认是POST
+	isDeprecated    bool
+	funcType        string //函数类型，filter，servlet，websocket，prpc，initiator,目前仅用来控制解析；
+	security        []string
 	// RequiredHeaders from @gos header=... — comma-separated entries; each entry is
 	// "HeaderName" or "HeaderName:description" for Swagger header parameters.
 	RequiredHeaders []FieldBasic
 	groupName       string
 	Filters         []string
-	owner           *Function
+	// Permission is the raw @gos permission=... value, copied into the check call.
+	Permission string
+	owner      *Function
 }
 
 const (
@@ -94,6 +96,8 @@ func (comment *functionComment) dealValuePair(key, value string) {
 				comment.Filters = append(comment.Filters, part)
 			}
 		}
+	case PermissionKey:
+		comment.Permission = value
 	case HEADER:
 		for _, part := range strings.Split(value, ",") {
 			part = strings.TrimSpace(part)

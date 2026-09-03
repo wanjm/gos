@@ -46,6 +46,7 @@
 | `type` | 类型（见 [type](#33-type)） |
 | `method` | HTTP method（servlet / restrpc） |
 | `filters` | 过滤器函数名（逗号分隔） |
+| `permission` | servlet 权限检测参数；原样复制到配置的检测函数调用中（见 [permission](#permission)） |
 | `header` | function 支持 `header="X-AppId:appId,..."`；结构体变量也可声明 header |
 | `swagger` | `swagger=false` 时不生成 OpenAPI；可用于 struct 或 method |
 | `enum` | 加在 const 后，表示一组取值，会编译为前端 enum |
@@ -83,6 +84,33 @@
 ### 3.5 filters
 
 逗号分隔的函数名（即 filter 函数名）。系统从 filter 集合中查找并绑定。
+
+#### permission
+
+servlet 方法可加 `permission=<args>`。生成代码在 bind/validate 之后、业务方法之前调用 `Generation.PermissionCheckFunc`（包路径 `PermissionCheckMod`），把 annotation 的值接到 `c` 后面。检测函数返回 **bool**（true 有权限，false 无权限）。false 时 servlet 返回 `PermissionDeniedCode`（未配置则用内部错误码）和 `"no permission"`。
+
+数字字面量原样复制；`pkg.Ident` 必须是**已解析包中的导出 const**（servlet 源文件不必 import，因为名字写在注释里）。gos 在 `servlet.gen.go` 中 import 该包，以便 IDE Find References 能定位到生成调用。type / var / func / 未导出 const 不匹配。
+
+```toml
+PermissionCheckFunc = "CheckPermission"
+PermissionCheckMod = "gitlab.plaso.cn/nt/nt-common/filter"
+PermissionDeniedCode = 11
+```
+
+```go
+// @gos url="/user/tk/write/admin/create"; permission=user_permission.PermissionGroupUser,user_permission.PermissionTypeCreateAdmin;
+```
+
+生成：
+
+```go
+if !filter.CheckPermission(c, user_permission.PermissionGroupUser, user_permission.PermissionTypeCreateAdmin) {
+    servletJson(c, 200, Response{Code: 11, Message: "no permission"})
+    return
+}
+```
+
+检测函数签名为 `func(ctx context.Context, <copied args>) bool`（传入的是 `*gin.Context`）。未配置 Func/Mod、找不到导出 const、或同名包不唯一且都声明了该 const 时 gos 退出。未加包前缀的 ident 不支持（会落在 `gen` 包）。
 
 ### 3.6 srpc
 
