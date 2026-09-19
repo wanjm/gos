@@ -18,7 +18,7 @@ func (s *SimpleBiz) SayHello(ctx context.Context, req *HelloRequest) (HelloRespo
 我们整个的分解过程如下：
 1. gos 生成 TS 的 API 类、`schema.gen.ts` 类型定义（以及可选的 `enum.gen.ts`）；
 2. 首次生成时写入可手改的 `platform.ts`（选择 WxClient / PcClient、配置 baseUrl / header）；
-3. 底层 HTTP 由 npm 包 `component_set/http` 提供（`Business`、`RespClass`、`WxClient` / `PcClient`）。
+3. 底层 HTTP 由 npm 包 `@wan_jm/component_set/http` 提供（`Business`、`RespClass`、`WxClient` / `PcClient`）。
 
 与第 6 篇 Flutter 路径的差异：TS **不需要**再跑 `build_runner`——gos 一次写出可直接调用的实现类。
 
@@ -73,8 +73,8 @@ gos 若发现目录下尚无 `platform.ts`，会写入模板；之后**不会覆
 
 ```ts
 // Written once by gos; edit freely.
-import { WxClient } from "component_set/http";
-// import { PcClient } from "component_set/http";
+import { WxClient } from "@wan_jm/component_set/http";
+// import { PcClient } from "@wan_jm/component_set/http";
 
 export const client = new WxClient();
 // export const client = new PcClient();
@@ -83,7 +83,7 @@ export const client = new WxClient();
 真实项目里常会扩展 Client（设置 `ApiBaseUrl`、注入 token header），例如小程序侧：
 
 ```ts
-import { WxClient as PlatformClient } from "component_set/http";
+import { WxClient as PlatformClient } from "@wan_jm/component_set/http";
 
 class Client extends PlatformClient {
   constructor() {
@@ -118,7 +118,7 @@ Go Web 开发：TypeScript HTTP Client 一键联动
 Go Web 开发提速 7（gos）：TypeScript HTTP Client 自动生成 —— Web / 小程序同样一键联动
 本文亮点
 ✅ 同一份 Go API 注解：配置 TsPath 后，一键生成 network / schema（及 enum）TS 代码
-✅ 开箱即用：继承 component_set 的 Business，直接 await xxxApi.method(req)
+✅ 开箱即用：继承 @wan_jm/component_set 的 Business，直接 await xxxApi.method(req)
 ✅ 平台可切换：platform.ts 只写一次，WxClient / PcClient 自由切换，gos 不覆盖手改
 
 本系列持续更新，前六篇回顾：
@@ -158,7 +158,7 @@ const res = await bookBizApi.bookList({ pageNum: 1, pageSize: 20 });
 整体比 Flutter 路径更「一步到位」：
 1. gos 扫描 Go servlet，收集 API 与入参/出参结构体；
 2. 写出 `schema.gen.ts`、`network.gen.ts`（有枚举则另写 `enum.gen.ts`）；
-3. 若缺少 `platform.ts`，写入可编辑模板；底层能力来自 `component_set/http`。
+3. 若缺少 `platform.ts`，写入可编辑模板；底层能力来自 `@wan_jm/component_set/http`。
 
 无需 dart 的 build_runner 第二阶段——生成物本身就是可调用的实现类。
 
@@ -221,8 +221,8 @@ export const simpleBizApi = new SimpleBizApi(client);
 - `getData`：委托给 `Business` → platform `client`
 - 导出单例，业务侧直接 import
 
-### 3. platform.ts 与 component_set
-HTTP 运行时在 npm 包 `component_set`：
+### 3. platform.ts 与 @wan_jm/component_set
+HTTP 运行时在 npm 包 `@wan_jm/component_set`：
 - `Business`：生成类的基类，持有 client 并代理 `getData`
 - `RespClass<T>`：统一响应包装（与后端 `{code,msg,obj}` 风格对齐）
 - `WxClient` / `PcClient`：小程序 / PC 平台实现
@@ -237,7 +237,7 @@ HTTP 运行时在 npm 包 `component_set`：
 | 接口抽象 | `@DataInterface` abstract + build_runner | 直接生成 `*Api extends Business` |
 | 结构体 | class + fromJson/toJson | `export interface` |
 | 二次生成 | 需要 `dart run build_runner` | 不需要 |
-| 运行时库 | component_set（Dart） | component_set/http（npm） |
+| 运行时库 | component_set（Dart） | @wan_jm/component_set/http（npm） |
 
 后端注解完全相同；差别只在 Generation 输出路径与目标语言。
 
@@ -260,7 +260,7 @@ AI 负责业务与页面，框架负责契约与稳定——与第 6 篇同一�
 ---
 八、示例与依赖
 - gos：https://github.com/wanjm/gos
-- component_set（HTTP 运行时）：业务侧依赖 npm `component_set`
+- @wan_jm/component_set（HTTP 运行时）：业务侧依赖 npm `@wan_jm/component_set`
 - 配置示例：yxt_data 的 `TsPath="../tboss/src/data/http"`
 - 生成形态参考：小程序工程中的 `network.gen.ts` + `platform.ts`
 

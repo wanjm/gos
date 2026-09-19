@@ -19,7 +19,7 @@ func NewTsGen() *TsGen {
 }
 
 // platform.ts is written only when missing so projects can switch the platform
-// client without losing edits. HTTP runtime lives in the component_set npm package.
+// client without losing edits. HTTP runtime lives in the @wan_jm/component_set npm package.
 // Set client.ApiBaseUrl from app code after importing platform.
 
 const platformTsTemplate = `// Written once by gos; edit freely.
