@@ -85,6 +85,8 @@
 
 逗号分隔的函数名（即 filter 函数名）。系统从 filter 集合中查找并绑定。
 
+`type=filter` 的 `group` 必须与服务 group 相同（`type=prpc` 默认 group 为 `prpc`）。`url=""` 的 filter 挂到该 server 的全局 gin middleware；非空 `url` 按路径包含关系绑到匹配路由。servlet 失败时返回 `{code,message}`；prpc 失败时返回 `{c,o}`。
+
 #### permission
 
 servlet 方法可加 `permission=<args>`。生成代码在 bind/validate 之后、业务方法之前调用 `Generation.PermissionCheckFunc`（包路径 `PermissionCheckMod`），把 annotation 的值接到 `c` 后面。检测函数返回 **bool**（true 有权限，false 无权限）。false 时 servlet 返回 `PermissionDeniedCode`（未配置则用内部错误码）和 `"no permission"`。

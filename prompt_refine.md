@@ -1,3 +1,18 @@
+## 2026-09-05 13:49:00
+
+1. ok, list the work need to do;
+2. List the work that needs to be done.;
+
+## 2026-09-04 16:50:00
+
+1. please read https://www.tapd.cn/tapd_fe/50221454/story/detail/1150221454001069738 ; and show me what need to do;
+2. Please read https://www.tapd.cn/tapd_fe/50221454/story/detail/1150221454001069738 and summarize what needs to be done.;
+
+## 2026-09-03 21:07:00
+
+1. I plan to auto generate go code as the above interface, so then i can also use gos to genrate more code and set up the test project;
+2. Auto-generate Go srpc client interfaces (like FlutterPath/TsPath) so a separate test project can run gos to generate the client stubs and host tests;
+
 ## 2026-09-02 15:56:00
 
 1. 1. permissionCheckCall should return true if has permission, and false if not; 2. yes, only const ;
