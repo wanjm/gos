@@ -1,3 +1,13 @@
+## 2026-09-30 14:43:00
+
+1. also add Count for mongo dal;
+2. Also add a Count method to the generated Mongo DAL.;
+
+## 2026-09-30 14:20:00
+
+1. in gos for generated sql dal code, please add count with ctx context.Context, options []common.Optioner and parameter;
+2. In gos, add a Count method to the generated SQL DAL that takes ctx context.Context and options []common.Optioner.;
+
 ## 2026-09-17 13:20:00
 
 1. ok please modify gos to generate the code and update callbackhub accordingly;

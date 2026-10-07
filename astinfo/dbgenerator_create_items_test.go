@@ -28,6 +28,11 @@ func TestGenMysqlDalIncludesCreateItems(t *testing.T) {
 		"func (a *ExampleTableDal) CreateItems(ctx context.Context, items example_table.ExampleTableList) error",
 		"err := dbOperation.Create(items)",
 		`common.Error(ctx, "batch insert data to example_table failed", common.Err(err))`,
+		"func (a *ExampleTableDal) Count(ctx context.Context, options []common.Optioner) (total int64, err error)",
+		"QueryFields: options",
+		"dbop.QueryCV(&common.SqlQueryOptions{",
+		", &total, nil)",
+		`common.Error(ctx, "Count record of example_table failed", common.Err(err))`,
 	)
 }
 
@@ -52,6 +57,10 @@ func TestGenMongoDalIncludesCreateItemsAndSetsIDs(t *testing.T) {
 		"documents := make([]any, len(items))",
 		"result, err := a.getDB().InsertMany(ctx, documents)",
 		"items[i].ID = objectID",
+		"func (a *ExampleTableDal) Count(ctx context.Context, options []common.Optioner) (total int64, err error)",
+		"op := a.getOperation(ctx, options)",
+		"total, err = op.Count()",
+		`common.Error(ctx, "count example_table failed", common.Err(err))`,
 	)
 }
 

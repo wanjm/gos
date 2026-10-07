@@ -415,6 +415,19 @@ func (a *{{.TableName}}Dal) ListWithOptions(ctx context.Context, opt *common.Sql
 	return
 }
 
+// Count 按条件统计表中的行数。
+// 它只执行 COUNT，返回匹配 options 的总数。
+func (a *{{.TableName}}Dal) Count(ctx context.Context, options []common.Optioner) (total int64, err error) {
+	dbop := a.getDBOperation(ctx)
+	err = dbop.QueryCV(&common.SqlQueryOptions{
+		QueryFields: options,
+	}, &total, nil)
+	if err != nil {
+		common.Error(ctx, "Count record of {{.RawTableName}} failed", common.Err(err))
+	}
+	return
+}
+
 // Update
 func (a *{{.TableName}}Dal) Update(ctx context.Context, options []common.Optioner,updates map[string]any) (err error) {
 	op := a.getDBOperation(ctx)
@@ -562,6 +575,18 @@ func (a *{{.TableName}}Dal) List(ctx context.Context, opts []common.Optioner, pa
 		return nil, 0, err
 	}
 	return list, total, nil
+}
+
+// Count 按条件统计集合中的文档数。
+// 它只执行 count，返回匹配 options 的总数。
+func (a *{{.TableName}}Dal) Count(ctx context.Context, options []common.Optioner) (total int64, err error) {
+	op := a.getOperation(ctx, options)
+	total, err = op.Count()
+	if err != nil {
+		common.Error(ctx, "count {{.RawTableName}} failed", common.Err(err))
+		return 0, err
+	}
+	return
 }
 
 func (a *{{.TableName}}Dal) GetOne(ctx context.Context, options []common.Optioner, cols ...[]string) (item *{{.Pkg.Name}}.{{.TableName}}, err error) {
