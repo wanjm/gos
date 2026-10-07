@@ -1,3 +1,9 @@
+## 2026-09-17 13:20:00
+
+- **Work item:** SRPC per-call host
+- **Result:** generated `WithPrefix` plus optional `{Client}WithPrefix` factory so one interface can talk to many hosts
+- **Docs:** `design.md/guide.md` §3.6
+
 ## 2026-09-15 17:30:00
 
 - **Work item:** prpc GenFilterCode

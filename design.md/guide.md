@@ -145,6 +145,15 @@ var BookSvc BookClient
 resp, err := BookSvc.GetBook(ctx, &GetBookRequest{Id: 1})
 ```
 
+同一 interface 要打多个 host 时，再声明同名工厂。gos 注入 `XxxWithPrefix(prefix)`，每次调用返回新客户端，不改默认 `Xxx`：
+
+```go
+var BookSvc BookClient
+var BookSvcWithPrefix func(prefix string) BookClient
+
+resp, err := BookSvcWithPrefix("http://book-dev").GetBook(ctx, req)
+```
+
 ### 3.7 restrpc
 
 定义 **interface + 全局 var**：gos 生成 `XxxStruct` 实现与 `initRestrpcClient`。

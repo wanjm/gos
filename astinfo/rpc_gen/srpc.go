@@ -27,7 +27,38 @@ func (srpc *SrpcGen) Generate(class *astinfo.Interface, file *astinfo.GenedFile)
 	for _, method := range class.Methods {
 		srpc.genRpcClientCode(file, className, method)
 	}
+	srpc.genWithPrefix(file, class, className)
 	return nil
+}
+
+// genWithPrefix 为 SRPC 客户端生成 WithPrefix。
+// 它写入一个复制 logger、改写 Prefix 的方法。
+func (srpc *SrpcGen) genWithPrefix(file *astinfo.GenedFile, class *astinfo.Interface, structName string) {
+	const withPrefixTemplate = `
+// WithPrefix 返回指向 prefix 的同接口客户端。
+// 它复制 logger 并改写 Prefix，不修改原客户端。
+func (receiver *{{.StructName}}) WithPrefix(prefix string) {{.IfaceType}} {
+	cloned := *receiver
+	cloned.client.Prefix = prefix
+	return &cloned
+}
+`
+	data := struct {
+		StructName string
+		IfaceType  string
+	}{
+		StructName: structName,
+		IfaceType:  class.RefName(file),
+	}
+	tpl, err := template.New("srpcWithPrefix").Parse(withPrefixTemplate)
+	if err != nil {
+		panic("Failed to parse srpc WithPrefix template: " + err.Error())
+	}
+	var sb strings.Builder
+	if err := tpl.Execute(&sb, data); err != nil {
+		panic("Failed to execute srpc WithPrefix template: " + err.Error())
+	}
+	file.AddBuilder(&sb)
 }
 
 func (srpc *SrpcGen) genRpcClientCode(file *astinfo.GenedFile, structName string, method *astinfo.InterfaceField) {
@@ -171,15 +202,26 @@ func initSrpcClient() {
 			rpcLogger: &rpclogger,
 		},
 	}
+	{{if .HasWithPrefix}}
+	{{.ImportName}}.{{.FieldName}}WithPrefix = func(prefix string) {{.ImportName}}.{{.TypeName}} {
+		return &{{.TypeName}}Struct{
+			client: SrpcClient{
+				Prefix: prefix,
+				rpcLogger: &rpclogger,
+			},
+		}
+	}
+	{{end}}
 	{{end}}
 }
 	`
 	generationCfg := astinfo.GlobalProject.Cfg.Generation
 	type RpcFieldData struct {
-		ImportName string
-		FieldName  string
-		TypeName   string
-		Host       string
+		ImportName    string
+		FieldName     string
+		TypeName      string
+		Host          string
+		HasWithPrefix bool
 	}
 
 	data := struct {
@@ -204,11 +246,13 @@ func initSrpcClient() {
 			host = impt.Name + "." + host
 		}
 
+		_, hasWithPrefix := iface.GoSource.Pkg.GlobalVar[field.Name+"WithPrefix"]
 		data.RpcFields = append(data.RpcFields, RpcFieldData{
-			ImportName: impt.Name,
-			FieldName:  field.Name,
-			TypeName:   iface.InterfaceName,
-			Host:       host,
+			ImportName:    impt.Name,
+			FieldName:     field.Name,
+			TypeName:      iface.InterfaceName,
+			Host:          host,
+			HasWithPrefix: hasWithPrefix,
 		})
 	}
 

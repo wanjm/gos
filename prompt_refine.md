@@ -1,3 +1,8 @@
+## 2026-09-17 13:20:00
+
+1. ok please modify gos to generate the code and update callbackhub accordingly;
+2. Modify gos so generated SRPC clients can target a host per call, then update callback-hub to route AliCallReceipt by environment;
+
 ## 2026-09-05 13:49:00
 
 1. ok, list the work need to do;
