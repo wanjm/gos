@@ -20,12 +20,21 @@ func GenBasicError(file *astinfo.GenedFile) {
 	}
 	a := `
 type Error struct {
-	Code    int    "json:\"code\""
-	Message string "json:\"message\""
+	Code    int             "json:\"code\""
+	Message string          "json:\"message\""
+	Obj     json.RawMessage "json:\"obj\""
 }
 
 func (error Error) Error() string {
 	return error.Message
+}
+
+func (error Error) GetErrorCode() int {
+	return error.Code
+}
+
+func (error Error) GetObj() json.RawMessage {
+	return error.Obj
 }
 
 type RpcResult struct {
