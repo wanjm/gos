@@ -19,8 +19,8 @@ func NewTsGen() *TsGen {
 }
 
 // platform.ts is written only when missing so projects can switch the platform
-// client without losing edits. HTTP runtime lives in @wan_jm/component_set; WeChat
-// cannot require scoped packages, so generated code imports a local re-export.
+// client without losing edits. HTTP runtime lives in @wan_jm/component_set.
+// WeChat resolves @scope from miniprogram_npm after 构建 npm (packNpmManually).
 // Set client.ApiBaseUrl from app code after importing platform.
 
 const platformTsTemplate = `// Written once by gos; edit freely.
@@ -32,8 +32,8 @@ export const client = new WxClient();
 // export const client = new PcClient();
 `
 
-const componentSetTsTemplate = `// WeChat cannot require scoped packages (@wan_jm/...). Re-export the vendored build.
-export * from "../../vendor/component_set/http";
+const componentSetTsTemplate = `// Re-export the scoped npm package packed into miniprogram_npm.
+export * from "@wan_jm/component_set/http";
 `
 
 func (t *TsGen) GenerateCode(mp *astinfo.MainProject) {
