@@ -70,7 +70,8 @@
 
 | type | 说明 |
 |------|------|
-| `servlet` | HTTP servlet |
+| `servlet` | 伯索格式的返回，obj，error {code:0, messasge:, obj} |
+| `restful` | 返回值就直接返回到http报文中 |
 | `prpc` | struct = prpc 服务端；interface = prpc 客户端 |
 | `srpc` | 客户端调用对端 servlet 风格接口：POST JSON，响应 `{code,msg,obj}` |
 | `restrpc` | 客户端调用对端 RESTful 接口：JSON 请求，HTTP status 表示成败 |
