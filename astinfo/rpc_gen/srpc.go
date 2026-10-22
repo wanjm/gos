@@ -136,12 +136,31 @@ func (srpc *SrpcGen) GenerateCommon(file *astinfo.GenedFile) {
 	srpcGenerated = true
 	file.GetImport(astbasic.SimplePackage("bytes", "bytes"))
 	file.GetImport(astbasic.SimplePackage("encoding/json", "json"))
-	file.GetImport(astbasic.SimplePackage("errors", "errors"))
 	file.GetImport(astbasic.SimplePackage("net/http", "http"))
 	file.GetImport(astbasic.SimplePackage("io", "io"))
 	file.GetImport(astbasic.SimplePackage("context", "context"))
 	var content strings.Builder
 	content.WriteString(`
+// SrpcError is the JSON body of an srpc call.
+// A non-zero Code is returned directly as the call error.
+type SrpcError struct {
+	Code    int    ` + "`json:\"code\"`" + `
+	Message string ` + "`json:\"msg\"`" + `
+	Object  any    ` + "`json:\"obj\"`" + `
+}
+
+// Error returns the srpc failure text.
+// It reads msg from the response.
+func (e SrpcError) Error() string {
+	return e.Message
+}
+
+// GetErrorCode returns the srpc business code.
+// It reads code from the response.
+func (e SrpcError) GetErrorCode() int {
+	return e.Code
+}
+
 type SrpcClient struct {
 	Prefix    string
 	rpcLogger rpcLogger
@@ -169,16 +188,12 @@ func (client *SrpcClient) SendRequest(ctx context.Context, name string, paramete
 	requestBody, _ := io.ReadAll(resp.Body)
 	client.rpcLogger.LogResponse(ctx, url, string(requestBody))
 	resp.Body.Close()
-	var res struct {
-		Code    int    ` + "`json:\"code\"`" + `
-		Message string ` + "`json:\"msg\"`" + `
-		Object  any    ` + "`json:\"obj\"`" + `
-	}
+	var res SrpcError
 	res.Object = result
 	dec := json.NewDecoder(bytes.NewReader(requestBody))
 	_ = dec.Decode(&res)
 	if res.Code != 0 {
-		return errors.New(res.Message)
+		return res
 	}
 	return nil
 }
