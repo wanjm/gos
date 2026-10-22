@@ -144,9 +144,9 @@ func (srpc *SrpcGen) GenerateCommon(file *astinfo.GenedFile) {
 // SrpcError is the JSON body of an srpc call.
 // A non-zero Code is returned directly as the call error.
 type SrpcError struct {
-	Code    int    ` + "`json:\"code\"`" + `
-	Message string ` + "`json:\"msg\"`" + `
-	Object  any    ` + "`json:\"obj\"`" + `
+	Code    int    "json:\"code\""
+	Message string "json:\"msg\""
+	Object  any    "json:\"obj\""
 }
 
 // Error returns the srpc failure text.
