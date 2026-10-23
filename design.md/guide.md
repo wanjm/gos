@@ -49,6 +49,7 @@
 | `permission` | servlet 权限检测参数；原样复制到配置的检测函数调用中（见 [permission](#permission)） |
 | `header` | function 支持 `header="X-AppId:appId,..."`；结构体变量也可声明 header |
 | `swagger` | `swagger=false` 时不生成 OpenAPI；可用于 struct 或 method |
+| `folder` | Apifox 目录。存在时写入 `x-apifox-folder`；`/` 表示多级目录。方法上的值覆盖 struct 上的值；缺省则不写该字段 |
 | `enum` | 加在 const 后，表示一组取值，会编译为前端 enum |
 | `dispalyWord` | const 每个常量的前端显示值；缺省用变量后注释 |
 | `displayKey` | const 前端多语言 key；默认用名字 |

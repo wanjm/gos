@@ -12,16 +12,17 @@ import (
 // @goservlet type=xxx ;  prpc, servlet, websocket, restful,
 // @goservlet group=xxx; 如果不存在，则跟type同名
 type structComment struct {
-	GroupName  string
-	serverType string // NONE, RpcStruct, ServletStruct·
-	Url        string // 服务的url, 对所有的方法都有效
-	AutoGen    bool
-	TableName  string
-	DbVarible  string
+	GroupName       string
+	serverType      string // NONE, RpcStruct, ServletStruct·
+	Url             string // 服务的url, 对所有的方法都有效
+	AutoGen         bool
+	TableName       string
+	DbVarible       string
 	EntityName      string // entity name for FromEntity generation
 	Arrays          []string
 	Maps            []string
-	SwaggerExcluded bool // swagger=false 时不生成 OpenAPI 文档
+	SwaggerExcluded bool   // swagger=false 时不生成 OpenAPI 文档
+	Folder          string // Apifox 目录；方法未设置 folder 时使用
 	class           *Struct
 }
 
@@ -88,6 +89,8 @@ func (comment *structComment) dealValuePair(key, value string) {
 		if excluded, ok := parseSwaggerFlag(value); ok {
 			comment.SwaggerExcluded = excluded
 		}
+	case Folder:
+		comment.Folder = value
 	}
 }
 

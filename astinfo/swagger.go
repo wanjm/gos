@@ -53,6 +53,21 @@ func swaggerPathMatchesExclude(path string, exclude string) bool {
 	return false
 }
 
+// swaggerApifoxFolder 返回 servlet 在 Apifox 中的目录。
+// 方法上的 folder 优先；未设置时使用接收者 struct 的 folder。
+func swaggerApifoxFolder(servlet *Method) string {
+	if servlet == nil {
+		return ""
+	}
+	if folder := strings.TrimSpace(servlet.Comment.Folder); folder != "" {
+		return folder
+	}
+	if servlet.Receiver != nil {
+		return strings.TrimSpace(servlet.Receiver.Comment.Folder)
+	}
+	return ""
+}
+
 func swaggerServletExcluded(servlet *Method, excludePaths []string) bool {
 	if servlet.Comment.SwaggerExcluded {
 		return true
@@ -338,6 +353,9 @@ func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager, server
 		}
 		pathItem := spec.PathItem{}
 		operation := initOperation(comment.Title)
+		if folder := swaggerApifoxFolder(servlet); folder != "" {
+			operation.Extensions["x-apifox-folder"] = folder
+		}
 		parameter := swaggerHeaderParameters(collectServletSwaggerHeaders(servlet, serverFiltersByGroup))
 		switch comment.Method {
 		case POST, "":

@@ -10,6 +10,7 @@ type functionComment struct {
 	Url             string // url
 	Title           string // 函数描述，供swagger使用
 	SwaggerExcluded bool   // swagger=false 时不生成 OpenAPI 文档
+	Folder          string // Apifox 目录；非空时写入 x-apifox-folder
 	Method          string // http方法，GET,POST，默认是POST
 	isDeprecated    bool
 	funcType        string //函数类型，filter，servlet，websocket，prpc，initiator,目前仅用来控制解析；
@@ -72,6 +73,8 @@ func (comment *functionComment) dealValuePair(key, value string) {
 		}
 	case Title:
 		comment.Title = value
+	case Folder:
+		comment.Folder = value
 	case SwaggerKey:
 		if excluded, ok := parseSwaggerFlag(value); ok {
 			comment.SwaggerExcluded = excluded
