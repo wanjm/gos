@@ -90,15 +90,30 @@ func TestAddServletWritesApifoxFolder(t *testing.T) {
 		t.Fatal(err)
 	}
 	var doc struct {
+		Tags []struct {
+			Name string `json:"name"`
+		} `json:"tags"`
 		Paths map[string]map[string]map[string]any `json:"paths"`
 	}
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		t.Fatal(err)
 	}
-	if got := doc.Paths["/homework/list"]["post"]["x-apifox-folder"]; got != "homework" {
+	post := doc.Paths["/homework/list"]["post"]
+	if got := post["x-apifox-folder"]; got != "homework" {
 		t.Fatalf("x-apifox-folder = %v, want homework\n%s", got, raw)
 	}
-	if _, ok := doc.Paths["/ping"]["post"]["x-apifox-folder"]; ok {
+	tags, _ := post["tags"].([]any)
+	if len(tags) != 1 || tags[0] != "homework" {
+		t.Fatalf("tags = %v, want [homework]\n%s", post["tags"], raw)
+	}
+	if len(doc.Tags) != 1 || doc.Tags[0].Name != "homework" {
+		t.Fatalf("root tags = %+v, want homework", doc.Tags)
+	}
+	ping := doc.Paths["/ping"]["post"]
+	if _, ok := ping["x-apifox-folder"]; ok {
 		t.Fatalf("servlet without folder should omit x-apifox-folder:\n%s", raw)
+	}
+	if pingTags, ok := ping["tags"].([]any); ok && len(pingTags) > 0 {
+		t.Fatalf("servlet without folder should have empty tags: %v", pingTags)
 	}
 }

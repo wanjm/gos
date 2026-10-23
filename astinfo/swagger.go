@@ -68,6 +68,22 @@ func swaggerApifoxFolder(servlet *Method) string {
 	return ""
 }
 
+// setApifoxFolder 把目录写进 Swagger 2.0 接口。
+// Apifox 用 tags 的第一项建目录，同时写入 x-apifox-folder。
+func (swagger *Swagger) setApifoxFolder(operation *spec.Operation, folder string) {
+	if operation == nil || folder == "" {
+		return
+	}
+	operation.Tags = []string{folder}
+	operation.Extensions["x-apifox-folder"] = folder
+	for _, tag := range swagger.swag.Tags {
+		if tag.Name == folder {
+			return
+		}
+	}
+	swagger.swag.Tags = append(swagger.swag.Tags, spec.NewTag(folder, "", nil))
+}
+
 // hasApifoxFolder 判断是否有接口写了 x-apifox-folder。
 // Apifox 只有在导入时要求更新目录，才会移动已有接口。
 func (swagger *Swagger) hasApifoxFolder() bool {
@@ -372,9 +388,7 @@ func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager, server
 		}
 		pathItem := spec.PathItem{}
 		operation := initOperation(comment.Title)
-		if folder := swaggerApifoxFolder(servlet); folder != "" {
-			operation.Extensions["x-apifox-folder"] = folder
-		}
+		swagger.setApifoxFolder(operation, swaggerApifoxFolder(servlet))
 		parameter := swaggerHeaderParameters(collectServletSwaggerHeaders(servlet, serverFiltersByGroup))
 		switch comment.Method {
 		case POST, "":
