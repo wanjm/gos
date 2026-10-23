@@ -68,6 +68,25 @@ func swaggerApifoxFolder(servlet *Method) string {
 	return ""
 }
 
+// hasApifoxFolder 判断是否有接口写了 x-apifox-folder。
+// Apifox 只有在导入时要求更新目录，才会移动已有接口。
+func (swagger *Swagger) hasApifoxFolder() bool {
+	if swagger == nil || swagger.swag == nil || swagger.swag.Paths == nil {
+		return false
+	}
+	for _, item := range swagger.swag.Paths.Paths {
+		for _, op := range []*spec.Operation{item.Get, item.Post, item.Put, item.Delete, item.Patch} {
+			if op == nil {
+				continue
+			}
+			if _, ok := op.Extensions["x-apifox-folder"]; ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func swaggerServletExcluded(servlet *Method, excludePaths []string) bool {
 	if servlet.Comment.SwaggerExcluded {
 		return true
@@ -449,7 +468,7 @@ func (swagger *Swagger) GenerateCode(cfg *basic.SwaggerCfg) string {
 				"targetSchemaFolderId":          cfg.SchemaFolder,
 				"endpointOverwriteBehavior":     "OVERWRITE_EXISTING",
 				"schemaOverwriteBehavior":       "OVERWRITE_EXISTING",
-				"updateFolderOfChangedEndpoint": false,
+				"updateFolderOfChangedEndpoint": swagger.hasApifoxFolder(),
 				"prependBasePath":               false,
 			},
 		}

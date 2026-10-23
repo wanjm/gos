@@ -31,6 +31,31 @@ func TestSwaggerApifoxFolder(t *testing.T) {
 	}
 }
 
+func TestFolderOnServletStructComment(t *testing.T) {
+	var c structComment
+	ParseGosTags(`type="servlet" folder="直播带货"`, &c)
+	if c.serverType != Servlet || c.Folder != "直播带货" {
+		t.Fatalf("type=%q folder=%q", c.serverType, c.Folder)
+	}
+}
+
+func TestHasApifoxFolderEnablesDirectoryUpdate(t *testing.T) {
+	sw := NewSwagger(&MainProject{Cfg: &basic.Config{}})
+	if sw.hasApifoxFolder() {
+		t.Fatal("empty swagger should not update directories")
+	}
+	sw.addServletFromFunctionManager(&MethodManager{Server: []*Method{{
+		Function: Function{
+			FunctionField: FunctionField{Name: "List"},
+			Comment:       functionComment{Url: "/tk/live/product/teacher/pendingList", Method: POST},
+		},
+		Receiver: &Struct{Comment: structComment{Folder: "直播带货"}},
+	}}}, nil)
+	if !sw.hasApifoxFolder() {
+		t.Fatal("struct folder should mark the document for directory update")
+	}
+}
+
 func TestFolderCommentParsed(t *testing.T) {
 	var method functionComment
 	method.dealValuePair("folder", `"order/mall"`)
