@@ -24,6 +24,7 @@ const (
 	ConstMethod   = "method"
 	Title         = "title"   //定义函数的描述描述，供swagger使用
 	SwaggerKey    = "swagger" // swagger=false 时不生成 OpenAPI 文档
+	Folder        = "folder"  // Apifox 目录，写入 OpenAPI x-apifox-folder
 	Type          = "type"
 	Group         = "group"
 	AutoKey       = "auto"    // bare key: struct => gen DI instance; global var => fill from DI
