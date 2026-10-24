@@ -33,6 +33,13 @@ type Generation struct {
 	TsPath        string   // 自动生成前端的typescript路径
 	Jsonv2        bool     // 是否使用jsonv2
 	ParseProjects []string // Additional modPaths to parse (from go.mod require)
+	// PermissionCheckFunc is the function called for @gos permission=... on servlets.
+	// The annotation value is copied as extra arguments after gin.Context.
+	// Signature: func(ctx context.Context, <copied permission args>) bool
+	// true means allowed; false means the servlet returns PermissionDeniedCode.
+	PermissionCheckFunc  string
+	PermissionCheckMod   string // import path of PermissionCheckFunc
+	PermissionDeniedCode int    // Response.Code when the check returns false; 0 uses the internal error code
 	// DefaultOrders: priority list of default sort columns for MySQL DAL generation.
 	// For each table, the first Field that exists on the entity is used.
 	// If Direction is empty on index >= 1, index 0's Direction is reused.
@@ -72,10 +79,10 @@ type TableGenCfg struct {
 }
 
 type SwaggerCfg struct {
-	ProjectId     int      // 项目id
-	ServletFolder int      // 生成的servlet文件夹
-	SchemaFolder  int      // 生成的schema文件夹
-	UrlPrefix     string   // url前缀, 正式环境和本地的路径不一样
+	ProjectId     int    // 项目id
+	ServletFolder int    // 生成的servlet文件夹
+	SchemaFolder  int    // 生成的schema文件夹
+	UrlPrefix     string // url前缀, 正式环境和本地的路径不一样
 	Token         string
 	JsonName      string
 	ExcludePaths  []string // 全局排除的 servlet url，支持 /health/* 前缀通配

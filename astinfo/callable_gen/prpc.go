@@ -1,6 +1,7 @@
 package callable_gen
 
 import (
+	"fmt"
 	"log"
 	"path"
 	"strconv"
@@ -19,12 +20,21 @@ func GenBasicError(file *astinfo.GenedFile) {
 	}
 	a := `
 type Error struct {
-	Code    int    "json:\"code\""
-	Message string "json:\"message\""
+	Code    int             "json:\"code\""
+	Message string          "json:\"message\""
+	Obj     json.RawMessage "json:\"obj\""
 }
 
 func (error Error) Error() string {
 	return error.Message
+}
+
+func (error Error) GetErrorCode() int {
+	return error.Code
+}
+
+func (error Error) GetObj() json.RawMessage {
+	return error.Obj
 }
 
 type RpcResult struct {
@@ -38,7 +48,10 @@ type RpcResult struct {
 	errorCodeGen = true
 }
 
-type PrpcGen struct{}
+type PrpcGen struct {
+	filters   []*FilterInfo
+	filterMap map[string]*FilterInfo
+}
 
 func (prpc *PrpcGen) GetName() string {
 	return "prpc"
@@ -50,14 +63,90 @@ func (prpc *PrpcGen) GenerateCommon(file *astinfo.GenedFile) {
 	generateCommon()
 }
 
+const prpcFilterTemplate = `func {{.FilterName}}(c *gin.Context) {
+	err := {{.ImportName}}.{{.FunctionName}}(c, &c.Request)
+	errorCode, errMessage := getErrorCode(err)
+	if errorCode != 0 {
+		cJSON(c, 200, map[string]any{
+			"o": []any{&Error{Code: errorCode, Message: errMessage}},
+			"c": 0,
+		})
+		c.Abort()
+	}
+}
+`
+
+// GenFilterCode writes the gin wrapper for a prpc-group filter.
+// Empty-url filters become server middleware; others attach to matching routes.
 func (prpc *PrpcGen) GenFilterCode(function *astinfo.Function, file *astinfo.GenedFile) string {
-	var content strings.Builder
-	name := ""
-	file.AddBuilder(&content)
-	return name
+	file.GetImport(astbasic.SimplePackage("github.com/gin-gonic/gin", "gin"))
+	pkg := function.GoSource.Pkg
+	filterName := "filter_" + pkg.Name + "_" + function.Name
+	impt := file.GetImport(&pkg.PkgBasic)
+
+	data := struct {
+		FilterName   string
+		ImportName   string
+		FunctionName string
+	}{
+		FilterName:   filterName,
+		ImportName:   impt.Name,
+		FunctionName: function.Name,
+	}
+
+	var sb strings.Builder
+	tpl, err := template.New("prpc_filter").Parse(prpcFilterTemplate)
+	if err != nil {
+		panic(err)
+	}
+	if err := tpl.Execute(&sb, data); err != nil {
+		panic(err)
+	}
+	file.AddBuilder(&sb)
+
+	if function.Comment.Url == "" || function.Comment.Url == "\"\"" {
+		return filterName
+	}
+	if prpc.filterMap == nil {
+		prpc.filterMap = make(map[string]*FilterInfo)
+	}
+	filterInfo := &FilterInfo{
+		FilterName:    filterName,
+		FilterRawName: function.Name,
+		Func:          function,
+	}
+	prpc.filterMap[function.Name] = filterInfo
+	prpc.filters = append(prpc.filters, filterInfo)
+	return ""
 }
 
-// genRouterCode
+// appendRouteFilterNames collects explicit and URL-matched filter names for one route.
+// It returns a comma-terminated list so the gin handler can be appended after them.
+func (prpc *PrpcGen) appendRouteFilterNames(method *astinfo.Method) string {
+	var names string
+	methodUrl := strings.Trim(method.Comment.Url, "\"")
+	for _, filter := range method.Comment.Filters {
+		if prpc.filterMap == nil {
+			fmt.Printf("filter %s not found in file %s for %s \n", filter, method.GoSource.Path, method.Name)
+			continue
+		}
+		filterInfo := prpc.filterMap[filter]
+		if filterInfo == nil {
+			fmt.Printf("filter %s not found in file %s for %s \n", filter, method.GoSource.Path, method.Name)
+			continue
+		}
+		names += filterInfo.FilterName + ","
+	}
+	for _, filter := range prpc.filters {
+		if strings.Contains(methodUrl, filter.Func.Comment.Url) {
+			names += filter.FilterName + ","
+		}
+	}
+	return names
+}
+
+// GenRouterCode writes one prpc gin route, including per-route filters.
+// It keeps the built-in TraceId only when a filter has not already set one.
 func (prpc *PrpcGen) GenRouterCode(method *astinfo.Method, file *astinfo.GenedFile) string {
 	var sb strings.Builder
 	name := ""
@@ -80,6 +169,7 @@ func (prpc *PrpcGen) GenRouterCode(method *astinfo.Method, file *astinfo.GenedFi
 		HttpMethod: method.Comment.Method,
 		MethodName: method.Name,
 		Url:        path.Join(method.Receiver.Comment.Url, method.Comment.Url),
+		FilterName: prpc.appendRouteFilterNames(method),
 		// DataError:  servlet.DataError,
 	}
 	var args []string
@@ -110,12 +200,14 @@ func (prpc *PrpcGen) GenRouterCode(method *astinfo.Method, file *astinfo.GenedFi
 		return
 	}
 	{{end}}
-	var Request= c.Request;
-	tid := Request.Header.Get(TraceId)
-	if len(tid) ==0 {
-		tid = xid.New().String()
+	if c.Value(TraceIdNameInContext) == nil {
+		var Request= c.Request;
+		tid := Request.Header.Get(TraceId)
+		if len(tid) ==0 {
+			tid = xid.New().String()
+		}
+		c.Request = Request.WithContext(context.WithValue(Request.Context(), TraceIdNameInContext, tid))
 	}
-	c.Request = Request.WithContext(context.WithValue(Request.Context(), TraceIdNameInContext, tid))
 	{{ if .HasResponse }}response,{{end}} err := receiver.{{.MethodName}}(c {{ if .HasRequest }},{{.ParamString}}{{ end }})
 	var code any
 	errorCode,errMessage:=getErrorCode(err)

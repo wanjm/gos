@@ -46,8 +46,10 @@
 | `type` | 类型（见 [type](#33-type)） |
 | `method` | HTTP method（servlet / restrpc） |
 | `filters` | 过滤器函数名（逗号分隔） |
+| `permission` | servlet 权限检测参数；原样复制到配置的检测函数调用中（见 [permission](#permission)） |
 | `header` | function 支持 `header="X-AppId:appId,..."`；结构体变量也可声明 header |
 | `swagger` | `swagger=false` 时不生成 OpenAPI；可用于 struct 或 method |
+| `folder` | Apifox 目录。Swagger 2.0 写入接口 `tags` 第一项，并写 `x-apifox-folder`；`/` 表示多级目录。方法上的值覆盖 struct 上的值；缺省则不写。有该字段时，导入会更新已有接口的目录 |
 | `enum` | 加在 const 后，表示一组取值，会编译为前端 enum |
 | `dispalyWord` | const 每个常量的前端显示值；缺省用变量后注释 |
 | `displayKey` | const 前端多语言 key；默认用名字 |
@@ -69,7 +71,8 @@
 
 | type | 说明 |
 |------|------|
-| `servlet` | HTTP servlet |
+| `servlet` | 伯索格式的返回，obj，error {code:0, messasge:, obj} |
+| `restful` | 返回值就直接返回到http报文中 |
 | `prpc` | struct = prpc 服务端；interface = prpc 客户端 |
 | `srpc` | 客户端调用对端 servlet 风格接口：POST JSON，响应 `{code,msg,obj}` |
 | `restrpc` | 客户端调用对端 RESTful 接口：JSON 请求，HTTP status 表示成败 |
@@ -83,6 +86,35 @@
 ### 3.5 filters
 
 逗号分隔的函数名（即 filter 函数名）。系统从 filter 集合中查找并绑定。
+
+`type=filter` 的 `group` 必须与服务 group 相同（`type=prpc` 默认 group 为 `prpc`）。`url=""` 的 filter 挂到该 server 的全局 gin middleware；非空 `url` 按路径包含关系绑到匹配路由。servlet 失败时返回 `{code,message}`；prpc 失败时返回 `{c,o}`。
+
+#### permission
+
+servlet 方法可加 `permission=<args>`。生成代码在 bind/validate 之后、业务方法之前调用 `Generation.PermissionCheckFunc`（包路径 `PermissionCheckMod`），把 annotation 的值接到 `c` 后面。检测函数返回 **bool**（true 有权限，false 无权限）。false 时 servlet 返回 `PermissionDeniedCode`（未配置则用内部错误码）和 `"no permission"`。
+
+数字字面量原样复制；`pkg.Ident` 必须是**已解析包中的导出 const**（servlet 源文件不必 import，因为名字写在注释里）。gos 在 `servlet.gen.go` 中 import 该包，以便 IDE Find References 能定位到生成调用。type / var / func / 未导出 const 不匹配。
+
+```toml
+PermissionCheckFunc = "CheckPermission"
+PermissionCheckMod = "gitlab.plaso.cn/nt/nt-common/filter"
+PermissionDeniedCode = 11
+```
+
+```go
+// @gos url="/user/tk/write/admin/create"; permission=user_permission.PermissionGroupUser,user_permission.PermissionTypeCreateAdmin;
+```
+
+生成：
+
+```go
+if !filter.CheckPermission(c, user_permission.PermissionGroupUser, user_permission.PermissionTypeCreateAdmin) {
+    servletJson(c, 200, Response{Code: 11, Message: "no permission"})
+    return
+}
+```
+
+检测函数签名为 `func(ctx context.Context, <copied args>) bool`（传入的是 `*gin.Context`）。未配置 Func/Mod、找不到导出 const、或同名包不唯一且都声明了该 const 时 gos 退出。未加包前缀的 ident 不支持（会落在 `gen` 包）。
 
 ### 3.6 srpc
 
@@ -113,6 +145,15 @@ var BookSvc BookClient
 
 ```go
 resp, err := BookSvc.GetBook(ctx, &GetBookRequest{Id: 1})
+```
+
+同一 interface 要打多个 host 时，再声明同名工厂。gos 注入 `XxxWithPrefix(prefix)`，每次调用返回新客户端，不改默认 `Xxx`：
+
+```go
+var BookSvc BookClient
+var BookSvcWithPrefix func(prefix string) BookClient
+
+resp, err := BookSvcWithPrefix("http://book-dev").GetBook(ctx, req)
 ```
 
 ### 3.7 restrpc

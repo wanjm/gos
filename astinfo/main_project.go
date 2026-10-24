@@ -205,6 +205,9 @@ CommonMod="github.com/wanjm/common"
 #FlutterPath="../client/lib/data/http"
 #JsPath="../client/src/api"
 ParseProjects = ["github.com/wanjm/common"]
+#PermissionCheckFunc="CheckPermission"
+#PermissionCheckMod="gitlab.plaso.cn/nt/nt-common/filter"
+#PermissionDeniedCode=11
 ## DBConfig配置（切片类型，使用[[ ]]表示数组元素）
 ##[[DBConfig]]
 #DSN="user:passwd@tcp(dbhost:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local" in private file"

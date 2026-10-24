@@ -12,28 +12,30 @@ const (
 )
 
 const (
-	UrlFilter   = "urlfilter"
-	Url         = "url" // 定义函数为servlet，默认method为POST
-	Creator     = "creator"
-	Initiator   = "initiator"
-	Websocket   = "websocket"
-	FilterConst = "filter"
-	UserFilter  = "filters"
-	Security    = "security"
-	ConstMethod = "method"
-	Title          = "title"   //定义函数的描述描述，供swagger使用
-	SwaggerKey     = "swagger" // swagger=false 时不生成 OpenAPI 文档
-	Type           = "type"
-	Group       = "group"
-	AutoKey = "auto"    // bare key: struct => gen DI instance; global var => fill from DI
-	AutoGen = "autogen" // deprecated alias of auto on struct; remove after next major release
-	Host    = "host"    //rpcclient 使用
-	tblName     = "tblName"
-	dbVarible   = "dbVariable"
-	entityKey   = "entity"
-	arraysKey   = "arrays"
-	mapsKey     = "maps"
-	Macro       = "macro"
+	UrlFilter     = "urlfilter"
+	Url           = "url" // 定义函数为servlet，默认method为POST
+	Creator       = "creator"
+	Initiator     = "initiator"
+	Websocket     = "websocket"
+	FilterConst   = "filter"
+	UserFilter    = "filters"
+	PermissionKey = "permission"
+	Security      = "security"
+	ConstMethod   = "method"
+	Title         = "title"   //定义函数的描述描述，供swagger使用
+	SwaggerKey    = "swagger" // swagger=false 时不生成 OpenAPI 文档
+	Folder        = "folder"  // Apifox 目录，写入 OpenAPI x-apifox-folder
+	Type          = "type"
+	Group         = "group"
+	AutoKey       = "auto"    // bare key: struct => gen DI instance; global var => fill from DI
+	AutoGen       = "autogen" // deprecated alias of auto on struct; remove after next major release
+	Host          = "host"    //rpcclient 使用
+	tblName       = "tblName"
+	dbVarible     = "dbVariable"
+	entityKey     = "entity"
+	arraysKey     = "arrays"
+	mapsKey       = "maps"
+	Macro         = "macro"
 	//desperate
 	Servlet = "servlet" //用于定义struct是servlet，所以默认groupName是servlets
 	Prpc    = "prpc"    //用于定义struct是prpc，所以默认groupName是prpc

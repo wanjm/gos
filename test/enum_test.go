@@ -225,6 +225,9 @@ func TestGenEnumTS(t *testing.T) {
 		},
 	}
 	out := ts_gen.GenEnumTS(enum)
+	if !strings.Contains(out, "export const enum PackageType {") {
+		t.Fatalf("ts output missing const enum declaration: %s", out)
+	}
 	if !strings.Contains(out, "Normal = 1") {
 		t.Fatalf("ts output missing member: %s", out)
 	}
@@ -243,8 +246,14 @@ func TestGenEnumTS(t *testing.T) {
 		},
 	}
 	strOut := ts_gen.GenEnumTS(strEnum)
-	if !strings.Contains(strOut, "HwlNormal: 'hwlnormal'") {
+	if !strings.Contains(strOut, "export const enum AiAgentType {") {
+		t.Fatalf("ts string enum missing const enum declaration: %s", strOut)
+	}
+	if !strings.Contains(strOut, "HwlNormal = 'hwlnormal'") {
 		t.Fatalf("ts string enum output: %s", strOut)
+	}
+	if !strings.Contains(strOut, "[AiAgentType.HwlNormal]: '好未来'") {
+		t.Fatalf("ts string display map key: %s", strOut)
 	}
 	if !strings.Contains(strOut, "return AiAgentTypeDisplayWord[v] ?? '';\n}\n") {
 		t.Fatalf("ts string text helper missing closing brace: %s", strOut)

@@ -5,12 +5,15 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"text/template"
 
 	"github.com/wanjm/gos/astbasic"
 	"github.com/wanjm/gos/astinfo"
 )
+
+var pkgIdentRe = regexp.MustCompile(`\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\b`)
 
 type FilterInfo struct {
 	FilterName    string
@@ -109,17 +112,20 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 	//  有request请求，需要解析request，有些情况下，服务端不需要request；
 	// 参数为context.Context, request *schema.Request
 	type CodeParam struct {
-		HttpMethod         string
-		MethodName         string
-		Url                string
-		FilterName         string //自带最后一个逗号
-		RequestConstruct   string
-		UrlParameterStr    string
-		HeaderParameterStr string
-		HasRequest         bool
-		HasResponse        bool
-		ResponseNilCode    string
-		DataError          int
+		HttpMethod           string
+		MethodName           string
+		Url                  string
+		FilterName           string //自带最后一个逗号
+		RequestConstruct     string
+		UrlParameterStr      string
+		HeaderParameterStr   string
+		HasRequest           bool
+		HasResponse          bool
+		HasPermission        bool
+		PermissionCall       string
+		PermissionDeniedCode int
+		ResponseNilCode      string
+		DataError            int
 	}
 	tm := &CodeParam{
 		HttpMethod: method.Comment.Method,
@@ -175,6 +181,18 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 			tm.FilterName += filter.FilterName + ","
 		}
 	}
+	if call := permissionCheckCall(method, file); call != "" {
+		tm.HasPermission = true
+		tm.PermissionCall = call
+		denied := 0
+		if astinfo.GlobalProject != nil && astinfo.GlobalProject.Cfg != nil {
+			denied = astinfo.GlobalProject.Cfg.Generation.PermissionDeniedCode
+		}
+		if denied == 0 {
+			denied = servlet.InternalError
+		}
+		tm.PermissionDeniedCode = denied
+	}
 	tmplText := `engine.{{.HttpMethod}} ( "{{.Url}}", {{.FilterName}} func(c *gin.Context) {
 		{{ if .HasRequest }}
 		request := {{.RequestConstruct}}
@@ -192,6 +210,15 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 			servletJson(c, 200, Response{
 				Code:    {{.DataError}},
 				Message: err.Error(),
+			})
+			return
+		}
+		{{ end }}
+		{{ if .HasPermission }}
+		if !{{.PermissionCall}} {
+			servletJson(c, 200, Response{
+				Code:    {{.PermissionDeniedCode}},
+				Message: "no permission",
 			})
 			return
 		}
@@ -222,4 +249,49 @@ func (servlet *ServletGen) GenRouterCode(method *astinfo.Method, file *astinfo.G
 		log.Fatalf("执行模板失败: %v", err)
 	}
 	return name
+}
+
+func permissionCheckCall(method *astinfo.Method, file *astinfo.GenedFile) string {
+	perm := strings.TrimSpace(method.Comment.Permission)
+	if perm == "" {
+		return ""
+	}
+	if astinfo.GlobalProject == nil || astinfo.GlobalProject.Cfg == nil {
+		fmt.Printf("permission annotation on %s requires Generation.PermissionCheckFunc and PermissionCheckMod\n", method.Name)
+		os.Exit(1)
+	}
+	gen := astinfo.GlobalProject.Cfg.Generation
+	if gen.PermissionCheckFunc == "" || gen.PermissionCheckMod == "" {
+		fmt.Printf("permission annotation on %s requires Generation.PermissionCheckFunc and PermissionCheckMod\n", method.Name)
+		os.Exit(1)
+	}
+	rewritten, err := rewritePermissionArgs(perm, file, method.Name)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
+	}
+	impt := file.GetImport(astbasic.SimplePackage(gen.PermissionCheckMod, path.Base(gen.PermissionCheckMod)))
+	return fmt.Sprintf("%s.%s(c, %s)", impt.Name, gen.PermissionCheckFunc, rewritten)
+}
+
+func rewritePermissionArgs(perm string, file *astinfo.GenedFile, methodName string) (string, error) {
+	var firstErr error
+	out := pkgIdentRe.ReplaceAllStringFunc(perm, func(s string) string {
+		if firstErr != nil {
+			return s
+		}
+		dot := strings.IndexByte(s, '.')
+		pkgName, ident := s[:dot], s[dot+1:]
+		pkg, err := astinfo.GlobalProject.LookupPackageIdent(pkgName, ident)
+		if err != nil {
+			firstErr = fmt.Errorf("permission annotation on %s: %w", methodName, err)
+			return s
+		}
+		impt := file.GetImport(astbasic.SimplePackage(pkg.ModPath, pkgName))
+		return impt.Name + "." + ident
+	})
+	if firstErr != nil {
+		return "", firstErr
+	}
+	return out, nil
 }

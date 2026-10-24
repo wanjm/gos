@@ -1,3 +1,69 @@
+## 2026-09-30 14:43:00
+
+1. also add Count for mongo dal;
+2. Also add a Count method to the generated Mongo DAL.;
+
+## 2026-09-30 14:20:00
+
+1. in gos for generated sql dal code, please add count with ctx context.Context, options []common.Optioner and parameter;
+2. In gos, add a Count method to the generated SQL DAL that takes ctx context.Context and options []common.Optioner.;
+
+## 2026-09-17 13:20:00
+
+1. ok please modify gos to generate the code and update callbackhub accordingly;
+2. Modify gos so generated SRPC clients can target a host per call, then update callback-hub to route AliCallReceipt by environment;
+
+## 2026-09-05 13:49:00
+
+1. ok, list the work need to do;
+2. List the work that needs to be done.;
+
+## 2026-09-04 16:50:00
+
+1. please read https://www.tapd.cn/tapd_fe/50221454/story/detail/1150221454001069738 ; and show me what need to do;
+2. Please read https://www.tapd.cn/tapd_fe/50221454/story/detail/1150221454001069738 and summarize what needs to be done.;
+
+## 2026-09-03 21:07:00
+
+1. I plan to auto generate go code as the above interface, so then i can also use gos to genrate more code and set up the test project;
+2. Auto-generate Go srpc client interfaces (like FlutterPath/TsPath) so a separate test project can run gos to generate the client stubs and host tests;
+
+## 2026-09-02 15:56:00
+
+1. 1. permissionCheckCall should return true if has permission, and false if not; 2. yes, only const ;
+2. 1. Make the generated permission check return true when allowed and false when denied. 2. Resolve @gos permission pkg.Ident only for exported consts;
+
+## 2026-09-02 14:15:00
+
+1. /local-review please review last two commission of gos.;
+2. Please review the last two commits of gos;
+
+## 2026-08-21 09:56:00
+
+
+1. let string generate the same code as int;
+2. Make string enums generate the same code as int enums;
+
+## 2026-08-21 08:57:00
+
+1. doesn't vite emit code using tsc? how does it emit code , it emit itself?;
+2. Doesn't Vite emit code using tsc? How does it emit code — does it emit itself?;
+
+## 2026-08-21 08:55:00
+
+1. show me example of ts code and the generated js code, to make me more clear;
+2. Show examples of TypeScript source and the generated JavaScript to make this clearer;
+
+## 2026-08-21 08:51:00
+
+1. what will happen if keep string the same as int?;
+2. What happens if string enums are generated the same way as int enums?;
+
+## 2026-08-21 08:47:00
+
+1. please review last commit of gos ,what string different from the others;
+2. Please review the last gos commit and explain how string enums differ from the others;
+
 ## 2026-08-11 16:42:41
 
 1. automatically generate Version when publicToml, don't comment it. as keep version the same of that in main

@@ -53,6 +53,56 @@ func swaggerPathMatchesExclude(path string, exclude string) bool {
 	return false
 }
 
+// swaggerApifoxFolder 返回 servlet 在 Apifox 中的目录。
+// 方法上的 folder 优先；未设置时使用接收者 struct 的 folder。
+func swaggerApifoxFolder(servlet *Method) string {
+	if servlet == nil {
+		return ""
+	}
+	if folder := strings.TrimSpace(servlet.Comment.Folder); folder != "" {
+		return folder
+	}
+	if servlet.Receiver != nil {
+		return strings.TrimSpace(servlet.Receiver.Comment.Folder)
+	}
+	return ""
+}
+
+// setApifoxFolder 把目录写进 Swagger 2.0 接口。
+// Apifox 用 tags 的第一项建目录，同时写入 x-apifox-folder。
+func (swagger *Swagger) setApifoxFolder(operation *spec.Operation, folder string) {
+	if operation == nil || folder == "" {
+		return
+	}
+	operation.Tags = []string{folder}
+	operation.Extensions["x-apifox-folder"] = folder
+	for _, tag := range swagger.swag.Tags {
+		if tag.Name == folder {
+			return
+		}
+	}
+	swagger.swag.Tags = append(swagger.swag.Tags, spec.NewTag(folder, "", nil))
+}
+
+// hasApifoxFolder 判断是否有接口写了 x-apifox-folder。
+// Apifox 只有在导入时要求更新目录，才会移动已有接口。
+func (swagger *Swagger) hasApifoxFolder() bool {
+	if swagger == nil || swagger.swag == nil || swagger.swag.Paths == nil {
+		return false
+	}
+	for _, item := range swagger.swag.Paths.Paths {
+		for _, op := range []*spec.Operation{item.Get, item.Post, item.Put, item.Delete, item.Patch} {
+			if op == nil {
+				continue
+			}
+			if _, ok := op.Extensions["x-apifox-folder"]; ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func swaggerServletExcluded(servlet *Method, excludePaths []string) bool {
 	if servlet.Comment.SwaggerExcluded {
 		return true
@@ -338,6 +388,7 @@ func (swagger *Swagger) addServletFromFunctionManager(pkg *MethodManager, server
 		}
 		pathItem := spec.PathItem{}
 		operation := initOperation(comment.Title)
+		swagger.setApifoxFolder(operation, swaggerApifoxFolder(servlet))
 		parameter := swaggerHeaderParameters(collectServletSwaggerHeaders(servlet, serverFiltersByGroup))
 		switch comment.Method {
 		case POST, "":
@@ -431,7 +482,7 @@ func (swagger *Swagger) GenerateCode(cfg *basic.SwaggerCfg) string {
 				"targetSchemaFolderId":          cfg.SchemaFolder,
 				"endpointOverwriteBehavior":     "OVERWRITE_EXISTING",
 				"schemaOverwriteBehavior":       "OVERWRITE_EXISTING",
-				"updateFolderOfChangedEndpoint": false,
+				"updateFolderOfChangedEndpoint": swagger.hasApifoxFolder(),
 				"prependBasePath":               false,
 			},
 		}
