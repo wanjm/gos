@@ -122,11 +122,11 @@ func (r *RestrpcGen) GenerateCommon(file *astinfo.GenedFile) {
 	content.WriteString(`
 // RestError is the object returned by a restrpc call when HTTP status indicates failure.
 type RestError struct {
-	StatusCode int             ` + "`json:\"-\"`" + `
-	Code       int             ` + "`json:\"code\"`" + `
-	Message    string          ` + "`json:\"message\"`" + `
-	ErrorText  string          ` + "`json:\"error\"`" + `
-	Raw        json.RawMessage ` + "`json:\"-\"`" + `
+	StatusCode int             "json:\"-\""
+	Code       int             "json:\"code\""
+	Message    string          "json:\"message\""
+	ErrorText  string          "json:\"error\""
+	Raw        json.RawMessage "json:\"-\""
 }
 
 func (e *RestError) Error() string {
