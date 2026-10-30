@@ -1,3 +1,8 @@
+## 2026-10-30 21:26:49
+
+1. please update gos ,when generate run , we need to check the existence of config.CertFile and then use call *TLS function;
+2. Please update gos so that the generated `run` function checks whether the file at `config.CertFile` exists and, if it does, calls the TLS serve function.;
+
 ## 2026-09-30 14:43:00
 
 1. also add Count for mongo dal;
