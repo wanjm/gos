@@ -85,6 +85,8 @@ func run() {
 		Cors:       true,
 		Addr:       basic.Cfg.Server.ServerHost,
 		ServerName: "servlet", // this is the name of group tag in comments;
+		CertFile:   basic.Cfg.Server.CertFile,
+		KeyFile:    basic.Cfg.Server.KeyFile,
 	})
 	manager.Go("http server shutdown monitor", func(ctx context.Context) {
 		shutdown(ctx, 5*time.Second)
@@ -117,6 +119,8 @@ type CommandOption struct {
 
 type Server struct {
 	ServerHost string
+	CertFile   string // TLS certificate path; empty or missing file serves plain HTTP
+	KeyFile    string // TLS private key path used with CertFile
 }
 
 type Config struct {
@@ -228,6 +232,8 @@ ParseProjects = ["github.com/wanjm/common"]
 func (mp *MainProject) genBusinessPublicToml() {
 	toml := `[Server]
 ServerHost=":8080"
+CertFile=""
+KeyFile=""
 
 ## DBConfig（也可放在 business.private.toml）
 #[DBConfig.MySqlConfig]
