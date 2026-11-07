@@ -1,3 +1,8 @@
+## 2026-11-07 20:20:00
+
+1. what can i do to find out the detailed design, and find out what needs to be optimized;
+2. What can I do to find the detailed design and identify what needs to be optimized?;
+
 ## 2026-11-07 19:47:33
 
 1. please resad gos project and let's understand it;
