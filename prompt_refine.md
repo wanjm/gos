@@ -1,3 +1,8 @@
+## 2026-11-07 20:26:00
+
+1. many md files are not update to date, so only the code can tell us what need to be optimized;
+2. Many of the markdown files are out of date, so use only the code to determine what needs to be optimized.;
+
 ## 2026-11-07 20:20:00
 
 1. what can i do to find out the detailed design, and find out what needs to be optimized;
