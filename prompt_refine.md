@@ -1,3 +1,8 @@
+## 2026-11-07 19:47:33
+
+1. please resad gos project and let's understand it;
+2. Please read the gos project and help me understand it.;
+
 ## 2026-10-30 21:26:49
 
 1. please update gos ,when generate run , we need to check the existence of config.CertFile and then use call *TLS function;
