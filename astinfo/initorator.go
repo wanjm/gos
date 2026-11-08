@@ -285,7 +285,72 @@ func (im *InitManager) collect() ([]*DependNode, VariableMap) {
 			}
 		}
 	}
+	dependNode = im.collectRpcClients(dependNode, waittingVariableMap)
 	return dependNode, waittingVariableMap
+}
+
+// rpcClientGenerator provides one prpc or srpc interface value.
+// The value is the generated client struct, and the node has no dependencies.
+type rpcClientGenerator struct {
+	iface *Interface
+}
+
+// RequiredFields returns no dependencies.
+// Host and logger are not dependency-injected values.
+func (g *rpcClientGenerator) RequiredFields() []*Field { return nil }
+
+// GeneredFields returns the interface this client is wired as.
+// The declared variable type is the interface, not the generated struct.
+func (g *rpcClientGenerator) GeneredFields() []*Field {
+	return []*Field{NewSimpleField(g.iface, "")}
+}
+
+// GenerateDependcyCode returns the &XxxStruct literal for this interface.
+// ClientGen.ConstructExpr supplies the prpc or srpc expression.
+func (g *rpcClientGenerator) GenerateDependcyCode(file *GenedFile) string {
+	for _, gen := range clientGens {
+		if gen.GetName() == g.iface.Comment.Type {
+			return gen.ConstructExpr(g.iface, file)
+		}
+	}
+	fmt.Printf("no client generator for %s\n", g.iface.IDName())
+	return "nil"
+}
+
+// GetInfo identifies this client when a dependency cannot be initialized.
+// It prints the interface id.
+func (g *rpcClientGenerator) GetInfo() string {
+	return "rpc client " + g.iface.IDName()
+}
+
+// collectRpcClients registers one provider for each prpc or srpc interface.
+// The provider is keyed by the interface type so fields and globals of that type can wire it.
+func (im *InitManager) collectRpcClients(dependNode []*DependNode, waiting VariableMap) []*DependNode {
+	pkgNames := make([]string, 0, len(im.project.Packages))
+	for name := range im.project.Packages {
+		pkgNames = append(pkgNames, name)
+	}
+	sort.Strings(pkgNames)
+	for _, pkgName := range pkgNames {
+		pkg := im.project.Packages[pkgName]
+		typeNames := make([]string, 0, len(pkg.Types))
+		for name := range pkg.Types {
+			typeNames = append(typeNames, name)
+		}
+		sort.Strings(typeNames)
+		for _, name := range typeNames {
+			iface, ok := pkg.Types[name].(*Interface)
+			if !ok {
+				continue
+			}
+			if iface.Comment.Type != Prpc && iface.Comment.Type != Srpc {
+				continue
+			}
+			node := waiting.addVGenerator(&rpcClientGenerator{iface: iface})
+			dependNode = append(dependNode, node)
+		}
+	}
+	return dependNode
 }
 
 // getGeneratorModPath returns the module path for a VariableGenerator.
@@ -295,6 +360,8 @@ func getGeneratorModPath(g VariableGenerator) string {
 		return v.GoSource.Pkg.ModPath
 	case *Struct:
 		return v.GoSource.Pkg.ModPath
+	case *rpcClientGenerator:
+		return v.iface.GoSource.Pkg.ModPath
 	default:
 		return ""
 	}
@@ -307,6 +374,7 @@ func (im *InitManager) isMainProject(modPath string) bool {
 }
 
 // collectAutofillVars finds package-level vars annotated with @gos auto.
+// A prpc or srpc interface variable is assigned only when it has that annotation.
 func (im *InitManager) collectAutofillVars() []*VarField {
 	p := im.project
 	var result []*VarField

@@ -1,6 +1,7 @@
 package rpcgen
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"text/template"
@@ -222,6 +223,20 @@ func restrpcEncodeQuery(parameter any) (string, error) {
 }
 `)
 	file.AddBuilder(&content)
+}
+
+// ConstructExpr builds the restrpc client value for one interface.
+// It returns &NameStruct{...} for assignment to the interface variable.
+func (r *RestrpcGen) ConstructExpr(iface *astinfo.Interface, file *astinfo.GenedFile) string {
+	host := clientHostExpr(iface, file)
+	return fmt.Sprintf(`&%sStruct{
+		client: RestrpcClient{
+			RestfulClient: RestfulClient{
+				Prefix: %s,
+				rpcLogger: &rpclogger,
+			},
+		},
+	}`, iface.InterfaceName, host)
 }
 
 func (r *RestrpcGen) InitClientVariable(rpcClientVar map[*astinfo.Interface]*astinfo.VarField, file *astinfo.GenedFile) string {

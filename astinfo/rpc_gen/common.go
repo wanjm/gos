@@ -1,6 +1,7 @@
 package rpcgen
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/wanjm/gos/astbasic"
@@ -47,15 +48,17 @@ func (logger *defaultRpcLogger) LogResponse(_ context.Context, url, response str
 func (logger *defaultRpcLogger) LogError(_ context.Context, url, err string) {
 	fmt.Printf("Error in '%s' err=%s\n", url, err)
 }
-
+` + rpcLoggerVar(file) + `
 // RestfulClient is the shared HTTP caller for prpc, srpc, and restrpc.
 type RestfulClient struct {
 	Prefix    string
 	rpcLogger rpcLogger
+	// header adds request headers for this client. prpc sets the developer function named by header=.
+	header func(context.Context) map[string]string
 }
 
 // Exchange sends one HTTP call shared by prpc, srpc, and restrpc.
-// It returns the status and body. A non-2xx status is not an error. requireTrace panics when the trace id is missing.
+// It copies client headers onto the request and returns the status and body. A non-2xx status is not an error. requireTrace panics when the trace id is missing.
 func (client *RestfulClient) Exchange(ctx context.Context, method, name string, body []byte, requireTrace bool) (int, []byte, error) {
 	reqURL := client.Prefix + name
 	var bodyReader io.Reader
@@ -67,6 +70,11 @@ func (client *RestfulClient) Exchange(ctx context.Context, method, name string, 
 	if err == nil {
 		if body != nil {
 			req.Header.Set("Content-Type", "application/json")
+		}
+		if client.header != nil {
+			for key, value := range client.header(ctx) {
+				req.Header.Set(key, value)
+			}
 		}
 		if requireTrace {
 			req.Header.Set(TraceId, ctx.Value(TraceIdNameInContext).(string))
@@ -90,4 +98,26 @@ func (client *RestfulClient) Exchange(ctx context.Context, method, name string, 
 `)
 	file.AddBuilder(&content)
 	file.Save()
+}
+
+// rpcLoggerVar declares the package-level logger wired clients take the address of.
+// It uses the configured logger type, or defaultRpcLogger when none is configured.
+func rpcLoggerVar(file *astinfo.GenedFile) string {
+	cfg := astinfo.GlobalProject.Cfg.Generation
+	if cfg.RpcLoggerKey == "" {
+		return "\nvar rpclogger defaultRpcLogger\n"
+	}
+	impt := file.GetImport(astbasic.SimplePackage(cfg.RpcLoggerMod, "xx"))
+	return fmt.Sprintf("\nvar rpclogger %s.%s\n", impt.Name, cfg.RpcLoggerKey)
+}
+
+// clientHostExpr returns the Prefix expression for an rpc client.
+// A quoted host is copied as a string; a bare name is called in the interface package.
+func clientHostExpr(iface *astinfo.Interface, file *astinfo.GenedFile) string {
+	impt := file.GetImport(&iface.GoSource.Pkg.PkgBasic)
+	host := iface.Comment.Host
+	if !strings.HasPrefix(host, `"`) {
+		host = impt.Name + "." + host
+	}
+	return host
 }

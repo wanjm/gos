@@ -7,8 +7,9 @@ import (
 )
 
 type interfaceComments struct {
-	Host string
-	Type string
+	Host   string
+	Type   string
+	Header string // prpc: same-package func(context.Context) map[string]string
 }
 
 func (config *interfaceComments) dealValuePair(key, value string) {
@@ -17,6 +18,8 @@ func (config *interfaceComments) dealValuePair(key, value string) {
 		config.Host = value
 	case Type:
 		config.Type = strings.Trim(value, `"`)
+	case HEADER:
+		config.Header = strings.Trim(value, `"`)
 	default:
 		fmt.Printf("unkonw key value pair => key=%s,value=%s\n", key, value)
 	}

@@ -1,7 +1,8 @@
 package rpcgen
 
 import (
-	"log"
+	"fmt"
+	"os"
 	"strings"
 	"text/template"
 
@@ -18,9 +19,6 @@ func (prpc *PrpcGen) GetName() string {
 }
 
 func (prpc *PrpcGen) Generate(class *astinfo.Interface, file *astinfo.GenedFile) error {
-	if len(class.Methods) == 0 {
-		return nil
-	}
 	var sb strings.Builder
 	className := class.InterfaceName + "Struct"
 	sb.WriteString("type " + className + " struct {\nclient PrpcClient\n}\n")
@@ -30,6 +28,43 @@ func (prpc *PrpcGen) Generate(class *astinfo.Interface, file *astinfo.GenedFile)
 		prpc.genRpcClientCode(file, className, servlet)
 	}
 	return nil
+}
+
+// ConstructExpr builds the prpc client value for one interface.
+// It returns &NameStruct{...} for assignment to the interface variable.
+func (prpc *PrpcGen) ConstructExpr(iface *astinfo.Interface, file *astinfo.GenedFile) string {
+	host := clientHostExpr(iface, file)
+	impt := file.GetImport(&iface.GoSource.Pkg.PkgBasic)
+	headerFunc, err := prpcHeaderExpr(iface.Comment.Header, impt.Name)
+	if err != nil {
+		fmt.Printf("%s on %s\n", err.Error(), iface.InterfaceName)
+		os.Exit(1)
+	}
+	header := ""
+	if headerFunc != "" {
+		header = "\n\t\t\theader: " + headerFunc + ","
+	}
+	return fmt.Sprintf(`&%sStruct{
+		client: PrpcClient{
+			RestfulClient: RestfulClient{
+				Prefix: %s,
+				rpcLogger: &rpclogger,%s
+			},
+		},
+	}`, iface.InterfaceName, host, header)
+}
+
+// prpcHeaderExpr turns a prpc header= name into a function value in the interface package.
+// It returns an empty string when header is unset, and an error when the value is a call.
+func prpcHeaderExpr(header, importName string) (string, error) {
+	header = strings.TrimSpace(header)
+	if header == "" {
+		return "", nil
+	}
+	if strings.ContainsAny(header, "()") {
+		return "", fmt.Errorf("prpc header %s must be a function name, not a call", header)
+	}
+	return importName + "." + header, nil
 }
 
 // 修改genRpcClientCode函数为使用template的形式
@@ -158,78 +193,8 @@ func (client *PrpcClient) SendRequest(ctx context.Context, name string, array []
 	file.AddBuilder(&content)
 }
 
-func (prpc *PrpcGen) InitClientVariable(rpcClientVar map[*astinfo.Interface]*astinfo.VarField, file *astinfo.GenedFile) string {
-	rpcClientTpl := `
-func initRpcClient() {
-	{{if .HasLogger}}
-	var rpclogger {{.LoggerImport}}.{{.LoggerKey}}
-	{{else}}
-	var rpclogger defaultRpcLogger
-	{{end}}
-
-	{{range .RpcFields}}
-	{{.ImportName}}.{{.FieldName}} = &{{.TypeName}}Struct{
-		client: PrpcClient{
-			RestfulClient: RestfulClient{
-				Prefix: {{.Host}},
-				rpcLogger: &rpclogger,
-			},
-		},
-	}
-	{{end}}
-}
-	`
-	generationCfg := astinfo.GlobalProject.Cfg.Generation
-	// 准备模板数据
-	type RpcFieldData struct {
-		ImportName string
-		FieldName  string
-		TypeName   string
-		Host       string
-	}
-
-	data := struct {
-		HasLogger    bool
-		LoggerImport string
-		LoggerKey    string
-		RpcFields    []RpcFieldData
-	}{
-		HasLogger: generationCfg.RpcLoggerKey != "",
-	}
-
-	// 处理日志配置
-	if data.HasLogger {
-		data.LoggerImport = file.GetImport(astbasic.SimplePackage(generationCfg.RpcLoggerMod, "xx")).Name
-		data.LoggerKey = generationCfg.RpcLoggerKey
-	}
-
-	for iface, field := range rpcClientVar {
-		impt := file.GetImport(&iface.GoSource.Pkg.PkgBasic)
-		host := iface.Comment.Host
-
-		if !strings.HasPrefix(host, `"`) {
-			host = impt.Name + "." + host
-		}
-
-		data.RpcFields = append(data.RpcFields, RpcFieldData{
-			ImportName: impt.Name,
-			FieldName:  field.Name,
-			TypeName:   iface.InterfaceName,
-			Host:       host,
-		})
-	}
-
-	// 解析并执行模板
-	tpl, err := template.New("rpcClient").Parse(rpcClientTpl)
-	if err != nil {
-		log.Fatalf("Failed to parse rpc client template: %v", err)
-	}
-
-	var content strings.Builder
-	if err := tpl.Execute(&content, data); err != nil {
-		log.Fatalf("Failed to execute rpc client template: %v", err)
-	}
-
-	file.AddBuilder(&content)
-	return "initRpcClient"
+// InitClientVariable no longer assigns a package global for prpc.
+// The client value is produced by ConstructExpr inside initVariable.
+func (prpc *PrpcGen) InitClientVariable(map[*astinfo.Interface]*astinfo.VarField, *astinfo.GenedFile) string {
+	return ""
 }

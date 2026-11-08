@@ -1,7 +1,9 @@
 package rpcgen
 
 import (
+	"fmt"
 	"log"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -17,9 +19,6 @@ func (srpc *SrpcGen) GetName() string {
 }
 
 func (srpc *SrpcGen) Generate(class *astinfo.Interface, file *astinfo.GenedFile) error {
-	if len(class.Methods) == 0 {
-		return nil
-	}
 	var sb strings.Builder
 	className := class.InterfaceName + "Struct"
 	sb.WriteString("type " + className + " struct {\nclient SrpcClient\n}\n")
@@ -29,6 +28,20 @@ func (srpc *SrpcGen) Generate(class *astinfo.Interface, file *astinfo.GenedFile)
 	}
 	srpc.genWithPrefix(file, class, className)
 	return nil
+}
+
+// ConstructExpr builds the srpc client value for one interface.
+// It returns &NameStruct{...} for assignment to the interface variable.
+func (srpc *SrpcGen) ConstructExpr(iface *astinfo.Interface, file *astinfo.GenedFile) string {
+	host := clientHostExpr(iface, file)
+	return fmt.Sprintf(`&%sStruct{
+		client: SrpcClient{
+			RestfulClient: RestfulClient{
+				Prefix: %s,
+				rpcLogger: &rpclogger,
+			},
+		},
+	}`, iface.InterfaceName, host)
 }
 
 // genWithPrefix 为 SRPC 客户端生成 WithPrefix。
@@ -189,25 +202,12 @@ func (client *SrpcClient) SendRequest(ctx context.Context, name string, paramete
 	file.AddBuilder(&content)
 }
 
+// InitClientVariable assigns srpc WithPrefix globals when they are declared.
+// The client value itself is produced by ConstructExpr inside initVariable.
 func (srpc *SrpcGen) InitClientVariable(rpcClientVar map[*astinfo.Interface]*astinfo.VarField, file *astinfo.GenedFile) string {
 	rpcClientTpl := `
 func initSrpcClient() {
-	{{if .HasLogger}}
-	var rpclogger {{.LoggerImport}}.{{.LoggerKey}}
-	{{else}}
-	var rpclogger defaultRpcLogger
-	{{end}}
-
 	{{range .RpcFields}}
-	{{.ImportName}}.{{.FieldName}} = &{{.TypeName}}Struct{
-		client: SrpcClient{
-			RestfulClient: RestfulClient{
-				Prefix: {{.Host}},
-				rpcLogger: &rpclogger,
-			},
-		},
-	}
-	{{if .HasWithPrefix}}
 	{{.ImportName}}.{{.FieldName}}WithPrefix = func(prefix string) {{.ImportName}}.{{.TypeName}} {
 		return &{{.TypeName}}Struct{
 			client: SrpcClient{
@@ -219,49 +219,35 @@ func initSrpcClient() {
 		}
 	}
 	{{end}}
-	{{end}}
 }
 	`
-	generationCfg := astinfo.GlobalProject.Cfg.Generation
 	type RpcFieldData struct {
-		ImportName    string
-		FieldName     string
-		TypeName      string
-		Host          string
-		HasWithPrefix bool
+		ImportName string
+		FieldName  string
+		TypeName   string
 	}
 
-	data := struct {
-		HasLogger    bool
-		LoggerImport string
-		LoggerKey    string
-		RpcFields    []RpcFieldData
-	}{
-		HasLogger: generationCfg.RpcLoggerKey != "",
-	}
-
-	if data.HasLogger {
-		data.LoggerImport = file.GetImport(astbasic.SimplePackage(generationCfg.RpcLoggerMod, "xx")).Name
-		data.LoggerKey = generationCfg.RpcLoggerKey
-	}
-
+	var fields []RpcFieldData
 	for iface, field := range rpcClientVar {
-		impt := file.GetImport(&iface.GoSource.Pkg.PkgBasic)
-		host := iface.Comment.Host
-
-		if !strings.HasPrefix(host, `"`) {
-			host = impt.Name + "." + host
+		if iface.GoSource.Pkg.GlobalVar[field.Name+"WithPrefix"] == nil {
+			continue
 		}
-
-		_, hasWithPrefix := iface.GoSource.Pkg.GlobalVar[field.Name+"WithPrefix"]
-		data.RpcFields = append(data.RpcFields, RpcFieldData{
-			ImportName:    impt.Name,
-			FieldName:     field.Name,
-			TypeName:      iface.InterfaceName,
-			Host:          host,
-			HasWithPrefix: hasWithPrefix,
+		impt := file.GetImport(&iface.GoSource.Pkg.PkgBasic)
+		fields = append(fields, RpcFieldData{
+			ImportName: impt.Name,
+			FieldName:  field.Name,
+			TypeName:   iface.InterfaceName,
 		})
 	}
+	if len(fields) == 0 {
+		return ""
+	}
+	sort.Slice(fields, func(i, j int) bool {
+		if fields[i].ImportName != fields[j].ImportName {
+			return fields[i].ImportName < fields[j].ImportName
+		}
+		return fields[i].FieldName < fields[j].FieldName
+	})
 
 	tpl, err := template.New("srpcClientInit").Parse(rpcClientTpl)
 	if err != nil {
@@ -269,7 +255,9 @@ func initSrpcClient() {
 	}
 
 	var content strings.Builder
-	if err := tpl.Execute(&content, data); err != nil {
+	if err := tpl.Execute(&content, struct {
+		RpcFields []RpcFieldData
+	}{RpcFields: fields}); err != nil {
 		log.Fatalf("Failed to execute srpc client template: %v", err)
 	}
 
