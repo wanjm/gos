@@ -1,3 +1,8 @@
+## 2026-11-08 17:26:00
+
+1. please read project of  ~/data/git/yxt_server/resource-ai-convert, it seems there is no such code;
+2. Read ~/data/git/yxt_server/resource-ai-convert and check whether it contains the generated prpc/srpc client wiring. It looks like that code is absent.;
+
 ## 2026-11-07 20:26:00
 
 1. many md files are not update to date, so only the code can tell us what need to be optimized;
