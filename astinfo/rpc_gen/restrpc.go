@@ -110,10 +110,8 @@ func (r *RestrpcGen) GenerateCommon(file *astinfo.GenedFile) {
 	}
 	GenRpcCommon()
 	restrpcGenerated = true
-	file.GetImport(astbasic.SimplePackage("bytes", "bytes"))
 	file.GetImport(astbasic.SimplePackage("encoding/json", "json"))
 	file.GetImport(astbasic.SimplePackage("fmt", "fmt"))
-	file.GetImport(astbasic.SimplePackage("io", "io"))
 	file.GetImport(astbasic.SimplePackage("net/http", "http"))
 	file.GetImport(astbasic.SimplePackage("net/url", "url"))
 	file.GetImport(astbasic.SimplePackage("context", "context"))
@@ -150,62 +148,45 @@ func (e *RestError) GetErrorCode() int {
 }
 
 type RestrpcClient struct {
-	Prefix    string
-	rpcLogger rpcLogger
+	RestfulClient
 }
 
+// SendRequest calls a RESTful method through RestfulClient.
+// It turns a non-2xx status into *RestError and decodes a 2xx body into result.
 func (client *RestrpcClient) SendRequest(ctx context.Context, method, name string, parameter any, result any) error {
-	reqURL := client.Prefix + name
-	var bodyReader io.Reader
-	var content []byte
+	path := name
+	var body []byte
 	if method == http.MethodGet || method == http.MethodHead {
 		if parameter != nil {
-			query, err := restrpcEncodeQuery(parameter)
-			if err != nil {
-				client.rpcLogger.LogError(ctx, reqURL, err.Error())
-				return err
+			query, qerr := restrpcEncodeQuery(parameter)
+			if qerr != nil {
+				client.rpcLogger.LogError(ctx, client.Prefix+name, qerr.Error())
+				return qerr
 			}
 			if query != "" {
-				if strings.Contains(reqURL, "?") {
-					reqURL = reqURL + "&" + query
+				if strings.Contains(client.Prefix+name, "?") {
+					path = name + "&" + query
 				} else {
-					reqURL = reqURL + "?" + query
+					path = name + "?" + query
 				}
 			}
 		}
 	} else if parameter != nil {
 		var marError error
-		content, marError = json.Marshal(parameter)
+		body, marError = json.Marshal(parameter)
 		if marError != nil {
-			client.rpcLogger.LogError(ctx, reqURL, marError.Error())
+			client.rpcLogger.LogError(ctx, client.Prefix+name, marError.Error())
 			return marError
 		}
-		bodyReader = bytes.NewReader(content)
 	}
-	req, err := http.NewRequest(method, reqURL, bodyReader)
-	var resp *http.Response
-	if err == nil {
-		if bodyReader != nil {
-			req.Header.Set("Content-Type", "application/json")
-		}
-		if v := ctx.Value(TraceIdNameInContext); v != nil {
-			if tid, ok := v.(string); ok && tid != "" {
-				req.Header.Set(TraceId, tid)
-			}
-		}
-		resp, err = http.DefaultClient.Do(req)
-		client.rpcLogger.LogRequest(ctx, reqURL, string(content))
-	}
+	status, responseBody, err := client.Exchange(ctx, method, path, body, false)
 	if err != nil {
-		client.rpcLogger.LogError(ctx, reqURL, err.Error())
 		return err
 	}
-	responseBody, _ := io.ReadAll(resp.Body)
-	client.rpcLogger.LogResponse(ctx, reqURL, string(responseBody))
-	resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+	reqURL := client.Prefix + path
+	if status < 200 || status >= 300 {
 		restErr := &RestError{
-			StatusCode: resp.StatusCode,
+			StatusCode: status,
 			Raw:        append(json.RawMessage(nil), responseBody...),
 		}
 		_ = json.Unmarshal(responseBody, restErr)
@@ -255,8 +236,10 @@ func initRestrpcClient() {
 	{{range .RpcFields}}
 	{{.ImportName}}.{{.FieldName}} = &{{.TypeName}}Struct{
 		client: RestrpcClient{
-			Prefix: {{.Host}},
-			rpcLogger: &rpclogger,
+			RestfulClient: RestfulClient{
+				Prefix: {{.Host}},
+				rpcLogger: &rpclogger,
+			},
 		},
 	}
 	{{end}}

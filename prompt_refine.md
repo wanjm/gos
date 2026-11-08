@@ -17,6 +17,25 @@
 
 1. please update gos ,when generate run , we need to check the existence of config.CertFile and then use call *TLS function;
 2. Please update gos so that the generated `run` function checks whether the file at `config.CertFile` exists and, if it does, calls the TLS serve function.;
+## 2026-11-04 11:42:00
+
+1. chage the code please , and i will read the generated code;
+2. Change the code so prpc and srpc go through the shared HTTP client, and I will read the generated code.
+
+## 2026-11-04 11:38:00
+
+1. what is the existing behavior in prpc when non-2xx appears;
+2. What is the existing prpc behavior when the HTTP response status is not 2xx?
+
+## 2026-11-03 11:33:00
+
+1. is there any existing feature missing? or does the new code style match the old one?
+2. Is any existing feature missing, and does the new code style match the old one?
+
+## 2026-11-03 11:04:00
+
+1. for gos rpc, there are restfulrpc, which accepts IN object and return OUT object; prpc, in which IN and OUT are array, with OUT only has two elements which is error and obj; in srpc, IN and OUT is obj, and out is {code: msg, obj}. so we plan to rearch add restfulrpc, then prpc and srpc dpends on restulrpc, but pass array and obj in ; how to design it;
+2. For gos RPC: restfulrpc accepts an IN object and returns an OUT object; prpc uses arrays for IN and OUT, and OUT has only two elements (error and obj); srpc uses objects for IN and OUT, and OUT is {code, msg, obj}. Restructure so restfulrpc is the base, and prpc and srpc depend on it while still passing an array or an object in. How should this be designed?
 
 ## 2026-09-30 14:43:00
 

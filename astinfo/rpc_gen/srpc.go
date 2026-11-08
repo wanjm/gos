@@ -136,8 +136,6 @@ func (srpc *SrpcGen) GenerateCommon(file *astinfo.GenedFile) {
 	srpcGenerated = true
 	file.GetImport(astbasic.SimplePackage("bytes", "bytes"))
 	file.GetImport(astbasic.SimplePackage("encoding/json", "json"))
-	file.GetImport(astbasic.SimplePackage("net/http", "http"))
-	file.GetImport(astbasic.SimplePackage("io", "io"))
 	file.GetImport(astbasic.SimplePackage("context", "context"))
 	var content strings.Builder
 	content.WriteString(`
@@ -162,10 +160,11 @@ func (e SrpcError) GetErrorCode() int {
 }
 
 type SrpcClient struct {
-	Prefix    string
-	rpcLogger rpcLogger
+	RestfulClient
 }
 
+// SendRequest calls a servlet-style method through RestfulClient.
+// It posts the request object and decodes {code,msg,obj} from the body for any HTTP status.
 func (client *SrpcClient) SendRequest(ctx context.Context, name string, parameter any, result any) error {
 	url := client.Prefix + name
 	content, marError := json.Marshal(parameter)
@@ -173,24 +172,13 @@ func (client *SrpcClient) SendRequest(ctx context.Context, name string, paramete
 		client.rpcLogger.LogError(ctx, url, marError.Error())
 		return marError
 	}
-	req, err := http.NewRequest("POST", url, bytes.NewReader(content))
-	var resp *http.Response
-	if err == nil {
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set(TraceId, ctx.Value(TraceIdNameInContext).(string))
-		resp, err = http.DefaultClient.Do(req)
-		client.rpcLogger.LogRequest(ctx, url, string(content))
-	}
+	_, responseBody, err := client.Exchange(ctx, "POST", name, content, true)
 	if err != nil {
-		client.rpcLogger.LogError(ctx, url, err.Error())
 		return err
 	}
-	requestBody, _ := io.ReadAll(resp.Body)
-	client.rpcLogger.LogResponse(ctx, url, string(requestBody))
-	resp.Body.Close()
 	var res SrpcError
 	res.Object = result
-	dec := json.NewDecoder(bytes.NewReader(requestBody))
+	dec := json.NewDecoder(bytes.NewReader(responseBody))
 	_ = dec.Decode(&res)
 	if res.Code != 0 {
 		return res
@@ -213,16 +201,20 @@ func initSrpcClient() {
 	{{range .RpcFields}}
 	{{.ImportName}}.{{.FieldName}} = &{{.TypeName}}Struct{
 		client: SrpcClient{
-			Prefix: {{.Host}},
-			rpcLogger: &rpclogger,
+			RestfulClient: RestfulClient{
+				Prefix: {{.Host}},
+				rpcLogger: &rpclogger,
+			},
 		},
 	}
 	{{if .HasWithPrefix}}
 	{{.ImportName}}.{{.FieldName}}WithPrefix = func(prefix string) {{.ImportName}}.{{.TypeName}} {
 		return &{{.TypeName}}Struct{
 			client: SrpcClient{
-				Prefix: prefix,
-				rpcLogger: &rpclogger,
+				RestfulClient: RestfulClient{
+					Prefix: prefix,
+					rpcLogger: &rpclogger,
+				},
 			},
 		}
 	}

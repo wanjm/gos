@@ -156,6 +156,13 @@ var BookSvcWithPrefix func(prefix string) BookClient
 resp, err := BookSvcWithPrefix("http://book-dev").GetBook(ctx, req)
 ```
 
+### 3.6.1 共用 HTTP
+
+prpc、srpc、restrpc 的请求都经过 `gen/rpc_common.gen.go` 里的 `RestfulClient.Exchange`。它发出 HTTP 并返回 status 和 body，不把非 2xx 当成错误。
+
+- prpc、srpc 调用时 `requireTrace` 为 true（没有 trace id 会 panic）。任何 status 都按原来的包络解码：prpc 是 `{c,o}`，srpc 是 `{code,msg,obj}`。
+- restrpc 调用时 `requireTrace` 为 false。只有它把非 2xx 转成 `*RestError`。
+
 ### 3.7 restrpc
 
 定义 **interface + 全局 var**：gos 生成 `XxxStruct` 实现与 `initRestrpcClient`。

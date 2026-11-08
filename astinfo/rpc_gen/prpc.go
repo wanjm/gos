@@ -127,16 +127,15 @@ func (prpc *PrpcGen) GenerateCommon(file *astinfo.GenedFile) {
 	generated = true
 	file.GetImport(astbasic.SimplePackage("bytes", "bytes"))
 	file.GetImport(astbasic.SimplePackage("encoding/json", "json"))
-	file.GetImport(astbasic.SimplePackage("net/http", "http"))
-	file.GetImport(astbasic.SimplePackage("io", "io"))
 	file.GetImport(astbasic.SimplePackage("context", "context"))
 	var content strings.Builder
 	content.WriteString(`
 type PrpcClient struct {
-	Prefix    string
-	rpcLogger rpcLogger
+	RestfulClient
 }
 
+// SendRequest calls a prpc method through RestfulClient.
+// It posts the argument array and decodes {c,o} from the body for any HTTP status.
 func (client *PrpcClient) SendRequest(ctx context.Context, name string, array []any) RpcResult {
 	url := client.Prefix + name
 	content, marError := json.Marshal(array)
@@ -144,25 +143,14 @@ func (client *PrpcClient) SendRequest(ctx context.Context, name string, array []
 		client.rpcLogger.LogError(ctx, url, marError.Error())
 		return RpcResult{C: 1, O: [2]any{nil, &json.RawMessage{}}}
 	}
-	req, err := http.NewRequest("POST", url, bytes.NewReader(content))
-	var resp *http.Response
-	if err == nil {
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set(TraceId, ctx.Value(TraceIdNameInContext).(string))
-		resp, err = http.DefaultClient.Do(req)
-		client.rpcLogger.LogRequest(ctx, url, string(content))
-	}
+	_, responseBody, err := client.Exchange(ctx, "POST", name, content, true)
 	if err != nil {
-		client.rpcLogger.LogError(ctx, url, err.Error())
 		return RpcResult{C: 1, O: [2]any{&Error{Message: "send request failed"}, &json.RawMessage{}}}
 	}
-	requestBody, _ := io.ReadAll(resp.Body)
-	client.rpcLogger.LogResponse(ctx, url, string(requestBody))
-	resp.Body.Close()
 	var res = RpcResult{
 		O: [2]any{&Error{}, &json.RawMessage{}},
 	}
-	dec := json.NewDecoder(bytes.NewReader(requestBody))
+	dec := json.NewDecoder(bytes.NewReader(responseBody))
 	_ = dec.Decode(&res)
 	return res
 }
@@ -182,8 +170,10 @@ func initRpcClient() {
 	{{range .RpcFields}}
 	{{.ImportName}}.{{.FieldName}} = &{{.TypeName}}Struct{
 		client: PrpcClient{
-			Prefix: {{.Host}},
-			rpcLogger: &rpclogger,
+			RestfulClient: RestfulClient{
+				Prefix: {{.Host}},
+				rpcLogger: &rpclogger,
+			},
 		},
 	}
 	{{end}}
