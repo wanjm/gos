@@ -217,7 +217,8 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 	//}
 	//)
 	// 1. 有default，则wire；
-	// 2. wire为ture，且不是简单结构体（needWire），则寻找值去绑定；
+	// 2. wire为false时，匿名嵌入且含default的结构体按嵌入结构体的default写入；
+	// 3. wire为ture，且不是简单结构体（needWire），则寻找值去绑定；
 	for _, field := range v.Fields {
 		var name = field.wriedName()
 		if name != "" {
@@ -234,6 +235,31 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 					sb.WriteString(v)
 					sb.WriteString(",\n")
 				}
+			} else if field.Name == "" && !wire {
+				// 匿名嵌入的结构体带 default 时，request 构造（wire 为 false）会把它写进字面量。
+				// 只填嵌入结构体里带 default 的原始字段。具名的结构体字段不展开。
+				//
+				//	type CreateReq struct {
+				//		PriceUserNum int  `default:"6"`
+				//		OpenComment  bool `default:"true"`
+				//	}
+				//	type CreateByGroupReq struct {
+				//		CreateReq
+				//	}
+				//
+				// 生成：
+				//
+				//	CreateByGroupReq{
+				//		CreateReq: CreateReq{
+				//			PriceUserNum: 6,
+				//			OpenComment:  true,
+				//		},
+				//	}
+				if st, ok := GetBasicType(field.Type).(*Struct); ok && st.hasConstructDefault() {
+					sb.WriteString(name + ":")
+					sb.WriteString(field.Type.GenConstructCode(genFile, false))
+					sb.WriteString(",\n")
+				}
 			} else if wire {
 				sb.WriteString(name + ":")
 				// 有可能是匿名field，但是不想改变原始的field，所以复制一份；
@@ -248,6 +274,28 @@ func (v *Struct) GenConstructCode(genFile *GenedFile, wire bool) string {
 	sb.WriteString("}")
 
 	return sb.String()
+}
+
+// hasConstructDefault 判断构造这个结构体时要不要写默认值。
+// 自身或匿名嵌入结构体带 default 标签时返回 true。
+func (v *Struct) hasConstructDefault() bool {
+	for _, field := range v.Fields {
+		if field.wriedName() == "" {
+			continue
+		}
+		if _, ok := field.Type.(*RawType); ok {
+			if _, ok := field.Tags[DEFAULT]; ok {
+				return true
+			}
+			continue
+		}
+		if field.Name == "" {
+			if st, ok := GetBasicType(field.Type).(*Struct); ok && st.hasConstructDefault() {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // RequiredFields 返回结构体需要检查依赖注入的field；

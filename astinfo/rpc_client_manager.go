@@ -25,26 +25,45 @@ func (manager *RpcClientManager) registerClientGen(gen ...ClientGen) {
 	}
 }
 
-// Generate
+// Generate writes rpc client structs for every typed client interface.
+// Package globals of that interface are kept only for srpc WithPrefix and restrpc assignment.
 func (manager *RpcClientManager) Generate(file *GenedFile) error {
 	project := GlobalProject
 	var clients map[string][]*Interface = map[string][]*Interface{}
 	var clientVar = make(map[*Interface]*VarField)
-	for _, pkg := range project.Packages {
-		// for _, iface := range pkg.Interfaces {
-		// 	if iface.Comment.Type == "" {
-		// 		continue
-		// 	}
-		// 	clients[iface.Comment.Type] = append(clients[iface.Comment.Type], iface)
-		// }
-		// for 循环rpc client的变量定义；
-		for _, varField := range pkg.GlobalVar {
-			if iface, ok := varField.Type.(*Interface); ok {
-				if iface.Comment.Type != "" {
-					clientVar[iface] = varField
-					clients[iface.Comment.Type] = append(clients[iface.Comment.Type], iface)
-				}
+	pkgNames := make([]string, 0, len(project.Packages))
+	for name := range project.Packages {
+		pkgNames = append(pkgNames, name)
+	}
+	sort.Strings(pkgNames)
+	for _, pkgName := range pkgNames {
+		pkg := project.Packages[pkgName]
+		varNames := make([]string, 0, len(pkg.GlobalVar))
+		for name := range pkg.GlobalVar {
+			varNames = append(varNames, name)
+		}
+		sort.Strings(varNames)
+		for _, name := range varNames {
+			varField := pkg.GlobalVar[name]
+			iface, ok := varField.Type.(*Interface)
+			if !ok || iface.Comment.Type == "" {
+				continue
 			}
+			if _, exists := clientVar[iface]; !exists {
+				clientVar[iface] = varField
+			}
+		}
+		typeNames := make([]string, 0, len(pkg.Types))
+		for name := range pkg.Types {
+			typeNames = append(typeNames, name)
+		}
+		sort.Strings(typeNames)
+		for _, name := range typeNames {
+			iface, ok := pkg.Types[name].(*Interface)
+			if !ok || iface.Comment.Type == "" {
+				continue
+			}
+			clients[iface.Comment.Type] = append(clients[iface.Comment.Type], iface)
 		}
 	}
 	clientTypes := make([]string, 0, len(clients))
@@ -76,7 +95,9 @@ func (manager *RpcClientManager) Generate(file *GenedFile) error {
 				rpcClientVar[iface] = clientVar[iface]
 			}
 		}
-		GlobalProject.InitFuncs4All = append(GlobalProject.InitFuncs4All, gen.InitClientVariable(rpcClientVar, file))
+		if initName := gen.InitClientVariable(rpcClientVar, file); initName != "" {
+			GlobalProject.InitFuncs4All = append(GlobalProject.InitFuncs4All, initName)
+		}
 		file.AddBuilder(&sb)
 		file.Save()
 	}
@@ -95,6 +116,8 @@ func RegisterClientGen(gen ...ClientGen) {
 type ClientGen interface {
 	GenerateCommon(file *GenedFile)
 	Generate(iface *Interface, file *GenedFile) error
-	InitClientVariable(rpcClientVar map[*Interface]*VarField, file *GenedFile) string // 返回init函数的名字；
+	// ConstructExpr returns the expression assigned to the interface variable.
+	ConstructExpr(iface *Interface, file *GenedFile) string
+	InitClientVariable(rpcClientVar map[*Interface]*VarField, file *GenedFile) string // 返回init函数的名字；空字符串表示没有init函数
 	GetName() string                                                                  // 返回client类型的名字；
 }

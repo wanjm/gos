@@ -4,6 +4,7 @@ import (
 	"context"
 )
 
+// BizHello is injected into Hello. autogen is the deprecated spelling of auto.
 // @gos autogen
 type BizHello struct {
 	Names  map[string]string

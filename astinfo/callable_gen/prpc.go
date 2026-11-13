@@ -14,10 +14,13 @@ import (
 
 var errorCodeGen = false
 
+// GenBasicError writes the shared prpc Error and RpcResult types into file.
+// It records the encoding/json import required by json.RawMessage.
 func GenBasicError(file *astinfo.GenedFile) {
 	if errorCodeGen {
 		return
 	}
+	file.GetImport(astbasic.SimplePackage("encoding/json", "json"))
 	a := `
 type Error struct {
 	Code    int             "json:\"code\""

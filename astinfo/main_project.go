@@ -85,6 +85,8 @@ func run() {
 		Cors:       true,
 		Addr:       basic.Cfg.Server.ServerHost,
 		ServerName: "servlet", // this is the name of group tag in comments;
+		CertFile:   basic.Cfg.Server.CertFile,
+		KeyFile:    basic.Cfg.Server.KeyFile,
 	})
 	manager.Go("http server shutdown monitor", func(ctx context.Context) {
 		shutdown(ctx, 5*time.Second)
@@ -117,6 +119,8 @@ type CommandOption struct {
 
 type Server struct {
 	ServerHost string
+	CertFile   string // TLS certificate path; empty or missing file serves plain HTTP
+	KeyFile    string // TLS private key path used with CertFile
 }
 
 type Config struct {
@@ -228,6 +232,8 @@ ParseProjects = ["github.com/wanjm/common"]
 func (mp *MainProject) genBusinessPublicToml() {
 	toml := `[Server]
 ServerHost=":8080"
+CertFile=""
+KeyFile=""
 
 ## DBConfig（也可放在 business.private.toml）
 #[DBConfig.MySqlConfig]
@@ -318,6 +324,7 @@ func (mp *MainProject) genBasicCode(file *GenedFile) {
 	file.GetImport(astbasic.SimplePackage("sync", "sync"))
 	file.GetImport(astbasic.SimplePackage("context", "context"))
 	file.GetImport(astbasic.SimplePackage("net/http", "http"))
+	file.GetImport(astbasic.SimplePackage("os", "os"))
 	file.GetImport(astbasic.SimplePackage("time", "time"))
 	file.GetImport(astbasic.SimplePackage("fmt", "fmt"))
 
@@ -386,9 +393,11 @@ func Start(config ...Config) func(ctx context.Context, stopWaitTime time.Duratio
 	}
 }
 
+// run starts one HTTP server from config.
+// It calls ListenAndServeTLS when config.CertFile exists on disk, otherwise ListenAndServe.
 func run(srv *http.Server, config Config) {
 	var err error
-	if config.CertFile != "" {
+	if certFileExists(config.CertFile) {
 		err = srv.ListenAndServeTLS(config.CertFile, config.KeyFile)
 	} else {
 		err = srv.ListenAndServe()
@@ -396,6 +405,19 @@ func run(srv *http.Server, config Config) {
 	if err != nil {
 		fmt.Printf("listen: %v\n", err)
 	}
+}
+
+// certFileExists reports whether the TLS cert path is usable.
+// It returns false when the path is empty or the file is missing.
+func certFileExists(path string) bool {
+	if path == "" {
+		return false
+	}
+	if _, err := os.Stat(path); err != nil {
+		fmt.Printf("cert file %s not found, listen without TLS: %v\n", path, err)
+		return false
+	}
+	return true
 }
 
 func createServer(config Config) *http.Server {

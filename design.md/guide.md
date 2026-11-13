@@ -47,7 +47,7 @@
 | `method` | HTTP method（servlet / restrpc） |
 | `filters` | 过滤器函数名（逗号分隔） |
 | `permission` | servlet 权限检测参数；原样复制到配置的检测函数调用中（见 [permission](#permission)） |
-| `header` | function 支持 `header="X-AppId:appId,..."`；结构体变量也可声明 header |
+| `header` | function 支持 `header="X-AppId:appId,..."`；结构体变量也可声明 header。prpc interface 上 `header=函数名` 指向开发者实现的请求头函数（见 [prpc header](#362-prpc-header)） |
 | `swagger` | `swagger=false` 时不生成 OpenAPI；可用于 struct 或 method |
 | `folder` | Apifox 目录。Swagger 2.0 写入接口 `tags` 第一项，并写 `x-apifox-folder`；`/` 表示多级目录。方法上的值覆盖 struct 上的值；缺省则不写。有该字段时，导入会更新已有接口的目录 |
 | `enum` | 加在 const 后，表示一组取值，会编译为前端 enum |
@@ -59,7 +59,7 @@
 裸 key（无取值）。含义由修饰目标决定：
 
 1. 修饰 **struct**：自动生成对象供注入（原 `autogen`）
-2. 修饰全局 **var**：在 `initVariable` 末尾将该类型对应的 initiator / `auto` struct 实例赋给该变量（供 filter 等无法注入的场景）
+2. 修饰全局 **var**：在 `initVariable` 末尾将该类型对应的 initiator / `auto` struct / prpc·srpc 客户端赋给该变量（供 filter 等无法注入的场景）
 
 #### deprecated（保留到下一个大版本，之后删除）
 
@@ -116,13 +116,14 @@ if !filter.CheckPermission(c, user_permission.PermissionGroupUser, user_permissi
 
 检测函数签名为 `func(ctx context.Context, <copied args>) bool`（传入的是 `*gin.Context`）。未配置 Func/Mod、找不到导出 const、或同名包不唯一且都声明了该 const 时 gos 退出。未加包前缀的 ident 不支持（会落在 `gen` 包）。
 
-### 3.6 srpc
+### 3.6 prpc / srpc 客户端注入
 
-定义 **interface + 全局 var**：gos 生成 `XxxStruct` 实现与 `initSrpcClient`，在 init 时把客户端赋给该 var。
+`type=prpc` 或 `type=srpc` 的 interface 会生成 `XxxStruct`，并作为该 interface 的 DI 实例，在 `initVariable` 里构造。生成不再依赖包级变量。
 
-1. interface：`type=srpc`，`host` 为 base URL 字面量，或同包内「返回 host 的函数调用」
-2. 每个方法：`url` 为相对路径（拼到 `host` 后）；签名 `(ctx, req) (resp, error)`
-3. 必须声明 `var Xxx InterfaceType`，否则不会生成注入
+1. interface：`type=prpc` 或 `type=srpc`；`host` 为 base URL 字面量，或同包内返回 host 的函数调用
+2. srpc 每个方法：`url` 为相对路径（拼到 `host` 后）；签名 `(ctx, req) (resp, error)`。prpc 方法见 [prpc header](#362-prpc-header)
+3. 其它 struct 的**导出字段**类型是该 interface 时，自动注入这个客户端
+4. 包级变量要拿到同一实例时，在 var 上加 `// @gos auto`。没有 `auto` 的全局变量不会被赋值
 
 ```go
 func GetBookHost() string {
@@ -138,16 +139,22 @@ type BookClient interface {
 	ListBook(ctx context.Context, req *ListBookRequest) (*ListBookResponse, error)
 }
 
+// @gos auto
+type BookBiz struct {
+	Book BookClient
+}
+
+func (b *BookBiz) Load(ctx context.Context, id int64) (*GetBookResponse, error) {
+	return b.Book.GetBook(ctx, &GetBookRequest{Id: id})
+}
+
+// @gos auto
 var BookSvc BookClient
 ```
 
-业务侧直接调用（无需手写 HTTP）：
+prpc interface 的注入方式相同：导出字段自动注入；包级变量只在带 `// @gos auto` 时被赋值。
 
-```go
-resp, err := BookSvc.GetBook(ctx, &GetBookRequest{Id: 1})
-```
-
-同一 interface 要打多个 host 时，再声明同名工厂。gos 注入 `XxxWithPrefix(prefix)`，每次调用返回新客户端，不改默认 `Xxx`：
+同一 srpc interface 要打多个 host 时，再声明工厂变量。变量名必须是「该 interface 某个全局变量名 + `WithPrefix`」。gos 在 `initSrpcClient` 里给这个函数赋值；每次调用返回新客户端。作为名字前缀的那个全局变量本身，只在有 `// @gos auto` 时被赋值。
 
 ```go
 var BookSvc BookClient
@@ -155,6 +162,49 @@ var BookSvcWithPrefix func(prefix string) BookClient
 
 resp, err := BookSvcWithPrefix("http://book-dev").GetBook(ctx, req)
 ```
+
+### 3.6.1 共用 HTTP
+
+prpc、srpc、restrpc 的请求都经过 `gen/rpc_common.gen.go` 里的 `RestfulClient.Exchange`。它发出 HTTP 并返回 status 和 body，不把非 2xx 当成错误。
+
+- context 里有 trace id 时，`Exchange` 写入 trace 头。
+- prpc、srpc 对任何 status 都按原来的包络解码：prpc 是 `{c,o}`，srpc 是 `{code,msg,obj}`。
+- 只有 restrpc 把非 2xx 转成 `*RestError`。
+- prpc interface 写了 `header` 时，`Exchange` 会在发请求前写入返回的头。
+
+### 3.6.2 prpc header
+
+`header` 写在 prpc interface 上，取值是同包函数名，不带调用括号。函数由开发者实现，`gen` 只在每次请求前调用它，并把返回值写成 HTTP 头。签名是 `func(ctx context.Context) map[string]string`。map 的 key 是头名，value 是头值。
+
+可以写死：
+
+```go
+func InitHeader(ctx context.Context) map[string]string {
+	return map[string]string{"X-App": "yxt"}
+}
+```
+
+也可以先调别的接口再组装：
+
+```go
+func InitHeader(ctx context.Context) map[string]string {
+	token, err := TokenSvc.GetToken(ctx)
+	if err != nil || token == nil {
+		return nil
+	}
+	return map[string]string{"access-token": token.AccessToken}
+}
+```
+
+```go
+// @gos type=prpc; host=GetHost(); header=InitHeader
+type Jsinternal interface {
+	// @gos url="/token/getDetail"
+	GetTokenDetail(ctx context.Context, tokenStr string) (*info.TokenUser, error)
+}
+```
+
+`host=GetHost()` 会在初始化时调用。`header=InitHeader` 传入函数本身，每次请求再调用。函数不存在时，生成代码无法通过编译。
 
 ### 3.7 restrpc
 
