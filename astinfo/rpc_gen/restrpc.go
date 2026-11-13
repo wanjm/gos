@@ -156,7 +156,7 @@ type RestrpcClient struct {
 // It turns a non-2xx status into *RestError and decodes a 2xx body into result.
 func (client *RestrpcClient) SendRequest(ctx context.Context, method, name string, parameter any, result any) error {
 	path := name
-	var body []byte
+	var request any
 	if method == http.MethodGet || method == http.MethodHead {
 		if parameter != nil {
 			query, qerr := restrpcEncodeQuery(parameter)
@@ -172,15 +172,10 @@ func (client *RestrpcClient) SendRequest(ctx context.Context, method, name strin
 				}
 			}
 		}
-	} else if parameter != nil {
-		var marError error
-		body, marError = json.Marshal(parameter)
-		if marError != nil {
-			client.rpcLogger.LogError(ctx, client.Prefix+name, marError.Error())
-			return marError
-		}
+	} else {
+		request = parameter
 	}
-	status, responseBody, err := client.Exchange(ctx, method, path, body, false)
+	status, responseBody, err := client.Exchange(ctx, method, path, request)
 	if err != nil {
 		return err
 	}

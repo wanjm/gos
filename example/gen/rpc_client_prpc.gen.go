@@ -16,13 +16,7 @@ type PrpcClient struct {
 // SendRequest calls a prpc method through RestfulClient.
 // It posts the argument array and decodes {c,o} from the body for any HTTP status.
 func (client *PrpcClient) SendRequest(ctx context.Context, name string, array []any) RpcResult {
-	url := client.Prefix + name
-	content, marError := json.Marshal(array)
-	if marError != nil {
-		client.rpcLogger.LogError(ctx, url, marError.Error())
-		return RpcResult{C: 1, O: [2]any{nil, &json.RawMessage{}}}
-	}
-	_, responseBody, err := client.Exchange(ctx, "POST", name, content, true)
+	_, responseBody, err := client.Exchange(ctx, "POST", name, array)
 	if err != nil {
 		return RpcResult{C: 1, O: [2]any{&Error{Message: "send request failed"}, &json.RawMessage{}}}
 	}

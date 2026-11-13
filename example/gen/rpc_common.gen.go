@@ -4,6 +4,7 @@ package gen
 import (
 	bytes "bytes"
 	context "context"
+	json "encoding/json"
 	fmt "fmt"
 	io "io"
 	http "net/http"
@@ -38,11 +39,18 @@ type RestfulClient struct {
 }
 
 // Exchange sends one HTTP call shared by prpc, srpc, and restrpc.
-// It copies client headers onto the request and returns the status and body. A non-2xx status is not an error. requireTrace panics when the trace id is missing.
-func (client *RestfulClient) Exchange(ctx context.Context, method, name string, body []byte, requireTrace bool) (int, []byte, error) {
+// It JSON-marshals a non-nil request, copies client headers, and returns the status and body. A nil request sends no body. A non-2xx status is not an error. It sets the trace header when the context has a trace id.
+func (client *RestfulClient) Exchange(ctx context.Context, method, name string, request any) (int, []byte, error) {
 	reqURL := client.Prefix + name
+	var body []byte
 	var bodyReader io.Reader
-	if body != nil {
+	if request != nil {
+		var marError error
+		body, marError = json.Marshal(request)
+		if marError != nil {
+			client.rpcLogger.LogError(ctx, reqURL, marError.Error())
+			return 0, nil, marError
+		}
 		bodyReader = bytes.NewReader(body)
 	}
 	req, err := http.NewRequest(method, reqURL, bodyReader)
@@ -56,9 +64,7 @@ func (client *RestfulClient) Exchange(ctx context.Context, method, name string, 
 				req.Header.Set(key, value)
 			}
 		}
-		if requireTrace {
-			req.Header.Set(TraceId, ctx.Value(TraceIdNameInContext).(string))
-		} else if v := ctx.Value(TraceIdNameInContext); v != nil {
+		if v := ctx.Value(TraceIdNameInContext); v != nil {
 			if tid, ok := v.(string); ok && tid != "" {
 				req.Header.Set(TraceId, tid)
 			}

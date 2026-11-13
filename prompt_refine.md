@@ -1,3 +1,23 @@
+## 2026-11-13 16:56:00
+
+1. remove requireTrace of it;
+2. Remove the requireTrace parameter from client.Exchange.;
+
+## 2026-11-13 16:31:00
+
+1. let rearch client.Exchange, which accepts requet of type any instead of content of byte,so that it wll marshal in client.Exchange;
+2. Refactor client.Exchange so it accepts a request of type any instead of a []byte body, and marshal that request inside client.Exchange.;
+
+## 2026-11-13 16:26:00
+
+1. when both prpc server and prpc client exists, where wll the code be generated;
+2. When both a prpc server and a prpc client exist, where is the generated `Error` code written?;
+
+## 2026-11-13 16:16:00
+
+1. please read code of gos, and show me the logic of generate prpc::Error;
+2. Read the gos source and explain how `prpc::Error` is generated.;
+
 ## 2026-11-12 16:44:00
 
 1. please read guide or the code, add code to show all our feature in example of gos ;

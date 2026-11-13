@@ -35,13 +35,7 @@ type SrpcClient struct {
 // SendRequest calls a servlet-style method through RestfulClient.
 // It posts the request object and decodes {code,msg,obj} from the body for any HTTP status.
 func (client *SrpcClient) SendRequest(ctx context.Context, name string, parameter any, result any) error {
-	url := client.Prefix + name
-	content, marError := json.Marshal(parameter)
-	if marError != nil {
-		client.rpcLogger.LogError(ctx, url, marError.Error())
-		return marError
-	}
-	_, responseBody, err := client.Exchange(ctx, "POST", name, content, true)
+	_, responseBody, err := client.Exchange(ctx, "POST", name, parameter)
 	if err != nil {
 		return err
 	}
