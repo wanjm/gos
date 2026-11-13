@@ -1,3 +1,8 @@
+## 2026-11-12 16:44:00
+
+1. please read guide or the code, add code to show all our feature in example of gos ;
+2. Read the gos guide and source, then add example code that demonstrates every gos feature.;
+
 ## 2026-11-08 17:26:00
 
 1. please read project of  ~/data/git/yxt_server/resource-ai-convert, it seems there is no such code;
