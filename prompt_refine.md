@@ -17,6 +17,11 @@
 
 1. please resad gos project and let's understand it;
 2. Please read the gos project and help me understand it.;
+## 2026-11-12 14:20:00
+
+1. in gos, when generate code for prpc.gen.go, it seems failed to import json;
+2. In gos, generating prpc.gen.go fails to import encoding/json.
+
 ## 2026-11-06 13:06:00
 
 1. what package is not containted in SortedPacakgeNames?
